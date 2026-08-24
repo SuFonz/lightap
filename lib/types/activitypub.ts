@@ -9,13 +9,25 @@ export interface APWebfinger {
 }
 
 export interface APObject {
-    "@context": "https://www.w3.org/ns/activitystreams",
+    "@context": string | string[],
     type: string,
-    id: string,
+    id?: string,
+    name?: string,
+}
+
+export interface APPerson extends APObject {
+    type: "Person",
     name: string,
 }
 
-export interface APActor extends APObject {
+export interface APNote extends APObject {
+    type: "Note",
+    name: string,
+    content: string,
+}
+
+export interface APActor extends APPerson {
+    id: string,
     type: "Person",
     preferredUsername: string,
     summary: string | null,
@@ -25,33 +37,25 @@ export interface APActor extends APObject {
     following: string,
 }
 
-export interface APActivity extends APObject {
+export interface APActivity<TObject = APObject> extends APObject {
     type: string | "Activity",
     summary: string,
-    actor: {
-        type: "Persion",
-        name: string,
-    },
-    object: {
-        type: "Note",
-        name: string,
-    }
+    actor: APPerson,
+    object: TObject,
 }
 
 export interface APCollection extends APObject {
     type: "Collection",
     totalItems: number,
-    items: {
-        type: "Note",
-        name: string,
-    }[],
+    items: APNote[],
 }
 
 export interface APOrderedCollection extends APObject {
     type: "OrderedCollection",
     totalItems: number,
-    orderedItems: {
-        type: "Note",
-        name: string,
-    }[],
+    orderedItems: APNote[],
+}
+
+export interface APCreate extends APActivity<APNote> {
+    type: "Create",
 }

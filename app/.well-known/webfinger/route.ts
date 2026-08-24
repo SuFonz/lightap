@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
     return Response.json(webfinger, {
         headers: {
-            "Content-Type": "application/jrd+json"
+            "Content-Type": "application/jrd+json",
         }
     });
 }

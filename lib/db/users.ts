@@ -24,7 +24,7 @@ export async function getUserByUsername(
     return {
         id: row.id,
         username: row.username,
-        displayName: row.display_name,
+        preferredUsername: row.preferred_username,
         summary: row.summary ?? undefined,
         iconUrl: row.icon_url ?? undefined,
         privateKeyPem: row.private_key_pem ?? undefined,

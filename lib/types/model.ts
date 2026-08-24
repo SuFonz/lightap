@@ -1,7 +1,7 @@
 export interface User {
     id: number,
     username: string,
-    displayName: string,
+    preferredUsername: string,
     summary?: string,
     iconUrl?: string,
     privateKeyPem?: string,
