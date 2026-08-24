@@ -1,6 +1,6 @@
 export interface UserRow {
-    id: number,
-    username: string,
+    id: string,
+    name: string,
     preferred_username: string,
     summary: string | null,
     icon_url: string | null,
@@ -10,3 +10,19 @@ export interface UserRow {
     updated_at: Date,
 }
 
+export interface ObjectRow {
+    id: number,
+    name: string | null,
+    type: string,
+    actor_id: string,
+    content: string,
+    created_at: Date,
+}
+
+export interface ActivityRow {
+    id: number,
+    type: string,
+    actor_id: string,
+    object_id: number,
+    created_at: Date,
+}

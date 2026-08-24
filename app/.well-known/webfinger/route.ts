@@ -1,5 +1,5 @@
-import { getUserByUsername } from "@/lib/db/users"
-import { buildWebfinger, parseResource } from "@/lib/activitypub/object";
+import { getUserByPreferredUsername } from "@/lib/db/users"
+import { buildWebfinger, parseResource } from "@/lib/activitypub/tools";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
     const [username, domain] = parseResource(resource);
 
-    const user = await getUserByUsername(username);
+    const user = await getUserByPreferredUsername(username);
 
     if (!user) {
         return new Response("User not found", {

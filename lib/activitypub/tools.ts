@@ -1,4 +1,4 @@
-import { APWebfinger, APActor } from "@/lib/types/activitypub"
+import { APWebfinger, APActor, APNote, APOrderedCollection } from "@/lib/types/activitypub"
 
 export function parseResource(
     resource: string
@@ -75,4 +75,49 @@ export function buildActor(
     };
 
     return actor;
+}
+
+export function buildNote(
+    baseUrl: string,
+    name: string,
+    content: string,
+    noteId: number,
+): APNote | null {
+    if (!name && !content) {
+        return null;
+    }
+
+    const url = new URL(baseUrl);
+    const note: APNote = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        type: "Note",
+        id: `${url.origin}/api/notes/${noteId}`,
+        name: name,
+        content: content,
+    };
+
+    return note;
+}
+
+export function buildOrderedCollection(
+    baseUrl: string,
+    username: string,
+    notes: APNote[],
+    kind: "outbox" | "inbox" = "outbox",
+): APOrderedCollection | null {
+    if (!username) {
+        return null;
+    }
+
+    const url = new URL(baseUrl);
+    const oc: APOrderedCollection = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        type: "OrderedCollection",
+        id: `${url.origin}/api/users/${username}/${kind}`,
+        summary: `${username}'s ${kind}`,
+        totalItems: notes.length,
+        orderedItems: notes,
+    };
+
+    return oc;
 }

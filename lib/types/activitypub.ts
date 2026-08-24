@@ -1,3 +1,5 @@
+export type APActivityType = "Activity" | "Create" | "Delete" | "Like" | "Dislike" | "Accept" | "Reject";
+
 export interface APWebfinger {
     subject: string,
     aliases?: string[],
@@ -11,7 +13,7 @@ export interface APWebfinger {
 export interface APObject {
     "@context": string | string[],
     type: string,
-    id?: string,
+    id: string,
     name?: string,
 }
 
@@ -38,7 +40,7 @@ export interface APActor extends APPerson {
 }
 
 export interface APActivity<TObject = APObject> extends APObject {
-    type: string | "Activity",
+    type: APActivityType | "Activity",
     summary: string,
     actor: APPerson,
     object: TObject,
@@ -52,6 +54,7 @@ export interface APCollection extends APObject {
 
 export interface APOrderedCollection extends APObject {
     type: "OrderedCollection",
+    summary: string,
     totalItems: number,
     orderedItems: APNote[],
 }
