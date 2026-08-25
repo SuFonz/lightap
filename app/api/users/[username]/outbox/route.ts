@@ -51,33 +51,43 @@ export async function GET(
     });
 }
 
-export async function POST(request: Request) {
+export async function POST(
+    request: Request,
+    { params }: { params: { username: string }}
+) {
     const headers = await request.headers;
     const activity = await request.json<APActivity>();
-    
+
     // 验证jwt
-    const authorization = headers.get("Authorization");
-    if (!authorization) {
-        return new Response("Unauthorized", {
-            status: 403,
-        });
-    }
+    // const authorization = headers.get("Authorization");
+    // if (!authorization) {
+    //     return new Response("Unauthorized", {
+    //         status: 403,
+    //     });
+    // }
 
-    const token = authorization.startsWith("Bearer ")
-        ? authorization.slice(7)
-        : authorization;
+    // const token = authorization.startsWith("Bearer ")
+    //     ? authorization.slice(7)
+    //     : authorization;
 
-    let payload: UserJwtPayload;
-    try {
-        payload = await verify(token, env.JWT_SECRET);
-    } catch {
-        return new Response("Unauthorized", {
-            status: 403,
-        });
-    }
+    // let payload: UserJwtPayload;
+    // try {
+    //     payload = await verify(token, env.JWT_SECRET);
+    // } catch {
+    //     return new Response("Unauthorized", {
+    //         status: 403,
+    //     });
+    // }
+
+    // // 用户名与路径不匹配
+    // if (params.username != payload.username) {
+    //     return new Response("Unauthorized", {
+    //         status: 403,
+    //     });
+    // }
 
     // 查询用户
-    const user = getUserByPreferredUsername(payload.username);
+    const user = getUserByPreferredUsername(params.username);
     if (!user) {
         return new Response("User not found", {
             status: 404

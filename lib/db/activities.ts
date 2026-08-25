@@ -30,17 +30,39 @@ export async function getActivitiesByPreferredUsername(
 }
 
 export async function insertActivity(
+    id: string,
     type: APActivityType,
     actorId: string,
-    objectId: number,
-): Promise<number> {
-    const res = await env.DB
+    objectId: string,
+    to: string[] | null,
+    cc: string[] | null,
+): Promise<string> {
+    await env.DB
         .prepare(
-            `INSERT INTO activities (type, actor_id, object_id, created_at)
-             VALUES (?, ?, ?, ?)`
+            `
+            INSERT INTO activities
+            (
+                id,
+                type,
+                actor_id,
+                object_id,
+                to_json,
+                cc_json,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            `
         )
-        .bind(type, actorId, objectId, Date.now())
+        .bind(
+            id,
+            type,
+            actorId,
+            objectId,
+            to ? JSON.stringify(to) : null,
+            cc ? JSON.stringify(cc) : null,
+            Date.now()
+        )
         .run();
 
-    return res.meta.last_row_id;
+    return id;
 }

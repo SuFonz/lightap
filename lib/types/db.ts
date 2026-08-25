@@ -11,7 +11,7 @@ export interface UserRow {
 }
 
 export interface ObjectRow {
-    id: number,
+    id: string,
     name: string | null,
     type: string,
     actor_id: string,
@@ -20,9 +20,11 @@ export interface ObjectRow {
 }
 
 export interface ActivityRow {
-    id: number,
+    id: string,
     type: string,
     actor_id: string,
-    object_id: number,
+    object_id: string,
+    to_json: string,
+    cc_json: string,
     created_at: Date,
 }

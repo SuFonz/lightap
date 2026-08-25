@@ -35,14 +35,36 @@ export async function getNotesByPreferredUsername(
     return rows.results;
 }
 
-export async function insertNote(actorId: string, name: string, content: string) {
-    const res = await env.DB
+export async function insertNote(
+    id: string,
+    actorId: string,
+    name: string,
+    content: string,
+): Promise<string> {
+    await env.DB
         .prepare(
-            `INSERT INTO objects VALUES(name, type, actor_id, content, created_at)
-             VALUES (?, ?, ?, ?, ?)`
+            `
+            INSERT INTO objects
+            (
+                id,
+                name,
+                type,
+                actor_id,
+                content,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            `
         )
-        .bind(name, "Note", actorId, content, Date.now())
+        .bind(
+            id,
+            name,
+            "Note",
+            actorId,
+            content,
+            Date.now()
+        )
         .run();
-    
-    return res.meta.last_row_id;
+
+    return id;
 }

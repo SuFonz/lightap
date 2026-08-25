@@ -35,8 +35,8 @@ export interface APActor extends APPerson {
     summary: string | null,
     inbox: string,
     outbox: string,
-    // followers: string,
-    // following: string,
+    followers: string,
+    following: string,
 }
 
 export interface APActivity<TObject = APObject> extends APObject {
