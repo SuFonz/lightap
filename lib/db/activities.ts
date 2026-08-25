@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { ActivityRow } from "@/lib/types/db";
 import { APActivityType } from "../types/activitypub";
 
-export async function getActivityByPreferredUsername(
+export async function getActivitiesByPreferredUsername(
     preferredUsername: string,
     limit: number | null = null,
 ): Promise<ActivityRow[] | null> {
@@ -32,7 +32,7 @@ export async function getActivityByPreferredUsername(
 export async function insertActivity(
     type: APActivityType,
     actorId: string,
-    objectId: string | null,
+    objectId: number,
 ): Promise<number> {
     const res = await env.DB
         .prepare(

@@ -70,8 +70,8 @@ export function buildActor(
         summary: summary,
         inbox: `${url.origin}/api/users/${preferredUsername}/inbox`,
         outbox: `${url.origin}/api/users/${preferredUsername}/outbox`,
-        followers: `${url.origin}/api/users/${preferredUsername}/followers`,
-        following: `${url.origin}/api/users/${preferredUsername}/following`,
+        // followers: `${url.origin}/api/users/${preferredUsername}/followers`,
+        // following: `${url.origin}/api/users/${preferredUsername}/following`,
     };
 
     return actor;

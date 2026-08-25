@@ -3,7 +3,7 @@ import { verify } from "@/lib/util/jwt";
 import { UserJwtPayload } from "@/lib/types/http"
 import { getUserByPreferredUsername } from "@/lib/db/users";
 import { APActivity, APCreate, APNote } from "@/lib/types/activitypub";
-import { getNotesByPreferredUsername } from "@/lib/db/objects";
+import { getNotesByPreferredUsername, insertNote } from "@/lib/db/objects";
 import { buildNote, buildOrderedCollection } from "@/lib/activitypub/tools";
 import { insertActivity } from "@/lib/db/activities";
 
@@ -103,8 +103,12 @@ export async function POST(request: Request) {
 }
 
 async function handleCreate(activity: APActivity) {
-    const actCrt = activity as APCreate;
-    
-    await insertActivity(activity.type, activity.actor.id, activity.object.id);
+    const activityCreate = activity as APCreate;
+    const actor = activityCreate.actor;
+    const note = activityCreate.object;
+
+    const noteId = await insertNote(actor.id, note.name, note.content);
+
+    await insertActivity(activity.type, actor.id, noteId);
 }
 
