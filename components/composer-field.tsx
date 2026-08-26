@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { Avatar } from "@/components/avatar";
 import { ComposerModal } from "@/components/composer-modal";
-import { FeatherIcon } from "@/components/icons";
+import { EmojiIcon, HashIcon, ImageIcon, PollIcon, WarnIcon } from "@/components/icons";
 import { useStore } from "@/components/store";
 import { cn } from "@/lib/utils";
 
@@ -18,8 +18,31 @@ interface ComposerFieldProps {
     onSubmit: (content: string) => Promise<void> | void;
 }
 
+function ComposerTool({
+    icon: IconCmp,
+    label,
+    tone,
+}: {
+    icon: ComponentType<{ size?: number }>;
+    label: string;
+    tone: string;
+}) {
+    return (
+        <span
+            title={label}
+            aria-hidden="true"
+            className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-[10px] text-slate-400 transition-colors hover:bg-white/80",
+                tone,
+            )}
+        >
+            <IconCmp size={17} />
+        </span>
+    );
+}
+
 export function ComposerField({
-    label = "说点什么和大家分享吧…",
+    label = "说点什么吧…",
     title = "发布新帖",
     placeholder,
     submitLabel = "发布",
@@ -35,21 +58,38 @@ export function ComposerField({
         <>
             <div
                 className={cn(
-                    "glass-card cursor-pointer px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow",
+                    "glass-card cursor-pointer p-4 transition-shadow duration-200 hover:shadow-glow",
                     className,
                 )}
+                role="button"
+                tabIndex={0}
+                aria-label="打开发帖框"
                 onClick={() => setOpen(true)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setOpen(true);
+                    }
+                }}
             >
                 <div className="flex items-center gap-3">
-                    <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={40} />
-                    <p className="min-w-0 flex-1 truncate rounded-full border border-white/70 bg-white/60 px-4 py-2.5 text-sm text-slate-400">
-                        {label}
-                    </p>
-                    <span
-                        aria-hidden="true"
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/30"
-                    >
-                        <FeatherIcon size={17} />
+                    <Avatar
+                        name={currentUser.displayName}
+                        src={currentUser.avatarUrl}
+                        size={42}
+                        status={currentUser.online}
+                    />
+                    <p className="min-w-0 flex-1 text-[15px] text-slate-400">{label}</p>
+                </div>
+
+                <div className="mt-3 flex items-center gap-0.5 border-t border-white/70 pt-3 pl-[54px]">
+                    <ComposerTool icon={ImageIcon} label="图片" tone="hover:text-brand-deep" />
+                    <ComposerTool icon={EmojiIcon} label="表情" tone="hover:text-magic-deep" />
+                    <ComposerTool icon={HashIcon} label="话题标签" tone="hover:text-brand-deep" />
+                    {showTips && <ComposerTool icon={PollIcon} label="投票" tone="hover:text-magic-deep" />}
+                    {showTips && <ComposerTool icon={WarnIcon} label="内容警告" tone="hover:text-sakura-deep" />}
+                    <span className="btn-solid ml-auto px-4 py-1.5 font-display text-sm font-bold">
+                        {submitLabel}
                     </span>
                 </div>
             </div>

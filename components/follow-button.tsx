@@ -41,11 +41,11 @@ export function FollowButton({ username, size = "md", className }: FollowButtonP
                 disabled={pending}
                 aria-pressed={following}
                 className={cn(
-                    "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full font-display font-bold transition-all duration-200 active:scale-95 disabled:opacity-60",
-                    size === "sm" ? "h-8 px-3.5 text-xs" : "h-10 px-5 text-sm",
+                    "inline-flex cursor-pointer items-center justify-center gap-1.5 font-display font-bold transition-all duration-200 active:scale-95 disabled:opacity-60",
+                    size === "sm" ? "h-8 px-3.5 text-xs" : "h-9 px-4 text-sm",
                     following
-                        ? "border border-sky-200 bg-white/70 text-sky-600 hover:border-sky-300 hover:bg-sky-50"
-                        : "bg-gradient-to-r from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/25 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/35",
+                        ? "rounded-[10px] border border-white/80 bg-white/60 text-brand-deep hover:bg-white/90"
+                        : "btn-solid",
                     className,
                 )}
             >

@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
-import { CloseIcon, HashIcon, SearchIcon, TrendingUpIcon, UserPlusIcon } from "@/components/icons";
+import { CloseIcon, SearchIcon, TrendingUpIcon } from "@/components/icons";
 import { PostCard } from "@/components/post-card";
 import { useStore } from "@/components/store";
+import { pillTones, TagPill, toneClasses } from "@/components/tag-pill";
 import { cn, formatCount } from "@/lib/utils";
 
 type Tab = "posts" | "users" | "tags";
@@ -71,7 +72,7 @@ export default function SearchPage() {
         <div className="flex flex-col gap-4">
             <section className="glass-card p-4">
                 <h1 className="mb-3 flex items-center gap-2 font-display text-lg font-black text-slate-800">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/30">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
                         <SearchIcon size={17} />
                     </span>
                     搜索
@@ -80,7 +81,7 @@ export default function SearchPage() {
                 <form onSubmit={handleSubmit} role="search" className="relative">
                     <SearchIcon
                         size={17}
-                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sky-400"
+                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-brand"
                     />
                     <input
                         type="search"
@@ -89,14 +90,14 @@ export default function SearchPage() {
                         placeholder="搜索帖子、用户、#话题…"
                         aria-label="搜索关键词"
                         autoFocus
-                        className="w-full rounded-full border border-white/70 bg-white/70 py-3 pl-11 pr-11 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200/60"
+                        className="w-full rounded-full border border-white/70 bg-white/70 py-3 pl-11 pr-11 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:border-brand/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand/15"
                     />
                     {query && (
                         <button
                             type="button"
                             aria-label="清空搜索"
                             onClick={() => setQuery("")}
-                            className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-sky-50 hover:text-sky-600"
+                            className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-brand/10 hover:text-brand-deep"
                         >
                             <CloseIcon size={15} />
                         </button>
@@ -106,12 +107,15 @@ export default function SearchPage() {
                 {!hasQuery && (
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                         <span className="text-xs font-bold text-slate-400">最近搜索：</span>
-                        {recentSearches.map((term) => (
+                        {recentSearches.map((term, i) => (
                             <button
                                 key={term}
                                 type="button"
                                 onClick={() => setQuery(term)}
-                                className="cursor-pointer rounded-full border border-dashed border-sky-300 bg-sky-50/60 px-3 py-1 text-xs font-bold text-sky-500 transition hover:border-sky-400 hover:bg-sky-100 active:scale-95"
+                                className={cn(
+                                    "cursor-pointer rounded-full px-3 py-1 text-xs font-bold ring-1 ring-white/80 transition active:scale-95",
+                                    toneClasses[pillTones[i % pillTones.length]],
+                                )}
                             >
                                 {term}
                             </button>
@@ -123,21 +127,20 @@ export default function SearchPage() {
             {!hasQuery ? (
                 <section className="glass-card p-5" aria-label="热门话题">
                     <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm font-extrabold text-slate-700">
-                        <TrendingUpIcon size={16} className="text-pink-400" /> 大家都在搜
+                        <TrendingUpIcon size={16} className="text-sakura-deep" /> 大家都在搜
                     </h2>
-                    <ul className="flex flex-col gap-1.5">
+                    <ul className="flex flex-col">
                         {trends.map((trend, i) => (
                             <li key={trend.name}>
                                 <button
                                     type="button"
                                     onClick={() => setQuery(trend.name)}
-                                    className="-mx-2 flex w-[calc(100%+16px)] cursor-pointer items-center gap-3 rounded-2xl px-2 py-2.5 text-left transition hover:bg-white/80"
+                                    className="-mx-2 flex w-[calc(100%+16px)] cursor-pointer items-center gap-3 rounded-xl px-2 py-2.5 text-left transition hover:bg-white/60"
                                 >
-                                    <span className="w-6 shrink-0 text-center font-display text-base font-black text-sky-300 tabular-nums">
+                                    <span className="w-6 shrink-0 text-center font-display text-base font-black text-brand/50 tabular-nums">
                                         {i + 1}
                                     </span>
-                                    <HashIcon size={15} className="shrink-0 text-blue-400" />
-                                    <span className="font-display text-sm font-bold text-slate-700">#{trend.name}</span>
+                                    <TagPill label={`#${trend.name}`} tone={pillTones[i % pillTones.length]} />
                                     <span className="ml-auto text-xs text-slate-400 tabular-nums">
                                         {formatCount(trend.postsCount)} 条帖子
                                     </span>
@@ -163,10 +166,10 @@ export default function SearchPage() {
                                 aria-selected={tab === key}
                                 onClick={() => setTab(key)}
                                 className={cn(
-                                    "flex-1 cursor-pointer rounded-xl py-2 font-display text-sm font-bold transition-all duration-200",
+                                    "flex-1 cursor-pointer rounded-[10px] py-2 font-display text-sm font-bold transition-all duration-200",
                                     tab === key
-                                        ? "bg-gradient-to-r from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/25"
-                                        : "text-slate-500 hover:bg-white/70 hover:text-sky-600",
+                                        ? "bg-brand text-white shadow-[0_6px_16px_-6px_rgba(59,167,255,0.55)]"
+                                        : "text-slate-500 hover:bg-white/70 hover:text-brand-deep",
                                 )}
                             >
                                 {label}
@@ -182,18 +185,18 @@ export default function SearchPage() {
                     )}
 
                     {tab === "posts" && (
-                        <div className="rise-in flex flex-col gap-4">
+                        <section className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="帖子结果">
                             {postResults.map((post) => (
-                                <PostCard key={post.id} post={post} />
+                                <PostCard key={post.id} post={post} bare />
                             ))}
-                        </div>
+                        </section>
                     )}
 
                     {tab === "users" && (
-                        <ul className="rise-in flex flex-col gap-3">
+                        <ul className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="用户结果">
                             {userResults.map((user) => (
-                                <li key={user.username} className="glass-card flex items-center gap-3 p-4">
-                                    <Avatar name={user.displayName} src={user.avatarUrl} size={46} />
+                                <li key={user.username} className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/45 sm:px-5">
+                                    <Avatar name={user.displayName} src={user.avatarUrl} size={44} status={user.online} />
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate font-display text-[15px] font-extrabold text-slate-800">
                                             {user.displayName}
@@ -210,26 +213,18 @@ export default function SearchPage() {
                     )}
 
                     {tab === "tags" && (
-                        <ul className="rise-in flex flex-col gap-3">
+                        <ul className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="话题结果">
                             {tagResults.map((trend) => (
                                 <li key={trend.name}>
                                     <button
                                         type="button"
                                         onClick={() => setQuery(trend.name)}
-                                        className="glass-card flex w-full cursor-pointer items-center gap-3 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-glow"
+                                        className="flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/45 sm:px-5"
                                     >
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-blue-100 text-blue-500">
-                                            <HashIcon size={18} />
+                                        <TagPill label={`#${trend.name}`} />
+                                        <span className="ml-auto text-xs text-slate-400 tabular-nums">
+                                            {formatCount(trend.postsCount)} 条帖子
                                         </span>
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block font-display text-sm font-extrabold text-slate-700">
-                                                #{trend.name}
-                                            </span>
-                                            <span className="block text-xs text-slate-400">
-                                                {formatCount(trend.postsCount)} 条帖子
-                                            </span>
-                                        </span>
-                                        <UserPlusIcon size={16} className="text-sky-300" />
                                     </button>
                                 </li>
                             ))}

@@ -36,10 +36,10 @@ export function MobileTopBar() {
             </button>
 
             <Link href="/" className="flex items-center gap-1.5" aria-label="LightAP 首页">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/30">
+                <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
                     <FeatherIcon size={16} />
                 </span>
-                <span className="font-display text-lg font-black tracking-tight text-blue-600">
+                <span className="font-display text-lg font-black tracking-tight text-brand-ink">
                     LightAP
                 </span>
             </Link>
@@ -48,22 +48,27 @@ export function MobileTopBar() {
                 <Link
                     href="/search"
                     aria-label="搜索"
-                    className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/80 hover:text-sky-600"
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/80 hover:text-brand-deep"
                 >
                     <SearchIcon size={21} />
                 </Link>
                 <Link
                     href="/notifications"
                     aria-label={`通知，${unreadCount} 条未读`}
-                    className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/80 hover:text-sky-600"
+                    className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/80 hover:text-brand-deep"
                 >
                     <BellIcon size={21} />
                     {unreadCount > 0 && (
-                        <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-pink-500" aria-hidden="true" />
+                        <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-sakura" aria-hidden="true" />
                     )}
                 </Link>
                 <Link href={`/u/${currentUser.username}`} aria-label="我的资料" className="ml-1">
-                    <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={34} />
+                    <Avatar
+                        name={currentUser.displayName}
+                        src={currentUser.avatarUrl}
+                        size={34}
+                        status={currentUser.online}
+                    />
                 </Link>
             </div>
         </header>
@@ -107,7 +112,7 @@ export function MobileBottomNav() {
                     type="button"
                     onClick={openComposer}
                     aria-label="发布新帖"
-                    className="-mt-7 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-500 text-white shadow-xl shadow-blue-500/40 ring-4 ring-white/70 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl active:scale-90"
+                    className="-mt-7 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-xl shadow-brand/50 ring-4 ring-white/70 transition-all duration-200 hover:-translate-y-1 active:scale-90"
                 >
                     <FeatherIcon size={23} />
                 </button>
@@ -134,13 +139,13 @@ function BottomNavLink({
             aria-current={active ? "page" : undefined}
             className={cn(
                 "flex min-h-12 min-w-16 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1 text-[10px] font-bold transition-colors",
-                active ? "text-blue-600" : "text-slate-400",
+                active ? "text-brand-deep" : "text-slate-400",
             )}
         >
-            <span className={cn("relative rounded-full p-1", active && "bg-sky-100/90")}>
+            <span className={cn("relative rounded-full p-1", active && "bg-brand/15")}>
                 <IconCmp size={21} />
                 {item.badge ? (
-                    <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white/90 bg-pink-500" aria-hidden="true" />
+                    <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white/90 bg-sakura" aria-hidden="true" />
                 ) : null}
             </span>
             {item.label}
@@ -161,12 +166,12 @@ export function MobileDrawer() {
             aria-label="菜单"
         >
             <div
-                className="absolute inset-0 bg-blue-950/30 backdrop-blur-sm"
+                className="absolute inset-0 bg-brand-ink/25 backdrop-blur-sm"
                 style={{ animation: "fade-in .2s ease-out" }}
                 onClick={() => setDrawerOpen(false)}
             />
             <div
-                className="absolute bottom-0 left-0 top-0 w-[300px] max-w-[85vw] overflow-y-auto rounded-r-3xl border-r border-white/60 bg-gradient-to-br from-white via-sky-50/95 to-blue-100/95 p-5 pr-6 pt-[max(env(safe-area-inset-top),20px)] shadow-2xl shadow-blue-500/25 backdrop-blur-2xl"
+                className="absolute bottom-0 left-0 top-0 w-[290px] max-w-[85vw] overflow-y-auto rounded-r-3xl border-r border-white/60 bg-gradient-to-br from-white via-[#f2f9ff] to-[#e0edfd] p-5 pr-6 pt-[max(env(safe-area-inset-top),20px)] shadow-2xl shadow-brand/25 backdrop-blur-2xl"
                 style={{ animation: "slide-in-left .28s cubic-bezier(.32,.72,.35,1)" }}
             >
                 <SidebarContent flat onNavigate={() => setDrawerOpen(false)} />
@@ -174,4 +179,3 @@ export function MobileDrawer() {
         </div>
     );
 }
-

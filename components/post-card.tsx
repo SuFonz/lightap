@@ -7,10 +7,20 @@ import { Avatar } from "@/components/avatar";
 import { BoostIcon, HeartIcon, MoreIcon, ReplyIcon, ShareIcon } from "@/components/icons";
 import { RelativeTime } from "@/components/relative-time";
 import { useStore } from "@/components/store";
+import { TagPill } from "@/components/tag-pill";
 import type { Post } from "@/lib/types";
 import { cn, formatCount } from "@/lib/utils";
 
-export function PostCard({ post, variant = "default" }: { post: Post; variant?: "default" | "context" }) {
+export function PostCard({
+    post,
+    variant = "default",
+    bare = false,
+}: {
+    post: Post;
+    variant?: "default" | "context";
+    /** 嵌入单一玻璃容器的时间线行，不再各自成卡 */
+    bare?: boolean;
+}) {
     const { getUser, toggleLike, toggleBoost, currentUser } = useStore();
     const router = useRouter();
     const author = getUser(post.authorUsername);
@@ -26,14 +36,12 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
         return parts.map((part, i) => {
             if (/^#[^\s#]+/.test(part)) {
                 return (
-                    <Link
+                    <TagPill
                         key={i}
+                        label={part}
                         href={`/search?q=${encodeURIComponent(part.slice(1))}`}
                         onClick={stop}
-                        className="font-semibold text-sky-500 decoration-sky-300 decoration-wavy underline-offset-4 hover:text-blue-600 hover:underline"
-                    >
-                        {part}
-                    </Link>
+                    />
                 );
             }
             if (/^@[^\s@]+/.test(part)) {
@@ -42,7 +50,7 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
                         key={i}
                         href={`/u/${part.slice(1)}`}
                         onClick={stop}
-                        className="font-semibold text-indigo-500 hover:text-indigo-600 hover:underline"
+                        className="font-bold text-brand-deep hover:underline"
                     >
                         {part}
                     </Link>
@@ -62,7 +70,7 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
             label: `回复，${replyCount} 条回复`,
             count: replyCount,
             active: false,
-            color: "hover:text-sky-500 [&:hover_.bubble]:bg-sky-100",
+            color: "hover:text-brand-deep [&:hover_.bubble]:bg-brand/15",
             icon: ReplyIcon,
             onClick: openDetail,
         },
@@ -71,7 +79,7 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
             label: post.boostedByMe ? "取消转发" : "转发",
             count: post.boosts,
             active: post.boostedByMe,
-            color: "hover:text-emerald-500 [&:hover_.bubble]:bg-emerald-100",
+            color: "hover:text-magic-deep [&:hover_.bubble]:bg-magic/15",
             icon: BoostIcon,
             onClick: () => toggleBoost(post.id),
         },
@@ -80,7 +88,7 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
             label: post.likedByMe ? "取消喜欢" : "喜欢",
             count: post.likes,
             active: post.likedByMe,
-            color: "hover:text-pink-500 [&:hover_.bubble]:bg-pink-100",
+            color: "hover:text-sakura-deep [&:hover_.bubble]:bg-sakura/20",
             icon: HeartIcon,
             onClick: () => toggleLike(post.id),
         },
@@ -89,7 +97,7 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
             label: "分享",
             count: 0,
             active: false,
-            color: "hover:text-violet-500 [&:hover_.bubble]:bg-violet-100",
+            color: "hover:text-brand-deep [&:hover_.bubble]:bg-brand/15",
             icon: ShareIcon,
             onClick: openDetail,
         },
@@ -108,10 +116,15 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
             tabIndex={0}
             aria-label={`查看 ${author.displayName} 的帖子详情`}
             className={cn(
-                "glass-card group relative cursor-pointer p-5 transition-all duration-200",
-                isContext
-                    ? "!shadow-none opacity-95 hover:!bg-white/50"
-                    : "hover:-translate-y-0.5 hover:shadow-glow",
+                "group relative cursor-pointer transition-colors duration-150",
+                bare
+                    ? cn("px-4 py-4 hover:bg-white/45 sm:px-5", isContext && "opacity-90")
+                    : cn(
+                          "glass-card p-5 transition-all duration-200",
+                          isContext
+                              ? "!shadow-none opacity-95 hover:!bg-white/50"
+                              : "hover:-translate-y-0.5 hover:shadow-glow",
+                      ),
             )}
         >
             <div className="flex items-start gap-3">
@@ -120,14 +133,14 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
                     aria-label={`${author.displayName} 的主页`}
                     onClick={stop}
                 >
-                    <Avatar name={author.displayName} src={author.avatarUrl} size={46} />
+                    <Avatar name={author.displayName} src={author.avatarUrl} size={46} status={author.online} />
                 </Link>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-x-2 gap-y-0 flex-wrap">
                         <Link
                             href={`/u/${author.username}`}
                             onClick={stop}
-                            className="truncate font-display text-[15px] font-extrabold text-slate-800 hover:text-sky-600"
+                            className="truncate font-display text-[15px] font-extrabold text-slate-800 hover:text-brand-deep"
                         >
                             {author.displayName}
                         </Link>
@@ -141,7 +154,7 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
                             type="button"
                             aria-label="更多操作"
                             onClick={stop}
-                            className="ml-1 hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-400 opacity-0 transition hover:bg-white/80 hover:text-sky-500 focus-visible:opacity-100 group-hover:opacity-100 sm:inline-flex"
+                            className="ml-1 hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-400 opacity-0 transition hover:bg-white/80 hover:text-brand-deep focus-visible:opacity-100 group-hover:opacity-100 sm:inline-flex"
                         >
                             <MoreIcon size={16} />
                         </button>
@@ -151,7 +164,7 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
                         {renderContent(post.content)}
                     </p>
 
-                    <div className="mt-3 flex max-w-sm items-center justify-between gap-2 sm:max-w-md">
+                    <div className="mt-2.5 flex max-w-sm items-center justify-between gap-2 sm:max-w-md">
                         {actions.map(({ key, label, count, active, color, icon: IconCmp, onClick }) => (
                             <button
                                 key={key}
@@ -167,8 +180,8 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
                                     "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold transition-colors duration-150",
                                     active
                                         ? key === "like"
-                                            ? "text-pink-500"
-                                            : "text-emerald-500"
+                                            ? "text-sakura-deep"
+                                            : "text-magic-deep"
                                         : "text-slate-400",
                                     !active && color,
                                     isMine && (key === "boost" || key === "like")
@@ -179,7 +192,7 @@ export function PostCard({ post, variant = "default" }: { post: Post; variant?: 
                                 <span className="bubble rounded-full p-1.5 transition-colors">
                                     <IconCmp
                                         size={17}
-                                        className={cn(active && key === "like" && "fill-pink-500")}
+                                        className={cn(active && key === "like" && "fill-sakura")}
                                     />
                                 </span>
                                 {count > 0 && formatCount(count)}

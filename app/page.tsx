@@ -24,7 +24,7 @@ export default function HomePage() {
     return (
         <div className="flex flex-col gap-4">
             <section className="glass-card flex items-center gap-3 px-5 py-4">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/30">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
                     <SparklesIcon size={19} />
                 </span>
                 <div>
@@ -53,10 +53,10 @@ export default function HomePage() {
                         aria-selected={tab === key}
                         onClick={() => setTab(key)}
                         className={cn(
-                            "flex-1 cursor-pointer rounded-xl py-2 font-display text-sm font-bold transition-all duration-200",
+                            "flex-1 cursor-pointer rounded-[10px] py-2 font-display text-sm font-bold transition-all duration-200",
                             tab === key
-                                ? "bg-gradient-to-r from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/25"
-                                : "text-slate-500 hover:bg-white/70 hover:text-sky-600",
+                                ? "bg-brand text-white shadow-[0_6px_16px_-6px_rgba(59,167,255,0.55)]"
+                                : "text-slate-500 hover:bg-white/70 hover:text-brand-deep",
                         )}
                     >
                         {label}
@@ -64,20 +64,21 @@ export default function HomePage() {
                 ))}
             </div>
 
-            <div className="rise-in flex flex-col gap-4">
+            {/* 时间线：一个玻璃容器，内容优先 */}
+            <section className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="时间线">
                 {visible.map((post) => (
-                    <PostCard key={post.id} post={post} />
+                    <PostCard key={post.id} post={post} bare />
                 ))}
-            </div>
+            </section>
 
             {visible.length === 0 && (
                 <div className="glass-card flex flex-col items-center gap-2 px-6 py-14 text-center">
-                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-sky-400">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand/15 text-brand">
                         <ImageIcon size={24} />
                     </span>
                     <p className="font-display font-extrabold text-slate-700">这里还什么都没有</p>
                     <p className="text-sm text-slate-400">
-                        去 <Link href="/users" className="font-bold text-sky-500 hover:underline">用户浏览</Link> 找些有趣的人关注吧！
+                        去 <Link href="/users" className="font-bold text-brand-deep hover:underline">用户浏览</Link> 找些有趣的人关注吧！
                     </p>
                 </div>
             )}

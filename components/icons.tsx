@@ -264,3 +264,35 @@ export function GlobeIcon(props: IconProps) {
         </Icon>
     );
 }
+
+export function EmojiIcon(props: IconProps) {
+    return (
+        <Icon {...props}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+            <line x1="9" x2="9.01" y1="9" y2="9" />
+            <line x1="15" x2="15.01" y1="9" y2="9" />
+        </Icon>
+    );
+}
+
+export function PollIcon(props: IconProps) {
+    return (
+        <Icon {...props}>
+            <line x1="18" x2="18" y1="20" y2="10" />
+            <line x1="12" x2="12" y1="20" y2="4" />
+            <line x1="6" x2="6" y1="20" y2="14" />
+            <line x1="3" x2="21" y1="20" y2="20" />
+        </Icon>
+    );
+}
+
+export function WarnIcon(props: IconProps) {
+    return (
+        <Icon {...props}>
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+            <line x1="12" x2="12.01" y1="9" y2="13" />
+            <line x1="12" x2="12.01" y1="17" y2="17" />
+        </Icon>
+    );
+}

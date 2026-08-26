@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
-import { CloseIcon, HashIcon, ImageIcon, SendIcon } from "@/components/icons";
+import {
+    CloseIcon,
+    EmojiIcon,
+    HashIcon,
+    ImageIcon,
+    PollIcon,
+    SendIcon,
+    WarnIcon,
+} from "@/components/icons";
 import { useStore } from "@/components/store";
 import { cn } from "@/lib/utils";
 
@@ -64,16 +72,33 @@ export function ComposerModal({
         }
     }
 
+    const tools: {
+        key: string;
+        icon: typeof ImageIcon;
+        label: string;
+        tone: string;
+    }[] = [
+        { key: "image", icon: ImageIcon, label: "添加图片（占位）", tone: "hover:text-brand-deep" },
+        { key: "emoji", icon: EmojiIcon, label: "添加表情（占位）", tone: "hover:text-magic-deep" },
+        { key: "hash", icon: HashIcon, label: "插入话题标签", tone: "hover:text-brand-deep" },
+        ...(showTips
+            ? [
+                  { key: "poll", icon: PollIcon, label: "发起投票（占位）", tone: "hover:text-magic-deep" },
+                  { key: "cw", icon: WarnIcon, label: "添加内容警告（占位）", tone: "hover:text-sakura-deep" },
+              ]
+            : []),
+    ];
+
     return (
         <div
-            className="fixed inset-0 z-50 flex items-start justify-center bg-blue-950/25 backdrop-blur-sm p-3 pt-[72px] sm:items-center sm:p-4"
+            className="fixed inset-0 z-50 flex items-start justify-center bg-brand-ink/20 backdrop-blur-sm p-3 pt-[72px] sm:items-center sm:p-4"
             onClick={onClose}
             role="dialog"
             aria-modal="true"
             aria-label={title}
         >
             <div
-                className="glass-strong w-full max-w-xl rounded-[28px] p-5"
+                className="glass-strong w-full max-w-xl p-5"
                 style={{ animation: "drop-in .32s cubic-bezier(.34,1.4,.64,1)" }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -83,14 +108,19 @@ export function ComposerModal({
                         type="button"
                         aria-label="关闭"
                         onClick={onClose}
-                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-white/80 hover:text-sky-600"
+                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-slate-400 transition hover:bg-white/80 hover:text-brand-deep active:scale-90"
                     >
                         <CloseIcon size={18} />
                     </button>
                 </div>
 
                 <div className="flex gap-3">
-                    <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={44} />
+                    <Avatar
+                        name={currentUser.displayName}
+                        src={currentUser.avatarUrl}
+                        size={44}
+                        status={currentUser.online}
+                    />
                     <textarea
                         ref={textareaRef}
                         value={content}
@@ -99,25 +129,25 @@ export function ComposerModal({
                         maxLength={maxLength + 50}
                         placeholder={placeholder}
                         aria-label={placeholder}
-                        className="w-full resize-none rounded-2xl border border-white/70 bg-white/70 px-4 py-3 text-[15px] leading-relaxed text-slate-700 placeholder:text-slate-400 focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200/60"
+                        className="w-full resize-none rounded-xl border border-transparent bg-white/55 px-4 py-3 text-[15px] leading-relaxed text-slate-700 placeholder:text-slate-400 transition focus:border-brand/40 focus:bg-white/85 focus:outline-none focus:ring-4 focus:ring-brand/15"
                     />
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2 pl-14">
-                    {showTips && (
-                        <>
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-sky-300 px-2.5 py-1 text-xs font-semibold text-sky-500">
-                                <HashIcon size={12} /> 话题标签
-                            </span>
-                            <button
-                                type="button"
-                                aria-label="添加图片（占位）"
-                                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-white/80 hover:text-pink-500"
-                            >
-                                <ImageIcon size={17} />
-                            </button>
-                        </>
-                    )}
+                <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-white/80 pt-3 pl-14">
+                    {tools.map(({ key, icon: IconCmp, label, tone }) => (
+                        <button
+                            key={key}
+                            type="button"
+                            aria-label={label}
+                            title={label.replace("（占位）", "")}
+                            className={cn(
+                                "flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-slate-400 transition-colors hover:bg-white/80",
+                                tone,
+                            )}
+                        >
+                            <IconCmp size={18} />
+                        </button>
+                    ))}
                     <span
                         className={cn(
                             "ml-auto text-xs font-bold tabular-nums",
@@ -131,7 +161,7 @@ export function ComposerModal({
                         type="button"
                         onClick={handleSend}
                         disabled={!canSend}
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-blue-600 px-5 py-2.5 font-display text-sm font-bold text-white shadow-md shadow-blue-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md"
+                        className="btn-solid px-5 py-2 font-display text-sm font-bold"
                     >
                         {sending ? "发送中…" : submitLabel}
                         <SendIcon size={15} />

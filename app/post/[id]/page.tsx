@@ -19,14 +19,14 @@ export default function PostDetailPage() {
     if (chain.length === 0) {
         return (
             <div className="glass-card mx-auto mt-10 max-w-md px-6 py-16 text-center">
-                <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sky-100 text-sky-400">
+                <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 text-brand">
                     <ReplyIcon size={26} />
                 </span>
                 <h1 className="font-display text-lg font-black text-slate-800">帖子不存在</h1>
                 <p className="mt-1 text-sm text-slate-400">这个帖子可能已经被删除了～</p>
                 <Link
                     href="/"
-                    className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-blue-600 px-5 py-2.5 font-display text-sm font-bold text-white shadow-md shadow-blue-500/30 transition hover:-translate-y-0.5 hover:shadow-lg"
+                    className="btn-solid mt-6 inline-flex px-5 py-2.5 font-display text-sm font-bold"
                 >
                     <HomeIcon size={15} /> 回到首页
                 </Link>
@@ -46,7 +46,7 @@ export default function PostDetailPage() {
                     type="button"
                     onClick={() => router.back()}
                     aria-label="返回"
-                    className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-slate-500 transition hover:bg-white/80 hover:text-sky-600 active:scale-90"
+                    className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-[10px] text-slate-500 transition hover:bg-white/80 hover:text-brand-deep active:scale-90"
                 >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="m12 19-7-7 7-7" />
@@ -57,23 +57,22 @@ export default function PostDetailPage() {
                     {isThread ? "回复详情" : "帖子详情"}
                 </h1>
                 {isThread && (
-                    <span className="ml-auto rounded-full bg-sky-100/80 px-2.5 py-1 text-[11px] font-bold text-sky-500">
+                    <span className="ml-auto rounded-full bg-magic/15 px-2.5 py-1 text-[11px] font-bold text-magic-deep">
                         上下文线程 · {chain.length} 层
                     </span>
                 )}
             </section>
 
-            <div className="flex flex-col gap-3">
-                {chain.map((item, idx) => {
-                    const isCurrent = idx === chain.length - 1;
-                    return (
-                        <div key={item.id} className="flex flex-col gap-3">
-                            {idx > 0 && <ThreadConnector />}
-                            <PostCard post={item} variant={isCurrent ? "default" : "context"} />
-                        </div>
-                    );
-                })}
-            </div>
+            <section className="glass-card divide-y divide-sky-200/50 overflow-hidden" aria-label="帖子线程">
+                {chain.map((item, idx) => (
+                    <PostCard
+                        key={item.id}
+                        post={item}
+                        bare
+                        variant={idx === chain.length - 1 ? "default" : "context"}
+                    />
+                ))}
+            </section>
 
             <ComposerField
                 label="写回复…"
@@ -95,20 +94,12 @@ export default function PostDetailPage() {
                     <p className="mt-1 text-sm text-slate-400">来抢沙发，说点什么吧～</p>
                 </div>
             ) : (
-                <div className="flex flex-col gap-3">
+                <section className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="回复列表">
                     {replies.map((reply) => (
-                        <PostCard key={reply.id} post={reply} />
+                        <PostCard key={reply.id} post={reply} bare />
                     ))}
-                </div>
+                </section>
             )}
-        </div>
-    );
-}
-
-function ThreadConnector() {
-    return (
-        <div className="flex h-4 items-center pl-[42px]" aria-hidden="true">
-            <span className="h-full w-px bg-gradient-to-b from-sky-200 to-sky-300" />
         </div>
     );
 }

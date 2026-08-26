@@ -16,12 +16,12 @@ import {
 } from "@/components/icons";
 import { useShell } from "@/components/shell-context";
 import { useStore } from "@/components/store";
-import { cn, formatCount } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface NavItem {
     href: string;
     label: string;
-    icon: ComponentType<{ size?: number }>;
+    icon: ComponentType<{ size?: number; className?: string }>;
     badge?: number;
 }
 
@@ -40,7 +40,7 @@ export function SidebarContent({
         { href: "/", label: "首页", icon: HomeIcon },
         { href: "/search", label: "搜索", icon: SearchIcon },
         { href: "/notifications", label: "通知", icon: BellIcon, badge: unreadCount },
-        { href: "/users", label: "用户浏览", icon: UsersIcon },
+        { href: "/users", label: "探索", icon: UsersIcon },
         { href: `/u/${currentUser.username}`, label: "我的资料", icon: UserIcon },
     ];
 
@@ -48,107 +48,118 @@ export function SidebarContent({
         href === "/" ? pathname === "/" : pathname.startsWith(href);
 
     return (
-        <div className="flex flex-col gap-4">
-            <section className={cn(!flat && "glass-card p-4")} aria-label="个人资料">
-                <div className="flex items-center gap-3">
-                    <span className="relative">
+        <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-2.5 px-1 pt-1">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
+                    <FeatherIcon size={17} />
+                </span>
+                <span className="font-display text-lg font-black tracking-tight text-brand-ink">
+                    LightAP
+                </span>
+                <span className="ml-auto rounded-full bg-magic/15 px-2 py-0.5 text-[10px] font-extrabold text-magic-deep">
+                    Fediverse
+                </span>
+            </div>
+
+            {/* 用户区：小巧、半透明、不抢内容 */}
+            <section aria-label="个人资料">
+                <div className="flex items-center gap-2.5">
+                    <Link
+                        href={`/u/${currentUser.username}`}
+                        onClick={onNavigate}
+                        aria-label="我的资料"
+                        className="shrink-0 transition-transform duration-150 hover:scale-105 active:scale-95"
+                    >
                         <Avatar
                             name={currentUser.displayName}
                             src={currentUser.avatarUrl}
-                            size={52}
-                            ring
+                            size={46}
+                            status={currentUser.online}
                         />
-                        <span
-                            className="absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400"
-                            aria-hidden="true"
-                        />
-                    </span>
-                    <div className="min-w-0">
+                    </Link>
+                    <Link
+                        href={`/u/${currentUser.username}`}
+                        onClick={onNavigate}
+                        className="min-w-0 flex-1"
+                    >
                         <p className="truncate font-display text-[15px] font-extrabold text-slate-800">
                             {currentUser.displayName}
                         </p>
                         <p className="truncate text-xs text-slate-400">
                             @{currentUser.username}@{currentUser.instance}
                         </p>
-                    </div>
+                    </Link>
+                    <button
+                        type="button"
+                        aria-label="编辑资料"
+                        title="编辑资料"
+                        onClick={() => {
+                            openEditProfile();
+                            onNavigate?.();
+                        }}
+                        className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-[10px] text-slate-400 transition-colors hover:bg-white/70 hover:text-brand-deep active:scale-90"
+                    >
+                        <EditIcon size={14} />
+                    </button>
                 </div>
-
-                <dl className="mt-4 grid grid-cols-3 gap-1 text-center">
-                    {[
-                        ["帖子", currentUser.postsCount],
-                        ["关注", currentUser.followingCount],
-                        ["粉丝", currentUser.followers],
-                    ].map(([label, count]) => (
-                        <div key={label as string} className="rounded-xl bg-sky-50/70 py-1.5">
-                            <dt className="text-[11px] font-semibold text-slate-400">{label}</dt>
-                            <dd className="font-display text-sm font-extrabold text-slate-700 tabular-nums">
-                                {formatCount(count as number)}
-                            </dd>
-                        </div>
-                    ))}
-                </dl>
-
-                <button
-                    type="button"
-                    onClick={() => {
-                        openEditProfile();
-                        onNavigate?.();
-                    }}
-                    className="mt-3 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-sky-200 bg-white/60 py-2 text-xs font-bold text-sky-600 transition hover:border-sky-300 hover:bg-sky-50 active:scale-[.98]"
-                >
-                    <EditIcon size={13} /> 编辑资料
-                </button>
             </section>
 
-            <nav className={cn(!flat && "glass-card p-2.5")} aria-label="主菜单">
+            <nav aria-label="主菜单">
                 <ul className="flex flex-col gap-1">
-                    {navItems.map(({ href, label, icon: IconCmp, badge }) => (
-                        <li key={href}>
-                            <Link
-                                href={href}
-                                onClick={onNavigate}
-                                aria-current={isActive(href) ? "page" : undefined}
-                                className={cn(
-                                    "group relative flex items-center gap-3 rounded-2xl px-4 py-2.5 font-display text-[15px] font-bold transition-all duration-200",
-                                    isActive(href)
-                                        ? "bg-gradient-to-r from-sky-100/90 to-blue-50/70 text-blue-600 shadow-sm"
-                                        : "text-slate-500 hover:bg-white/80 hover:text-sky-600",
-                                )}
-                            >
-                                <span
+                    {navItems.map(({ href, label, icon: IconCmp, badge }) => {
+                        const active = isActive(href);
+                        return (
+                            <li key={href}>
+                                <Link
+                                    href={href}
+                                    onClick={onNavigate}
+                                    aria-current={active ? "page" : undefined}
                                     className={cn(
-                                        "flex h-8 w-8 items-center justify-center rounded-xl transition-colors",
-                                        isActive(href)
-                                            ? "bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/30"
-                                            : "bg-white/70 text-slate-400 group-hover:text-sky-500",
+                                        "group relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 font-display text-[15px] font-bold transition-all duration-200",
+                                        active
+                                            ? "bg-white/75 text-brand-ink shadow-[0_6px_18px_-8px_rgba(59,167,255,0.4)] ring-1 ring-white/80"
+                                            : "text-slate-500 hover:bg-white/50 hover:text-brand-deep",
                                     )}
                                 >
-                                    <IconCmp size={18} />
-                                </span>
-                                {label}
-                                {badge ? (
-                                    <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-gradient-to-r from-pink-400 to-fuchsia-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
-                                        {badge > 99 ? "99+" : badge}
-                                    </span>
-                                ) : null}
-                            </Link>
-                        </li>
-                    ))}
+                                    {active && (
+                                        <span
+                                            className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-gradient-to-b from-brand to-magic"
+                                            aria-hidden="true"
+                                        />
+                                    )}
+                                    <IconCmp
+                                        size={19}
+                                        className={cn(
+                                            "transition-colors",
+                                            active ? "text-brand" : "text-slate-400 group-hover:text-brand-deep",
+                                        )}
+                                    />
+                                    {label}
+                                    {badge ? (
+                                        <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-sakura px-1.5 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
+                                            {badge > 99 ? "99+" : badge}
+                                        </span>
+                                    ) : null}
+                                </Link>
+                            </li>
+                        );
+                    })}
                 </ul>
             </nav>
 
+            {/* 第三层：实体发布按钮 */}
             <button
                 type="button"
                 onClick={() => {
                     openComposer();
                     onNavigate?.();
                 }}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 py-3.5 font-display text-[15px] font-extrabold tracking-wide text-white shadow-lg shadow-blue-500/35 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/45 active:scale-[.98]"
+                className="btn-solid w-full py-2.5 font-display text-[15px] font-extrabold tracking-wide"
             >
-                <FeatherIcon size={18} /> 发布新帖
+                <FeatherIcon size={17} /> 发布新帖
             </button>
 
-            <p className="flex items-center justify-center gap-1.5 pb-2 text-center text-[11px] font-semibold text-slate-300">
+            <p className="flex items-center justify-center gap-1.5 pb-2 text-center text-[11px] font-semibold text-slate-400/90">
                 <GlobeIcon size={12} /> LightAP · 联邦宇宙小站
             </p>
         </div>
@@ -158,7 +169,7 @@ export function SidebarContent({
 export function Sidebar() {
     return (
         <aside
-            className="sticky top-6 hidden max-h-[calc(100dvh-3rem)] w-[264px] shrink-0 self-start overflow-y-auto scrollbar-none lg:block"
+            className="sticky top-6 hidden max-h-[calc(100dvh-3rem)] w-[240px] shrink-0 self-start overflow-y-auto scrollbar-none lg:block"
             aria-label="侧边栏"
         >
             <SidebarContent />

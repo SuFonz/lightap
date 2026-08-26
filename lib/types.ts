@@ -7,6 +7,10 @@ export interface User {
     followers: number;
     followingCount: number;
     postsCount: number;
+    /** 二次元风小徽章，如「插画师」 */
+    badges?: string[];
+    /** 在线状态 */
+    online?: boolean;
 }
 
 export interface Post {

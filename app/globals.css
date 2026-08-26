@@ -5,8 +5,25 @@
     --font-display: "Nunito", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", ui-rounded, system-ui, sans-serif;
     --font-body: "DM Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
 
-    --color-sky-candy: #7dd3fc;
-    --shadow-glow: 0 12px 40px -8px rgba(59, 130, 246, 0.28), 0 4px 16px rgba(56, 116, 236, 0.1);
+    /* 主色：天空蓝（70%） */
+    --color-brand: #3ba7ff;
+    --color-brand-deep: #1f8fee;
+    --color-brand-ink: #0f6dcf;
+
+    /* 背景：浅天蓝 → 雾蓝 → 淡紫蓝 */
+    --color-sky-bg: #ddf3ff;
+    --color-sky-mist: #d3e7f8;
+    --color-lilac: #e2e3fa;
+
+    /* 点缀：魔法紫 & 少女粉（10%） */
+    --color-magic: #9b8cff;
+    --color-magic-deep: #7a6af0;
+    --color-sakura: #ff9bd8;
+    --color-sakura-deep: #e879b8;
+
+    /* 蓝色柔光阴影：像漂浮玻璃 */
+    --shadow-glow: 0 10px 34px -8px rgba(59, 167, 255, 0.26), 0 3px 12px -3px rgba(59, 167, 255, 0.12);
+    --shadow-float: 0 16px 44px -14px rgba(59, 167, 255, 0.35);
 }
 
 :root {
@@ -20,12 +37,13 @@ html {
 body {
     margin: 0;
     font-family: var(--font-body);
-    color: #1e293b;
-    background-color: #e3efff;
+    color: #3d5a78;
+    background-color: #ddf3ff;
     background-image:
-        radial-gradient(ellipse 80% 60% at 20% 0%, rgba(191, 219, 254, 0.55), transparent),
-        radial-gradient(ellipse 70% 55% at 85% 20%, rgba(199, 210, 254, 0.5), transparent),
-        radial-gradient(ellipse 65% 50% at 50% 100%, rgba(251, 207, 232, 0.35), transparent);
+        radial-gradient(ellipse 60% 42% at 14% -6%, rgba(255, 255, 255, 0.9), transparent 58%),
+        radial-gradient(ellipse 48% 40% at 88% 2%, rgba(255, 255, 255, 0.6), transparent 56%),
+        radial-gradient(ellipse 70% 46% at 50% 110%, rgba(155, 140, 255, 0.2), transparent 62%),
+        linear-gradient(180deg, #ddf3ff 0%, #dcedfb 36%, #d9e6fa 64%, #e5e4fb 100%);
     background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
 }
@@ -39,14 +57,14 @@ h1, h2, h3, h4 {
 }
 
 ::selection {
-    background: rgba(125, 211, 252, 0.5);
+    background: rgba(59, 167, 255, 0.32);
 }
 
 ::-webkit-scrollbar {
     width: 10px;
 }
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(147, 197, 253, 0.9), rgba(96, 165, 250, 0.9));
+    background: linear-gradient(180deg, rgba(59, 167, 255, 0.75), rgba(155, 140, 255, 0.7));
     border-radius: 999px;
     border: 3px solid transparent;
     background-clip: padding-box;
@@ -55,44 +73,103 @@ h1, h2, h3, h4 {
     background: transparent;
 }
 
+/* ── 第二层：半透明白色玻璃面板 ─────────────────────────── */
 @utility glass-card {
     position: relative;
-    border-radius: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.68);
     background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.48) 55%, rgba(224, 242, 254, 0.42) 100%);
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
+        linear-gradient(155deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.44) 45%, rgba(224, 243, 255, 0.38) 100%);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
     box-shadow:
-        0 8px 32px -6px rgba(59, 130, 246, 0.14),
-        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+        0 10px 34px -12px rgba(59, 167, 255, 0.22),
+        0 2px 10px -4px rgba(59, 167, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
+/* 弹窗用的更实玻璃：白色负责可读性 */
 @utility glass-strong {
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.85);
     background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(240, 249, 255, 0.86) 100%);
-    backdrop-filter: blur(30px) saturate(180%);
-    -webkit-backdrop-filter: blur(30px) saturate(180%);
+        linear-gradient(160deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 249, 255, 0.92) 60%, rgba(226, 240, 255, 0.9) 100%);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
     box-shadow:
-        0 24px 70px -12px rgba(30, 64, 175, 0.28),
+        0 24px 64px -16px rgba(43, 108, 176, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 1);
 }
 
+/* 导航条玻璃 */
 @utility glass-bar {
     background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(240, 249, 255, 0.62) 100%);
-    backdrop-filter: blur(26px) saturate(180%);
-    -webkit-backdrop-filter: blur(26px) saturate(180%);
+        linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(238, 248, 255, 0.55) 100%);
+    backdrop-filter: blur(24px) saturate(170%);
+    -webkit-backdrop-filter: blur(24px) saturate(170%);
     box-shadow:
-        0 6px 28px -8px rgba(59, 130, 246, 0.22),
+        0 6px 24px -10px rgba(59, 167, 255, 0.25),
         inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
+/* ── 第三层：实体功能按钮（不透明亮蓝） ─────────────────── */
+@utility btn-solid {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 0.65rem;
+    color: #fff;
+    background: linear-gradient(180deg, #59b5ff 0%, #3ba7ff 52%, #2e97f4 100%);
+    box-shadow:
+        0 8px 20px -6px rgba(59, 167, 255, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+
+    &:hover:not(:disabled) {
+        transform: translateY(-1px);
+        filter: saturate(1.08) brightness(1.03);
+        box-shadow:
+            0 12px 26px -6px rgba(59, 167, 255, 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(0) scale(0.97);
+        box-shadow:
+            0 4px 12px -4px rgba(59, 167, 255, 0.55),
+            inset 0 2px 4px rgba(14, 90, 165, 0.18);
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+        box-shadow: 0 4px 12px -6px rgba(59, 167, 255, 0.4);
+    }
+}
+
+/* ── 第一层：环境光斑与星光 ─────────────────────────────── */
 .blob {
     border-radius: 44% 56% 58% 42% / 52% 44% 56% 48%;
     filter: blur(70px);
     animation: blob-float 16s ease-in-out infinite;
+}
+
+.sparkle {
+    position: absolute;
+    display: block;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.35) 45%, transparent 72%);
+    box-shadow: 0 0 18px 4px rgba(255, 255, 255, 0.35);
+    animation: twinkle 5s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.15; transform: scale(0.75); }
+    50% { opacity: 0.95; transform: scale(1.15); }
 }
 
 @keyframes blob-float {
@@ -171,7 +248,7 @@ h1, h2, h3, h4 {
 }
 
 :focus-visible {
-    outline: 2px solid #2563eb;
+    outline: 2px solid #1f8fee;
     outline-offset: 2px;
     border-radius: 4px;
 }

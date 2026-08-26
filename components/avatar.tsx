@@ -25,35 +25,51 @@ interface AvatarProps {
     src?: string;
     size?: number;
     ring?: boolean;
+    /** 在线状态小绿点 */
+    status?: boolean;
     className?: string;
 }
 
-export function Avatar({ name, src, size = 44, ring = false, className }: AvatarProps) {
+export function Avatar({ name, src, size = 44, ring = false, status = false, className }: AvatarProps) {
     const [failed, setFailed] = useState(false);
     const showImage = src && !failed;
     const initial = name.slice(0, 1).toUpperCase();
+    const dot = Math.max(9, Math.round(size * 0.27));
 
     return (
         <span
             className={cn(
-                "relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-gradient-to-br font-display font-extrabold text-white shadow-sm",
-                gradientFor(name),
-                ring && "ring-2 ring-white/90 outline outline-2 outline-sky-200/80",
+                "relative inline-flex shrink-0 select-none",
+                ring && "rounded-full ring-2 ring-white/90 outline outline-2 outline-brand/25",
                 className,
             )}
-            style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }}
+            style={{ width: size, height: size }}
             aria-hidden="true"
         >
-            {showImage ? (
-                <img
-                    src={src}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    onError={() => setFailed(true)}
-                    draggable={false}
+            <span
+                className={cn(
+                    "flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-gradient-to-br font-display font-extrabold text-white shadow-sm",
+                    gradientFor(name),
+                )}
+                style={{ fontSize: Math.round(size * 0.42) }}
+            >
+                {showImage ? (
+                    <img
+                        src={src}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        onError={() => setFailed(true)}
+                        draggable={false}
+                    />
+                ) : (
+                    initial
+                )}
+            </span>
+            {status && (
+                <span
+                    className="absolute bottom-0 right-0 rounded-full bg-emerald-400 shadow-sm ring-2 ring-white"
+                    style={{ width: dot, height: dot }}
                 />
-            ) : (
-                initial
             )}
         </span>
     );

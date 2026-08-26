@@ -27,6 +27,8 @@ export const seedUsers: User[] = [
         followers: 1024,
         followingCount: 87,
         postsCount: 3,
+        badges: ["前端", "画画"],
+        online: true,
     },
     {
         username: "sakura",
@@ -37,6 +39,8 @@ export const seedUsers: User[] = [
         followers: 2333,
         followingCount: 120,
         postsCount: 128,
+        badges: ["手账", "摄影"],
+        online: true,
     },
     {
         username: "kuro",
@@ -47,6 +51,8 @@ export const seedUsers: User[] = [
         followers: 866,
         followingCount: 42,
         postsCount: 512,
+        badges: ["夜猫子", "Rust"],
+        online: false,
     },
     {
         username: "yuki",
@@ -57,6 +63,8 @@ export const seedUsers: User[] = [
         followers: 1500,
         followingCount: 300,
         postsCount: 89,
+        badges: ["插画师", "接稿中"],
+        online: true,
     },
     {
         username: "taro",
@@ -67,6 +75,8 @@ export const seedUsers: User[] = [
         followers: 640,
         followingCount: 95,
         postsCount: 233,
+        badges: ["独立游戏", "像素画"],
+        online: false,
     },
     {
         username: "luna",
@@ -77,6 +87,8 @@ export const seedUsers: User[] = [
         followers: 980,
         followingCount: 61,
         postsCount: 77,
+        badges: ["天文", "电子手账"],
+        online: false,
     },
 ];
 

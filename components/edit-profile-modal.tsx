@@ -52,14 +52,14 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-blue-950/25 backdrop-blur-sm sm:items-center sm:p-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-brand-ink/20 backdrop-blur-sm sm:items-center sm:p-4"
             onClick={onClose}
             role="dialog"
             aria-modal="true"
             aria-label="编辑资料"
         >
             <form
-                className="glass-strong w-full max-w-md rounded-t-[28px] p-6 sm:rounded-[28px]"
+                className="glass-strong w-full max-w-md rounded-t-3xl p-6 sm:rounded-3xl"
                 style={{ animation: "pop-in .28s cubic-bezier(.34,1.4,.64,1)" }}
                 onClick={(e) => e.stopPropagation()}
                 onSubmit={handleSubmit}
@@ -70,7 +70,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                         type="button"
                         aria-label="关闭"
                         onClick={onClose}
-                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-white/80 hover:text-sky-600"
+                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-slate-400 transition hover:bg-white/80 hover:text-brand-deep active:scale-90"
                     >
                         <CloseIcon size={18} />
                     </button>
@@ -85,7 +85,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                             value={avatarUrl}
                             onChange={(e) => setAvatarUrl(e.target.value)}
                             placeholder="https://…"
-                            className="mt-1 w-full rounded-xl border border-white/70 bg-white/70 px-3 py-2 text-sm font-normal text-slate-700 focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200/60"
+                            className="mt-1 w-full rounded-[10px] border border-white/70 bg-white/70 px-3 py-2 text-sm font-normal text-slate-700 focus:border-brand/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand/15"
                         />
                     </label>
                 </div>
@@ -98,7 +98,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                         maxLength={20}
-                        className="mt-1 w-full rounded-xl border border-white/70 bg-white/70 px-3 py-2.5 text-sm font-normal text-slate-700 focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200/60"
+                        className="mt-1 w-full rounded-[10px] border border-white/70 bg-white/70 px-3 py-2.5 text-sm font-normal text-slate-700 focus:border-brand/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand/15"
                     />
                 </label>
 
@@ -110,14 +110,14 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                         rows={3}
                         maxLength={160}
                         placeholder="介绍一下自己吧～"
-                        className="mt-1 w-full resize-none rounded-xl border border-white/70 bg-white/70 px-3 py-2.5 text-sm font-normal leading-relaxed text-slate-700 focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200/60"
+                        className="mt-1 w-full resize-none rounded-[10px] border border-white/70 bg-white/70 px-3 py-2.5 text-sm font-normal leading-relaxed text-slate-700 focus:border-brand/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand/15"
                     />
                 </label>
 
                 <button
                     type="submit"
                     disabled={saving || !displayName.trim()}
-                    className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-blue-600 px-5 py-3 font-display text-sm font-bold text-white shadow-md shadow-blue-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                    className="btn-solid w-full px-5 py-3 font-display text-sm font-bold"
                 >
                     {saved ? (
                         <>

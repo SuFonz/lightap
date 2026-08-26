@@ -24,22 +24,22 @@ const typeMeta: Record<
     follow: {
         verb: "关注了你",
         icon: UserPlusIcon,
-        classes: "from-sky-100 to-blue-100 text-blue-500",
+        classes: "bg-brand/15 text-brand-deep",
     },
     like: {
         verb: "喜欢了你的帖子",
         icon: HeartIcon,
-        classes: "from-pink-100 to-fuchsia-100 text-pink-500",
+        classes: "bg-sakura/20 text-sakura-deep",
     },
     boost: {
         verb: "转发了你的帖子",
         icon: BoostIcon,
-        classes: "from-emerald-100 to-teal-100 text-emerald-500",
+        classes: "bg-magic/15 text-magic-deep",
     },
     mention: {
         verb: "在帖子中提到了你",
         icon: AtIcon,
-        classes: "from-violet-100 to-indigo-100 text-indigo-500",
+        classes: "bg-brand/15 text-brand-ink",
     },
 };
 
@@ -60,10 +60,10 @@ export default function NotificationsPage() {
     return (
         <div className="flex flex-col gap-4">
             <section className="glass-card flex items-center gap-3 px-5 py-4">
-                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/30">
+                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
                     <BellIcon size={18} />
                     {unreadCount > 0 && (
-                        <span className="absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-gradient-to-r from-pink-400 to-fuchsia-500 px-1 py-0.5 text-[10px] font-black text-white ring-2 ring-white">
+                        <span className="absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-sakura px-1 py-0.5 text-[10px] font-black text-white ring-2 ring-white">
                             {unreadCount}
                         </span>
                     )}
@@ -78,7 +78,7 @@ export default function NotificationsPage() {
                     type="button"
                     onClick={markAllNotificationsRead}
                     disabled={unreadCount === 0}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-sky-200 bg-white/60 px-3.5 py-2 text-xs font-bold text-sky-600 transition hover:border-sky-300 hover:bg-sky-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/60"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-white/80 bg-white/60 px-3.5 py-2 text-xs font-bold text-brand-deep transition hover:bg-white/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/60"
                 >
                     <CheckIcon size={13} /> 全部已读
                 </button>
@@ -99,10 +99,10 @@ export default function NotificationsPage() {
                         aria-selected={tab === key}
                         onClick={() => setTab(key)}
                         className={cn(
-                            "flex-1 cursor-pointer rounded-xl py-2 font-display text-sm font-bold transition-all duration-200",
+                            "flex-1 cursor-pointer rounded-[10px] py-2 font-display text-sm font-bold transition-all duration-200",
                             tab === key
-                                ? "bg-gradient-to-r from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/25"
-                                : "text-slate-500 hover:bg-white/70 hover:text-sky-600",
+                                ? "bg-brand text-white shadow-[0_6px_16px_-6px_rgba(59,167,255,0.55)]"
+                                : "text-slate-500 hover:bg-white/70 hover:text-brand-deep",
                         )}
                     >
                         {label}
@@ -116,7 +116,7 @@ export default function NotificationsPage() {
                     <p className="mt-1 text-sm text-slate-400">发个帖子让大家来找你玩吧！</p>
                 </div>
             ) : (
-                <ul className="rise-in flex flex-col gap-3">
+                <ul className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="通知列表">
                     {visible.map((n) => {
                         const actor = getUser(n.actorUsername);
                         if (!actor) return null;
@@ -131,16 +131,21 @@ export default function NotificationsPage() {
                                 <Link
                                     href={href}
                                     className={cn(
-                                        "glass-card relative flex items-center gap-3 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow",
-                                        !n.read &&
-                                            "before:absolute before:inset-y-4 before:left-0 before:w-1 before:rounded-full before:bg-gradient-to-b before:from-sky-400 before:to-blue-600",
+                                        "relative flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/45 sm:px-5",
+                                        !n.read && "bg-white/40",
                                     )}
                                 >
+                                    {!n.read && (
+                                        <span
+                                            className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-gradient-to-b from-brand to-magic"
+                                            aria-hidden="true"
+                                        />
+                                    )}
                                     <span className="relative shrink-0">
-                                        <Avatar name={actor.displayName} src={actor.avatarUrl} size={44} />
+                                        <Avatar name={actor.displayName} src={actor.avatarUrl} size={44} status={actor.online} />
                                         <span
                                             className={cn(
-                                                "absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br ring-2 ring-white",
+                                                "absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full ring-2 ring-white",
                                                 meta.classes,
                                             )}
                                             aria-hidden="true"
@@ -167,7 +172,7 @@ export default function NotificationsPage() {
                                     />
                                     {!n.read && (
                                         <span
-                                            className="h-2 w-2 shrink-0 rounded-full bg-gradient-to-br from-sky-400 to-blue-600"
+                                            className="h-2 w-2 shrink-0 rounded-full bg-gradient-to-br from-brand to-magic"
                                             aria-label="未读"
                                         />
                                     )}
