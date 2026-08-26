@@ -2,33 +2,19 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { Avatar } from "@/components/avatar";
+import { ComposerField } from "@/components/composer-field";
 import { PostCard } from "@/components/post-card";
-import { HomeIcon, ReplyIcon, SendIcon } from "@/components/icons";
+import { HomeIcon, ReplyIcon } from "@/components/icons";
 import { useStore } from "@/components/store";
-import { cn } from "@/lib/utils";
 
 const MAX_REPLY = 500;
 
 export default function PostDetailPage() {
     const params = useParams<{ id: string }>();
     const id = typeof params?.id === "string" ? params.id : "";
-    const { getPostPath, addReply, currentUser } = useStore();
+    const { getPostPath, addReply } = useStore();
     const router = useRouter();
     const chain = id ? getPostPath(id) ?? [] : [];
-
-    const [content, setContent] = useState("");
-    const [sending, setSending] = useState(false);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const [focusReply, setFocusReply] = useState(false);
-
-    useEffect(() => {
-        if (focusReply) {
-            textareaRef.current?.focus();
-            setFocusReply(false);
-        }
-    }, [focusReply]);
 
     if (chain.length === 0) {
         return (
@@ -51,21 +37,7 @@ export default function PostDetailPage() {
     const post = chain[chain.length - 1];
     const isThread = chain.length > 1;
     const postId = post.id;
-    const remaining = MAX_REPLY - content.length;
-    const canSend = content.trim().length > 0 && remaining >= 0 && !sending;
     const replies = [...post.replies].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-
-    async function handleSend() {
-        if (!canSend) return;
-        setSending(true);
-        try {
-            await addReply(postId, content.trim());
-            setContent("");
-            setFocusReply(true);
-        } finally {
-            setSending(false);
-        }
-    }
 
     return (
         <div className="flex flex-col gap-3">
@@ -103,41 +75,15 @@ export default function PostDetailPage() {
                 })}
             </div>
 
-            <section className="glass-card p-4" aria-label="回复">
-                <div className="flex gap-3">
-                    <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={40} />
-                    <textarea
-                        ref={textareaRef}
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        rows={3}
-                        maxLength={MAX_REPLY}
-                        placeholder={`回复一下 @${post.authorUsername} 吧～`}
-                        aria-label="回复内容"
-                        className="w-full resize-none rounded-2xl border border-white/70 bg-white/70 px-4 py-3 text-[15px] leading-relaxed text-slate-700 placeholder:text-slate-400 focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200/60"
-                    />
-                </div>
-                <div className="mt-3 flex items-center gap-3">
-                    <span
-                        className={cn(
-                            "ml-auto text-xs font-bold tabular-nums",
-                            remaining < 0 ? "text-red-500" : remaining <= 50 ? "text-amber-500" : "text-slate-400",
-                        )}
-                        aria-live="polite"
-                    >
-                        {remaining}
-                    </span>
-                    <button
-                        type="button"
-                        onClick={handleSend}
-                        disabled={!canSend}
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-blue-600 px-5 py-2.5 font-display text-sm font-bold text-white shadow-md shadow-blue-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md"
-                    >
-                        {sending ? "发送中…" : "发表回复"}
-                        <SendIcon size={15} />
-                    </button>
-                </div>
-            </section>
+            <ComposerField
+                label="写回复…"
+                title="发表回复"
+                placeholder={`回复一下 @${post.authorUsername} 吧～`}
+                submitLabel="发表回复"
+                showTips={false}
+                maxLength={MAX_REPLY}
+                onSubmit={(content) => addReply(postId, content)}
+            />
 
             <h2 className="glass-card px-5 py-3 font-display text-sm font-extrabold text-slate-700">
                 回复 · {post.replies.length}

@@ -25,7 +25,13 @@ interface NavItem {
     badge?: number;
 }
 
-export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarContent({
+    onNavigate,
+    flat = false,
+}: {
+    onNavigate?: () => void;
+    flat?: boolean;
+}) {
     const pathname = usePathname();
     const { currentUser, unreadCount } = useStore();
     const { openComposer, openEditProfile } = useShell();
@@ -43,7 +49,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
     return (
         <div className="flex flex-col gap-4">
-            <section className="glass-card p-4" aria-label="个人资料">
+            <section className={cn(!flat && "glass-card p-4")} aria-label="个人资料">
                 <div className="flex items-center gap-3">
                     <span className="relative">
                         <Avatar
@@ -94,7 +100,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 </button>
             </section>
 
-            <nav className="glass-card p-2.5" aria-label="主菜单">
+            <nav className={cn(!flat && "glass-card p-2.5")} aria-label="主菜单">
                 <ul className="flex flex-col gap-1">
                     {navItems.map(({ href, label, icon: IconCmp, badge }) => (
                         <li key={href}>

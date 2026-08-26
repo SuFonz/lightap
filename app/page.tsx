@@ -2,42 +2,24 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Avatar } from "@/components/avatar";
-import { ComposerModal } from "@/components/composer-modal";
-import { FeatherIcon, ImageIcon, SparklesIcon } from "@/components/icons";
-import { InlineComposer } from "@/components/inline-composer";
+import { ComposerField } from "@/components/composer-field";
+import { ImageIcon, SparklesIcon } from "@/components/icons";
 import { PostCard } from "@/components/post-card";
-import { useShell } from "@/components/shell-context";
 import { useStore } from "@/components/store";
 import { cn } from "@/lib/utils";
 
 export default function HomePage() {
-    const { posts, currentUser } = useStore();
-    const { openComposer } = useShell();
+    const { posts, currentUser, addPost } = useStore();
     const [tab, setTab] = useState<"all" | "following">("all");
-    const [composerOpen, setComposerOpen] = useState(false);
-    const [inlineOpen, setInlineOpen] = useState(false);
-    const [isDesktop, setIsDesktop] = useState(false);
     const [greeting, setGreeting] = useState("欢迎回来");
 
     useEffect(() => {
         const hour = new Date().getHours();
         setGreeting(hour < 5 ? "夜深了" : hour < 12 ? "早上好" : hour < 18 ? "下午好" : "晚上好");
-
-        const mq = window.matchMedia("(min-width: 1024px)");
-        const updateDesktop = () => setIsDesktop(mq.matches);
-        updateDesktop();
-        mq.addEventListener("change", updateDesktop);
-        return () => mq.removeEventListener("change", updateDesktop);
     }, []);
 
     const followingOnly = posts.filter((p) => p.authorUsername !== "kuro" && p.authorUsername !== "taro");
     const visible = tab === "all" ? posts : followingOnly;
-
-    function handleComposeClick() {
-        if (isDesktop) setInlineOpen((v) => !v);
-        else setComposerOpen(true);
-    }
 
     return (
         <div className="flex flex-col gap-4">
@@ -55,24 +37,7 @@ export default function HomePage() {
                 </div>
             </section>
 
-            {isDesktop && inlineOpen ? (
-                <InlineComposer onClose={() => setInlineOpen(false)} />
-            ) : (
-                <section className="glass-card cursor-pointer px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow" onClick={handleComposeClick}>
-                    <div className="flex items-center gap-3">
-                        <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={40} />
-                        <p className="min-w-0 flex-1 truncate rounded-full border border-white/70 bg-white/60 px-4 py-2.5 text-sm text-slate-400">
-                            说点什么和大家分享吧…
-                        </p>
-                        <span
-                            aria-hidden="true"
-                            className="hidden h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/30 sm:flex"
-                        >
-                            <FeatherIcon size={17} />
-                        </span>
-                    </div>
-                </section>
-            )}
+            <ComposerField onSubmit={addPost} />
 
             <div className="glass-card flex gap-1 p-1.5" role="tablist" aria-label="时间线切换">
                 {(
@@ -116,8 +81,6 @@ export default function HomePage() {
                     </p>
                 </div>
             )}
-
-            <ComposerModal open={composerOpen} onClose={() => setComposerOpen(false)} />
         </div>
     );
 }

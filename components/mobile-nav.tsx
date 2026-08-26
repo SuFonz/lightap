@@ -166,10 +166,10 @@ export function MobileDrawer() {
                 onClick={() => setDrawerOpen(false)}
             />
             <div
-                className="absolute bottom-0 left-0 top-0 w-[300px] max-w-[85vw] overflow-y-auto p-4 pt-[max(env(safe-area-inset-top),16px)]"
+                className="absolute bottom-0 left-0 top-0 w-[300px] max-w-[85vw] overflow-y-auto rounded-r-3xl border-r border-white/60 bg-gradient-to-br from-white via-sky-50/95 to-blue-100/95 p-5 pr-6 pt-[max(env(safe-area-inset-top),20px)] shadow-2xl shadow-blue-500/25 backdrop-blur-2xl"
                 style={{ animation: "slide-in-left .28s cubic-bezier(.32,.72,.35,1)" }}
             >
-                <SidebarContent onNavigate={() => setDrawerOpen(false)} />
+                <SidebarContent flat onNavigate={() => setDrawerOpen(false)} />
             </div>
         </div>
     );
