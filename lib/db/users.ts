@@ -14,11 +14,39 @@ export async function getUserByPreferredUsername(
             `
         )
         .bind(preferredUsername)
-        .first<UserRow>();
+        .first();
 
     if (!row) {
         return null;
     }
 
-    return row;
+    return {
+        ...row,
+        created_at: new Date(row.created_at as number),
+        updated_at: new Date(row.updated_at as number),
+    } as UserRow;
+}
+
+export async function getUserById(id: string): Promise<UserRow | null> {
+    const row = await env.DB
+        .prepare(
+            `
+            SELECT *
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+            `
+        )
+        .bind(id)
+        .first();
+
+    if (!row) {
+        return null;
+    }
+
+    return {
+        ...row,
+        created_at: new Date(row.created_at as number),
+        updated_at: new Date(row.updated_at as number),
+    } as UserRow;
 }

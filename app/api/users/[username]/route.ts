@@ -28,12 +28,15 @@ export async function GET(
         user.name,
         user.preferred_username,
         user.summary,
+        user.public_key_pem,
     );
     if (!actor) {
         return new Response("Server error", {
             status: 500,
         });
     }
+
+    console.log(actor);
 
     return new Response(JSON.stringify(actor), {
         status: 200,

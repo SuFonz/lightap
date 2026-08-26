@@ -1,15 +1,14 @@
-import { env } from "cloudflare:workers";
-import { verify } from "@/lib/util/jwt";
-import { UserJwtPayload } from "@/lib/types/http"
 import { getUserByPreferredUsername } from "@/lib/db/users";
-import { APActivity, APCreate, APNote } from "@/lib/types/activitypub";
+import { APActivity, APActivityType, APNote } from "@/lib/types/activitypub";
 import { getNotesByPreferredUsername, insertNote } from "@/lib/db/objects";
-import { buildNote, buildOrderedCollection } from "@/lib/activitypub/tools";
+import { buildNote, buildOrderedCollection, convertNote } from "@/lib/activitypub/tools";
 import { insertActivity } from "@/lib/db/activities";
 
 export const dynamic = "force-dynamic";
 
-const handlers: Record<string, (activity: APActivity) => Promise<void>> = {
+const handlers: Partial<
+    Record<APActivityType, (baseUrl: string, activity: APActivity) => Promise<void>>
+> = {
     Create: handleCreate,
 };
 
@@ -30,7 +29,7 @@ export async function GET(
     const apNotes: APNote[] = [];
 
     for (const note of notes) {
-        const apNote = buildNote(url.origin, note.name ?? "", note.content, note.id);
+        const apNote = convertNote(note.id, note.name ?? "", note.content);
         if (apNote) {
             apNotes.push(apNote);
         }
@@ -55,6 +54,7 @@ export async function POST(
     request: Request,
     { params }: { params: { username: string }}
 ) {
+    const url = new URL(request.url);
     const headers = await request.headers;
     const activity = await request.json<APActivity>();
 
@@ -96,7 +96,11 @@ export async function POST(
 
     try {
         // 处理 Activity
-        await handlers[activity.type](activity);
+        const handler = handlers[activity.type];
+
+        if (handler) {
+            await handler(url.origin, activity);
+        }
 
         return new Response(null, {
             status: 201,
@@ -112,13 +116,25 @@ export async function POST(
     });
 }
 
-async function handleCreate(activity: APActivity) {
-    const activityCreate = activity as APCreate;
-    const actor = activityCreate.actor;
-    const note = activityCreate.object;
+async function handleCreate(baseUrl: string, activity: APActivity) {
+    const actor = activity.actor;
+    const note = activity.object as APNote;
+    const actorText = typeof(actor) === "string" ? actor : JSON.stringify(actor);
 
-    const noteId = await insertNote(actor.id, note.name, note.content);
+    const noteId = await insertNote(
+        `${baseUrl}/notes/${crypto.randomUUID()}`, 
+        actorText,
+        note.name, 
+        note.content
+    );
 
-    await insertActivity(activity.type, actor.id, noteId);
+    await insertActivity(
+        `${baseUrl}/activities/${crypto.randomUUID()}`, 
+        activity.type, 
+        actorText, 
+        noteId, 
+        activity.to ?? [],
+        activity.cc ?? []
+    );
 }
 

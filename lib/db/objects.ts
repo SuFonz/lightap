@@ -9,7 +9,7 @@ export async function getNotesByPreferredUsername(
     let sql = `
         SELECT o.*
         FROM objects o
-        INNER JOIN users u ON u.id = o.actor_id
+        INNER JOIN users u ON u.id = o.actor
         WHERE u.preferred_username = ?
           AND o.type = 'Note'
         ORDER BY o.created_at DESC
@@ -30,9 +30,67 @@ export async function getNotesByPreferredUsername(
     const rows = await env.DB
         .prepare(sql)
         .bind(...params)
-        .all<ObjectRow>();
+        .all();
 
-    return rows.results;
+    return rows.results.map((row) => ({
+        ...row,
+        created_at: new Date(row.created_at as number),
+    })) as ObjectRow[];
+}
+
+export async function getReceivedNotesOf(
+    preferredUsername: string,
+    limit: number | null = null,
+    offset: number | null = null
+): Promise<ObjectRow[]> {
+
+    let sql = `
+        SELECT o.*
+        FROM activities a
+        INNER JOIN objects o
+            ON o.id = a.object
+        INNER JOIN users u
+            ON u.id = ?
+        WHERE o.type = 'Note'
+          AND (
+              EXISTS (
+                  SELECT 1
+                  FROM json_each(a.to_json)
+                  WHERE json_each.value = u.id
+              )
+              OR
+              EXISTS (
+                  SELECT 1
+                  FROM json_each(a.cc_json)
+                  WHERE json_each.value = u.id
+              )
+          )
+        ORDER BY o.created_at DESC
+    `;
+
+    const params: (string | number)[] = [
+        preferredUsername
+    ];
+
+    if (limit !== null) {
+        sql += ` LIMIT ?`;
+        params.push(limit);
+
+        if (offset !== null) {
+            sql += ` OFFSET ?`;
+            params.push(offset);
+        }
+    }
+
+    const rows = await env.DB
+        .prepare(sql)
+        .bind(...params)
+        .all();
+
+    return rows.results.map((row) => ({
+        ...row,
+        created_at: new Date(row.created_at as number)
+    })) as ObjectRow[];
 }
 
 export async function insertNote(
@@ -49,7 +107,7 @@ export async function insertNote(
                 id,
                 name,
                 type,
-                actor_id,
+                actor,
                 content,
                 created_at
             )

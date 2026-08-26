@@ -14,7 +14,7 @@ export interface ObjectRow {
     id: string,
     name: string | null,
     type: string,
-    actor_id: string,
+    actor: string,
     content: string,
     created_at: Date,
 }
@@ -22,9 +22,16 @@ export interface ObjectRow {
 export interface ActivityRow {
     id: string,
     type: string,
-    actor_id: string,
-    object_id: string,
+    actor: string,
+    object: string,
     to_json: string,
     cc_json: string,
+    created_at: Date,
+}
+
+export interface FollowRow {
+    id: number,
+    follower: string,
+    following: string,
     created_at: Date,
 }

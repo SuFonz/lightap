@@ -25,7 +25,8 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "vinext dev",
+    "init": "npx wrangler d1 execute lightap --local --file ./lightap.sql",
+    "dev": "npm run init && vinext dev",
     "build": "vinext build",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "deploy": "vinext-cloudflare deploy --config dist/server/wrangler.json",

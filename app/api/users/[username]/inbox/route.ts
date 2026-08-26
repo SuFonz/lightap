@@ -1,16 +1,20 @@
-import { APActivity, APCreate, APNote } from "@/lib/types/activitypub";
-import { buildNote, buildOrderedCollection } from "@/lib/activitypub/tools";
+import { APActivity, APActivityType, APNote } from "@/lib/types/activitypub";
+import { buildAcceptFollow, buildNote, buildOrderedCollection, convertNote } from "@/lib/activitypub/tools";
 import { insertActivity } from "@/lib/db/activities";
 import { getUserByPreferredUsername } from "@/lib/db/users";
 import { UserJwtPayload } from "@/lib/types/http";
 import { verify } from "@/lib/util/jwt";
 import { env } from "cloudflare:workers";
-import { insertNote } from "@/lib/db/objects";
+import { getReceivedNotesOf, insertNote } from "@/lib/db/objects";
+import { postActivity } from "@/lib/activitypub/fetch";
 
 export const dynamic = "force-dynamic";
 
-const handlers: Record<string, (activity: APActivity) => Promise<void>> = {
+const handlers: Partial<
+    Record<APActivityType, (baseUrl: string, activity: APActivity) => Promise<void>>
+> = {
     Create: handleCreate,
+    Follow: handleFollow,
 };
 
 export async function GET(
@@ -55,11 +59,11 @@ export async function GET(
         });
     }
 
-    const notes = await getReceivedNotes(10);
+    const notes = await getReceivedNotesOf(params.username, 10);
     const apNotes: APNote[] = [];
 
     for (const note of notes) {
-        const apNote = buildNote(url.origin, note.name, note.content, note.id);
+        const apNote = convertNote(note.id, note.name ?? "", note.content);
         if (apNote) {
             apNotes.push(apNote);
         }
@@ -85,6 +89,7 @@ export async function POST(
 ) {
     const url = new URL(request.url);
     const username = params.username;
+    const activity = await request.json<APActivity>();
 
     if (!username) {
         return new Response("Empty username", {
@@ -99,24 +104,19 @@ export async function POST(
         });
     }
 
-    let activity: APActivity;
     try {
-        activity = await request.json<APActivity>();
-    } catch {
-        return new Response("Invalid JSON", {
-            status: 400,
-        });
-    }
+        console.log(activity);
+        console.log();
+        const handler = handlers[activity.type];
+        if (!handler) {
+            return new Response("Unsupported activity type", {
+                status: 400,
+            });
+        }
 
-    const handler = handlers[activity.type];
-    if (!handler) {
-        return new Response("Unsupported activity type", {
-            status: 400,
-        });
-    }
-
-    try {
-        await handler(activity);
+        if (handler) {
+            await handler(url.origin, activity);
+        }
 
         return new Response(null, {
             status: 202,
@@ -132,13 +132,36 @@ export async function POST(
     });
 }
 
-async function handleCreate(activity: APActivity): Promise<void> {
-    const createActivity = activity as APCreate;
-    const actor = createActivity.actor;
-    const note = createActivity.object;
+async function handleCreate(baseUrl: string, activity: APActivity): Promise<void> {
+    const actor = activity.actor;
+    const note = activity.object as APNote;
+    const actorText = typeof(actor) === "string" ? actor : JSON.stringify(actor);
 
-    const noteId = await insertNote(note.id, note.name, note.content);
+    await insertNote(
+        note.id, 
+        actorText,
+        note.name, 
+        note.content
+    );
 
-    await insertActivity("Create", actor.id, noteId);
+    await insertActivity(
+        activity.id,
+        "Create",
+        actorText,
+        note.id,
+        activity.to ?? [],
+        activity.cc ?? []
+    );
 
+}
+
+async function handleFollow(baseUrl: string, activity: APActivity): Promise<void> {
+    const selfActor = activity.object;
+    const targetActor = activity.actor;
+    const selfId = typeof(selfActor) === "string" ? selfActor : selfActor.id;
+    const targetId = typeof(targetActor) === "string" ? targetActor : targetActor.id;
+
+    const acceptFollow = buildAcceptFollow(baseUrl, selfId, activity);
+    
+    await postActivity(selfId, targetId, acceptFollow);
 }

@@ -26,13 +26,11 @@ export async function GET(
     // TODO: 关注功能尚未实现，这里使用占位数据
     const placeholderFollowers: APPerson[] = [
         {
-            "@context": "https://www.w3.org/ns/activitystreams",
             type: "Person",
             id: `${url.origin}/api/users/placeholder_follower_1`,
             name: "Placeholder Follower 1",
         },
         {
-            "@context": "https://www.w3.org/ns/activitystreams",
             type: "Person",
             id: `${url.origin}/api/users/placeholder_follower_2`,
             name: "Placeholder Follower 2",

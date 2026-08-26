@@ -9,7 +9,7 @@ export async function getActivitiesByPreferredUsername(
     let sql = `
         SELECT a.*
         FROM activity a
-        INNER JOIN users u ON u.id = a.actor_id
+        INNER JOIN users u ON u.id = a.actor
         WHERE u.preferred_username = ?
         ORDER BY a.created_at DESC
     `;
@@ -24,9 +24,12 @@ export async function getActivitiesByPreferredUsername(
     const rows = await env.DB
         .prepare(sql)
         .bind(...params)
-        .all<ActivityRow>();
+        .all();
 
-    return rows.results;
+    return rows.results.map((row) => ({
+        ...row,
+        created_at: new Date(row.created_at as number),
+    })) as ActivityRow[];
 }
 
 export async function insertActivity(
@@ -44,8 +47,8 @@ export async function insertActivity(
             (
                 id,
                 type,
-                actor_id,
-                object_id,
+                actor,
+                object,
                 to_json,
                 cc_json,
                 created_at
