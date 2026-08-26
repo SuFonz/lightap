@@ -156,23 +156,30 @@ function BottomNavLink({
 export function MobileDrawer() {
     const { drawerOpen, setDrawerOpen } = useShell();
 
-    if (!drawerOpen) return null;
-
     return (
         <div
-            className="fixed inset-0 z-50 lg:hidden"
+            className={cn(
+                "fixed inset-0 z-50 transition-[visibility] duration-300 lg:hidden",
+                drawerOpen ? "visible" : "invisible",
+            )}
             role="dialog"
-            aria-modal="true"
+            aria-modal={drawerOpen}
             aria-label="菜单"
+            aria-hidden={!drawerOpen}
         >
             <div
-                className="absolute inset-0 bg-brand-ink/25 backdrop-blur-sm"
-                style={{ animation: "fade-in .2s ease-out" }}
+                className={cn(
+                    "absolute inset-0 bg-brand-ink/25 backdrop-blur-sm transition-opacity duration-200",
+                    drawerOpen ? "opacity-100" : "opacity-0",
+                )}
                 onClick={() => setDrawerOpen(false)}
             />
             <div
-                className="absolute bottom-0 left-0 top-0 w-[290px] max-w-[85vw] overflow-y-auto rounded-r-3xl border-r border-white/60 bg-gradient-to-br from-white via-[#f2f9ff] to-[#e0edfd] p-5 pr-6 pt-[max(env(safe-area-inset-top),20px)] shadow-2xl shadow-brand/25 backdrop-blur-2xl"
-                style={{ animation: "slide-in-left .28s cubic-bezier(.32,.72,.35,1)" }}
+                className={cn(
+                    "absolute bottom-0 left-0 top-0 w-[290px] max-w-[85vw] overflow-y-auto rounded-r-3xl border-r border-white/60 bg-gradient-to-br from-white via-[#f2f9ff] to-[#e0edfd] p-5 pr-6 pt-[max(env(safe-area-inset-top),20px)] shadow-2xl shadow-brand/25 backdrop-blur-2xl",
+                    "transition-transform duration-300 ease-[cubic-bezier(.32,.72,.35,1)]",
+                    drawerOpen ? "translate-x-0" : "-translate-x-full",
+                )}
             >
                 <SidebarContent flat onNavigate={() => setDrawerOpen(false)} />
             </div>
