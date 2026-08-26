@@ -1,241 +1,123 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Avatar } from "@/components/avatar";
+import { ComposerModal } from "@/components/composer-modal";
+import { FeatherIcon, ImageIcon, SparklesIcon } from "@/components/icons";
+import { InlineComposer } from "@/components/inline-composer";
+import { PostCard } from "@/components/post-card";
+import { useShell } from "@/components/shell-context";
+import { useStore } from "@/components/store";
+import { cn } from "@/lib/utils";
 
-interface Note {
-    id: string;
-    name: string;
-    content: string;
-}
+export default function HomePage() {
+    const { posts, currentUser } = useStore();
+    const { openComposer } = useShell();
+    const [tab, setTab] = useState<"all" | "following">("all");
+    const [composerOpen, setComposerOpen] = useState(false);
+    const [inlineOpen, setInlineOpen] = useState(false);
+    const [isDesktop, setIsDesktop] = useState(false);
+    const [greeting, setGreeting] = useState("欢迎回来");
 
-interface OrderedCollection {
-    type: string;
-    id: string;
-    summary: string;
-    totalItems: number;
-    orderedItems: Note[];
-}
+    useEffect(() => {
+        const hour = new Date().getHours();
+        setGreeting(hour < 5 ? "夜深了" : hour < 12 ? "早上好" : hour < 18 ? "下午好" : "晚上好");
 
-export default function Home() {
-    const [username, setUsername] = useState("alice");
-    const [noteName, setNoteName] = useState("");
-    const [content, setContent] = useState("");
+        const mq = window.matchMedia("(min-width: 1024px)");
+        const updateDesktop = () => setIsDesktop(mq.matches);
+        updateDesktop();
+        mq.addEventListener("change", updateDesktop);
+        return () => mq.removeEventListener("change", updateDesktop);
+    }, []);
 
-    const [queryUsername, setQueryUsername] = useState("alice");
-    const [collection, setCollection] = useState<OrderedCollection | null>(null);
+    const followingOnly = posts.filter((p) => p.authorUsername !== "kuro" && p.authorUsername !== "taro");
+    const visible = tab === "all" ? posts : followingOnly;
 
-    const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-    const [loading, setLoading] = useState(false);
-
-    async function handlePost(e: FormEvent) {
-        e.preventDefault();
-
-        if (!username.trim() || !content.trim()) {
-            setMessage({ ok: false, text: "用户名和内容不能为空" });
-            return;
-        }
-
-        const origin = window.location.origin;
-        const actorId = `${origin}/api/users/${username.trim()}`;
-
-        const activity = {
-            "@context": "https://www.w3.org/ns/activitystreams",
-            type: "Create",
-            summary: `${username.trim()} posted a note`,
-            actor: {
-                "@context": "https://www.w3.org/ns/activitystreams",
-                type: "Person",
-                id: actorId,
-                name: username.trim(),
-            },
-            object: {
-                "@context": "https://www.w3.org/ns/activitystreams",
-                type: "Note",
-                name: noteName.trim(),
-                content: content.trim(),
-            },
-        };
-
-        setLoading(true);
-        setMessage(null);
-        try {
-            const res = await fetch(`/api/users/${username.trim()}/outbox`, {
-                method: "POST",
-                headers: { "Content-Type": "application/activity+json" },
-                body: JSON.stringify(activity),
-            });
-
-            if (res.ok) {
-                setMessage({ ok: true, text: `POST 成功 (${res.status}), Location: ${res.headers.get("Location") ?? "-"}` });
-                setContent("");
-                setNoteName("");
-            } else {
-                setMessage({ ok: false, text: `POST 失败 (${res.status}): ${await res.text()}` });
-            }
-        } catch (err) {
-            setMessage({ ok: false, text: `请求异常: ${err instanceof Error ? err.message : err}` });
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function handleFetch(e: FormEvent) {
-        e.preventDefault();
-        setLoading(true);
-        setMessage(null);
-        try {
-            const res = await fetch(`/api/users/${queryUsername.trim()}/outbox`);
-            if (!res.ok) {
-                setCollection(null);
-                setMessage({ ok: false, text: `GET 失败 (${res.status}): ${await res.text()}` });
-                return;
-            }
-            const data: OrderedCollection = await res.json();
-            setCollection(data);
-        } catch (err) {
-            setCollection(null);
-            setMessage({ ok: false, text: `请求异常: ${err instanceof Error ? err.message : err}` });
-        } finally {
-            setLoading(false);
-        }
+    function handleComposeClick() {
+        if (isDesktop) setInlineOpen((v) => !v);
+        else setComposerOpen(true);
     }
 
     return (
-        <main className="min-h-screen bg-slate-50 px-6 py-10 text-slate-950">
-            <section className="mx-auto flex max-w-4xl flex-col gap-8">
+        <div className="flex flex-col gap-4">
+            <section className="glass-card flex items-center gap-3 px-5 py-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/30">
+                    <SparklesIcon size={19} />
+                </span>
                 <div>
-                    <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
-                        MiniAP · ActivityPub
-                    </p>
-                    <h1 className="mt-2 text-3xl font-semibold leading-tight sm:text-4xl">
-                        Outbox 测试页面
+                    <h1 className="font-display text-lg font-black text-slate-800">
+                        {greeting}，{currentUser.displayName}～
                     </h1>
-                    <p className="mt-2 text-slate-600">
-                        通过 POST 向 outbox 发布一条 Create Activity（发帖），再用 GET 读取该用户的 outbox。
+                    <p className="text-xs font-medium text-slate-400">
+                        今天联邦宇宙里也有有趣的事发生哦
                     </p>
                 </div>
-
-                {message && (
-                    <div
-                        className={`rounded-lg border px-4 py-3 text-sm ${
-                            message.ok
-                                ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                                : "border-red-300 bg-red-50 text-red-800"
-                        }`}
-                    >
-                        {message.text}
-                    </div>
-                )}
-
-                <form
-                    className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6"
-                    onSubmit={handlePost}
-                >
-                    <h2 className="text-lg font-semibold">POST · 发布新帖</h2>
-                    <div className="grid gap-4 sm:grid-cols-3">
-                        <label className="flex flex-col gap-1 text-sm font-medium">
-                            用户名
-                            <input
-                                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-normal focus:border-orange-500 focus:outline-none"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                placeholder="alice"
-                            />
-                        </label>
-                        <label className="flex flex-col gap-1 text-sm font-medium">
-                            Note name（可选）
-                            <input
-                                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-normal focus:border-orange-500 focus:outline-none"
-                                value={noteName}
-                                onChange={(e) => setNoteName(e.target.value)}
-                                placeholder="标题"
-                            />
-                        </label>
-                        <label className="flex flex-col gap-1 text-sm font-medium">
-                            内容
-                            <textarea
-                                className="min-h-20 rounded-md border border-slate-300 px-3 py-2 text-sm font-normal focus:border-orange-500 focus:outline-none"
-                                value={content}
-                                onChange={(e) => setContent(e.target.value)}
-                                placeholder="说点什么..."
-                            />
-                        </label>
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-fit rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
-                    >
-                        {loading ? "请求中..." : "发布"}
-                    </button>
-                    <p className="text-xs text-slate-500">
-                        请求体: POST /api/users/{"{username}"}/outbox
-                    </p>
-                </form>
-
-                <form
-                    className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6"
-                    onSubmit={handleFetch}
-                >
-                    <h2 className="text-lg font-semibold">GET · 查看 Outbox</h2>
-                    <div className="grid gap-4 sm:grid-cols-3">
-                        <label className="flex flex-col gap-1 text-sm font-medium">
-                            用户名
-                            <input
-                                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-normal focus:border-orange-500 focus:outline-none"
-                                value={queryUsername}
-                                onChange={(e) => setQueryUsername(e.target.value)}
-                                placeholder="alice"
-                            />
-                        </label>
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-fit rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50"
-                    >
-                        {loading ? "请求中..." : "拉取"}
-                    </button>
-                    <p className="text-xs text-slate-500">
-                        请求: GET /api/users/{"{username}"}/outbox
-                    </p>
-
-                    {collection && (
-                        <div className="flex flex-col gap-3">
-                            <p className="text-sm text-slate-600">
-                                {collection.summary} · 共 {collection.totalItems} 条
-                            </p>
-                            {collection.orderedItems.length === 0 ? (
-                                <p className="text-sm text-slate-400">暂无内容</p>
-                            ) : (
-                                collection.orderedItems.map((note) => (
-                                    <article
-                                        key={note.id}
-                                        className="rounded-md border border-slate-200 bg-slate-50 p-4"
-                                    >
-                                        <div className="flex items-baseline justify-between gap-2">
-                                            <span className="text-sm font-semibold">
-                                                {note.name || "(无标题)"}
-                                            </span>
-                                            <a
-                                                className="text-xs text-slate-500 hover:underline"
-                                                href={note.id}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                            >
-                                                {note.id}
-                                            </a>
-                                        </div>
-                                        <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
-                                            {note.content}
-                                        </p>
-                                    </article>
-                                ))
-                            )}
-                        </div>
-                    )}
-                </form>
             </section>
-        </main>
+
+            {isDesktop && inlineOpen ? (
+                <InlineComposer onClose={() => setInlineOpen(false)} />
+            ) : (
+                <section className="glass-card cursor-pointer px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow" onClick={handleComposeClick}>
+                    <div className="flex items-center gap-3">
+                        <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={40} />
+                        <p className="min-w-0 flex-1 truncate rounded-full border border-white/70 bg-white/60 px-4 py-2.5 text-sm text-slate-400">
+                            说点什么和大家分享吧…
+                        </p>
+                        <span
+                            aria-hidden="true"
+                            className="hidden h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/30 sm:flex"
+                        >
+                            <FeatherIcon size={17} />
+                        </span>
+                    </div>
+                </section>
+            )}
+
+            <div className="glass-card flex gap-1 p-1.5" role="tablist" aria-label="时间线切换">
+                {(
+                    [
+                        ["all", "全部"],
+                        ["following", "已关注"],
+                    ] as const
+                ).map(([key, label]) => (
+                    <button
+                        key={key}
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === key}
+                        onClick={() => setTab(key)}
+                        className={cn(
+                            "flex-1 cursor-pointer rounded-xl py-2 font-display text-sm font-bold transition-all duration-200",
+                            tab === key
+                                ? "bg-gradient-to-r from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/25"
+                                : "text-slate-500 hover:bg-white/70 hover:text-sky-600",
+                        )}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
+            <div className="rise-in flex flex-col gap-4">
+                {visible.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                ))}
+            </div>
+
+            {visible.length === 0 && (
+                <div className="glass-card flex flex-col items-center gap-2 px-6 py-14 text-center">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-sky-400">
+                        <ImageIcon size={24} />
+                    </span>
+                    <p className="font-display font-extrabold text-slate-700">这里还什么都没有</p>
+                    <p className="text-sm text-slate-400">
+                        去 <Link href="/users" className="font-bold text-sky-500 hover:underline">用户浏览</Link> 找些有趣的人关注吧！
+                    </p>
+                </div>
+            )}
+
+            <ComposerModal open={composerOpen} onClose={() => setComposerOpen(false)} />
+        </div>
     );
 }

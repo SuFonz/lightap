@@ -1,0 +1,136 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Avatar } from "@/components/avatar";
+import { FollowButton } from "@/components/follow-button";
+import { SearchIcon, UserPlusIcon, UsersIcon } from "@/components/icons";
+import { useStore } from "@/components/store";
+import { cn, formatCount } from "@/lib/utils";
+
+type Filter = "all" | "following" | "notFollowing";
+
+export default function UsersPage() {
+    const { users, currentUser, isFollowing } = useStore();
+    const [filter, setFilter] = useState<Filter>("all");
+    const [query, setQuery] = useState("");
+
+    const visible = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        return users.filter((user) => {
+            if (user.username === currentUser.username) return false;
+            if (filter === "following" && !isFollowing(user.username)) return false;
+            if (filter === "notFollowing" && isFollowing(user.username)) return false;
+            if (
+                q &&
+                !user.displayName.toLowerCase().includes(q) &&
+                !user.username.toLowerCase().includes(q)
+            ) {
+                return false;
+            }
+            return true;
+        });
+    }, [users, filter, query, isFollowing, currentUser.username]);
+
+    return (
+        <div className="flex flex-col gap-4">
+            <section className="glass-card flex items-center gap-3 px-5 py-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/30">
+                    <UsersIcon size={18} />
+                </span>
+                <div>
+                    <h1 className="font-display text-lg font-black text-slate-800">用户浏览</h1>
+                    <p className="text-xs font-medium text-slate-400">
+                        发现联邦宇宙里的有趣伙伴，本站与远端用户都在这里
+                    </p>
+                </div>
+            </section>
+
+            <section className="glass-card p-4">
+                <label className="flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-4 py-2.5 transition focus-within:border-sky-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-sky-200/60">
+                    <SearchIcon size={16} className="shrink-0 text-sky-400" />
+                    <input
+                        type="search"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="按昵称或用户名筛选…"
+                        aria-label="筛选用户"
+                        className="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                    />
+                </label>
+
+                <div className="mt-3 flex gap-1 rounded-2xl bg-sky-50/70 p-1" role="tablist" aria-label="关注状态筛选">
+                    {(
+                        [
+                            ["all", "全部"],
+                            ["notFollowing", "未关注"],
+                            ["following", "已关注"],
+                        ] as const
+                    ).map(([key, label]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            role="tab"
+                            aria-selected={filter === key}
+                            onClick={() => setFilter(key)}
+                            className={cn(
+                                "flex-1 cursor-pointer rounded-xl py-1.5 font-display text-xs font-bold transition-all duration-200",
+                                filter === key
+                                    ? "bg-gradient-to-r from-sky-400 to-blue-600 text-white shadow-md shadow-blue-500/25"
+                                    : "text-slate-500 hover:text-sky-600",
+                            )}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            </section>
+
+            {visible.length === 0 ? (
+                <div className="glass-card px-6 py-14 text-center">
+                    <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-sky-400">
+                        <UserPlusIcon size={24} />
+                    </span>
+                    <p className="font-display font-extrabold text-slate-700">没有匹配的用户</p>
+                    <p className="mt-1 text-sm text-slate-400">换个筛选条件试试吧～</p>
+                </div>
+            ) : (
+                <ul className="rise-in grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {visible.map((user) => (
+                        <li key={user.username} className="glass-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow">
+                            <div className="flex items-start gap-3">
+                                <Avatar name={user.displayName} src={user.avatarUrl} size={52} ring />
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate font-display text-[15px] font-extrabold text-slate-800">
+                                        {user.displayName}
+                                    </p>
+                                    <p className="truncate text-xs text-slate-400">
+                                        @{user.username}
+                                        {user.instance !== "lightap.social" && `@${user.instance}`}
+                                    </p>
+                                </div>
+                                <FollowButton username={user.username} size="sm" />
+                            </div>
+                            <p className="mt-3 line-clamp-2 min-h-10 text-[13px] leading-relaxed text-slate-500">
+                                {user.bio}
+                            </p>
+                            <dl className="mt-3 flex gap-4 border-t border-sky-100/80 pt-3 text-xs text-slate-400">
+                                <div className="flex gap-1">
+                                    <dt>帖子</dt>
+                                    <dd className="font-bold text-slate-600 tabular-nums">{formatCount(user.postsCount)}</dd>
+                                </div>
+                                <div className="flex gap-1">
+                                    <dt>关注</dt>
+                                    <dd className="font-bold text-slate-600 tabular-nums">{formatCount(user.followingCount)}</dd>
+                                </div>
+                                <div className="flex gap-1">
+                                    <dt>粉丝</dt>
+                                    <dd className="font-bold text-slate-600 tabular-nums">{formatCount(user.followers)}</dd>
+                                </div>
+                            </dl>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
+}

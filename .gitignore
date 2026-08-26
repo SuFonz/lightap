@@ -13,3 +13,4 @@ next-env.d.ts
 worker-configuration.d.ts
 wrangler.jsonc
 tsconfig.tsbuildinfo
+.opencode
