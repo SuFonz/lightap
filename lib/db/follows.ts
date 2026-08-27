@@ -73,7 +73,7 @@ export async function getFollowingOf(
 export async function insertFollow(
     follower: string,
     following: string,
-): Promise<string> {
+): Promise<void> {
     await env.DB
         .prepare(
             `
@@ -93,6 +93,4 @@ export async function insertFollow(
             Date.now()
         )
         .run();
-
-    return following;
 }

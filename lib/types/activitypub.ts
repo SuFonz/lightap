@@ -1,5 +1,6 @@
-export const AP_CONTEXT =  "https://www.w3.org/ns/activitystreams";
-export const SECURITY_CONTEXT = "https://w3id.org/security/v1";
+export const AP_CONTEXT = "https://www.w3.org/ns/activitystreams";
+export const AP_CONTEXT_PUBLIC = `${AP_CONTEXT}#Public`;
+export const AP_SECURITY_CONTEXT = "https://w3id.org/security/v1";
 
 export type APActivityType = "Activity" |
                              "Create" | 

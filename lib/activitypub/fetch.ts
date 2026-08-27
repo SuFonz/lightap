@@ -19,7 +19,7 @@ export async function APRequest(
     });
 }
 
-export async function APSignedRequest(
+export async function APSignedPost(
     url: string,
     data: object,
     privateKeyPem: string,
@@ -54,9 +54,6 @@ export async function APSignedRequest(
         headers,
         body,
     });
-
-    console.log(res);
-    console.log(res.body);
 
     return res;
 }
@@ -101,9 +98,17 @@ export async function getActorUrlFromWebfinger(webfinger: APWebfinger): Promise<
     return link?.href ?? "";
 }
 
-export async function postActivity(selfActor: string, targetActor: string, activity: APActivity) {
-    const tActor = await fetchActor(targetActor);
-    const user = await getUserById(selfActor);
-    const res = await APSignedRequest(tActor.inbox, activity, user?.private_key_pem ?? "", `${selfActor}#main-key`);
+export async function postActivity(selfActor: string, targetActor: string, activity: APActivity): Promise<boolean> {
+    try {
+        const tActor = await fetchActor(targetActor);
+        const user = await getUserById(selfActor);
+        const res = await APSignedPost(tActor.inbox, activity, user?.private_key_pem ?? "", `${selfActor}#main-key`);
+
+        if (res.ok) {
+            return true;
+        }
+    } catch (e: any) {}
+
+    return false;
 }
 

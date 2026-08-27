@@ -7,6 +7,7 @@ import { verify } from "@/lib/util/jwt";
 import { env } from "cloudflare:workers";
 import { getReceivedNotesOf, insertNote } from "@/lib/db/objects";
 import { postActivity } from "@/lib/activitypub/fetch";
+import { insertFollow } from "@/lib/db/follows";
 
 export const dynamic = "force-dynamic";
 
@@ -163,5 +164,8 @@ async function handleFollow(baseUrl: string, activity: APActivity): Promise<void
 
     const acceptFollow = buildAcceptFollow(baseUrl, selfId, activity);
     
-    await postActivity(selfId, targetId, acceptFollow);
+    const success = await postActivity(selfId, targetId, acceptFollow);
+    if (success) {
+        await insertFollow(targetId, selfId);
+    }
 }
