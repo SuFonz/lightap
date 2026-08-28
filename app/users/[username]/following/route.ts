@@ -24,26 +24,26 @@ export async function GET(
     }
 
     // TODO: 关注功能尚未实现，这里使用占位数据
-    const placeholderFollowers: APPerson[] = [
+    const placeholderFollowing: APPerson[] = [
         {
             type: "Person",
-            id: `${url.origin}/api/users/placeholder_follower_1`,
-            name: "Placeholder Follower 1",
+            id: `${url.origin}/users/placeholder_following_1`,
+            name: "Placeholder Following 1",
         },
         {
             type: "Person",
-            id: `${url.origin}/api/users/placeholder_follower_2`,
-            name: "Placeholder Follower 2",
+            id: `${url.origin}/users/placeholder_following_2`,
+            name: "Placeholder Following 2",
         },
     ];
 
     const orderedCollection = {
         "@context": "https://www.w3.org/ns/activitystreams",
         type: "OrderedCollection",
-        id: `${url.origin}/api/users/${username}/followers`,
-        summary: `${username}'s followers`,
-        totalItems: placeholderFollowers.length,
-        orderedItems: placeholderFollowers,
+        id: `${url.origin}/users/${username}/following`,
+        summary: `${username}'s following`,
+        totalItems: placeholderFollowing.length,
+        orderedItems: placeholderFollowing,
     };
 
     return new Response(JSON.stringify(orderedCollection), {

@@ -38,26 +38,26 @@ export function convertNote(
 }
 
 export function buildWebfinger(
-    baseUrl: string,
+    origin: string,
     username: string,
     domain: string,
 ): APWebfinger {
     const webfinger: APWebfinger = {
         subject: `acct:${username}@${domain}`,
         aliases: [
-            `${baseUrl}/@${username}`,
-            `${baseUrl}/api/users/${username}`,
+            `${origin}/@${username}`,
+            `${origin}/users/${username}`,
         ],
         links: [
             {
                 rel: "http://webfinger.net/rel/profile-page",
                 type: "text/html",
-                href: `${baseUrl}/@${username}`
+                href: `${origin}/@${username}`
             },
             {
                 rel: "self",
                 type: "application/activity+json",
-                href: `${baseUrl}/api/users/${username}`
+                href: `${origin}/users/${username}`
             }
         ]
     };
@@ -66,45 +66,45 @@ export function buildWebfinger(
 }
 
 export function buildActor(
-    baseUrl: string,
+    origin: string,
     name: string,
     preferredUsername: string,
     summary: string | null,
     publicKeyPem: string | null,
 ): APActor {
-    const url = new URL(baseUrl);
+    const url = new URL(origin);
     const actor: APActor = {
         "@context": "https://www.w3.org/ns/activitystreams",
         type: "Person",
-        id: `${url.origin}/api/users/${preferredUsername}`,
+        id: `${url.origin}/users/${preferredUsername}`,
         name: name,
         preferredUsername: preferredUsername,
         summary: summary,
         publicKey: {
-            id: `${url.origin}/api/users/${preferredUsername}#main-key`,
-            owner: `${url.origin}/api/users/${preferredUsername}`,
+            id: `${url.origin}/users/${preferredUsername}#main-key`,
+            owner: `${url.origin}/users/${preferredUsername}`,
             publicKeyPem: publicKeyPem ?? "",
         },
-        inbox: `${url.origin}/api/users/${preferredUsername}/inbox`,
-        outbox: `${url.origin}/api/users/${preferredUsername}/outbox`,
-        followers: `${url.origin}/api/users/${preferredUsername}/followers`,
-        following: `${url.origin}/api/users/${preferredUsername}/following`,
+        inbox: `${url.origin}/users/${preferredUsername}/inbox`,
+        outbox: `${url.origin}/users/${preferredUsername}/outbox`,
+        followers: `${url.origin}/users/${preferredUsername}/followers`,
+        following: `${url.origin}/users/${preferredUsername}/following`,
     };
 
     return actor;
 }
 
 export function buildOrderedCollection(
-    baseUrl: string,
+    origin: string,
     username: string,
     notes: APNote[],
     kind: "outbox" | "inbox" = "outbox",
 ): APOrderedCollection {
-    const url = new URL(baseUrl);
+    const url = new URL(origin);
     const oc: APOrderedCollection = {
         "@context": "https://www.w3.org/ns/activitystreams",
         type: "OrderedCollection",
-        id: `${url.origin}/api/users/${username}/${kind}`,
+        id: `${url.origin}/users/${username}/${kind}`,
         summary: `${username}'s ${kind}`,
         totalItems: notes.length,
         orderedItems: notes,
@@ -114,22 +114,22 @@ export function buildOrderedCollection(
 }
 
 export function buildNote(
-    baseUrl: string,
+    origin: string,
     name: string,
     content: string,
 ): APNote {
-    return convertNote(`${baseUrl}/notes/${crypto.randomUUID()}`, name, content);
+    return convertNote(`${origin}/notes/${crypto.randomUUID()}`, name, content);
 }
 
 export function buildAcceptFollow(
-    baseUrl: string,
+    origin: string,
     selfActor: string,
     follow: APActivity,
 ): APAccept {
     const accept: APAccept = {
         "@context": "https://www.w3.org/ns/activitystreams",
         type: "Accept",
-        id: `${baseUrl}/activities/${crypto.randomUUID()}`,
+        id: `${origin}/activities/${crypto.randomUUID()}`,
         actor: selfActor,
         object: follow,
     };
