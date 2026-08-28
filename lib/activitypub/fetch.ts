@@ -1,6 +1,6 @@
 import { APActivity, APActor, APNote, APWebfinger } from "../types/activitypub";
 import { buildAcceptFollow } from "./tools";
-import { SigningRequest, createDigest, signHttpSignature } from "../util/signature";
+import { SignResult, SignResultRFC9421, SigningRequest, createDigest, signRequest } from "../util/signature";
 import { getUserById } from "../db/users";
 
 export async function APRequest(
@@ -40,13 +40,51 @@ export async function APSignedPost(
 
     const signingRequest: SigningRequest = {
         method,
-        pathname: `${parsedUrl.pathname}${parsedUrl.search}`,
+        url: `${parsedUrl.pathname}${parsedUrl.search}`,
         getHeader: (name) => headers.get(name) ?? null,
     };
 
-    const signature = await signHttpSignature(privateKeyPem, keyId, signingRequest);
-    if (signature) {
-        headers.set("Signature", signature);
+    const signResult = await signRequest(privateKeyPem, keyId, signingRequest) as SignResult;
+    headers.set("Signature", signResult.Signature);
+
+    const res = await fetch(url, {
+        method,
+        headers,
+        body,
+    });
+
+    return res;
+}
+
+/** RFC 9421 */
+export async function APSignedPostV2(
+    url: string,
+    data: object,
+    privateKeyPem: string,
+    keyId: string,
+): Promise<Response> {
+    const method = "POST";
+    const body = JSON.stringify(data);
+    const digest = await createDigest(body);
+
+    const parsedUrl = new URL(url);
+    const headers = new Headers({
+        "Accept": "application/activity+json",
+        "Content-Type": "application/activity+json",
+        "Content-Digest": digest,
+        "Host": parsedUrl.host,
+        "Date": new Date().toUTCString(),
+    });
+
+    const signingRequest: SigningRequest = {
+        method,
+        url: `${parsedUrl.pathname}${parsedUrl.search}`,
+        getHeader: (name) => headers.get(name) ?? null,
+    };
+
+    const signResult = await signRequest(privateKeyPem, keyId, signingRequest, "rfc9421") as SignResultRFC9421;
+    for (const [key, value] of Object.entries(signResult)) {
+        headers.set(key, value);
     }
 
     const res = await fetch(url, {
@@ -102,10 +140,17 @@ export async function postActivity(selfActor: string, targetActor: string, activ
     try {
         const tActor = await fetchActor(targetActor);
         const user = await getUserById(selfActor);
-        const res = await APSignedPost(tActor.inbox, activity, user?.private_key_pem ?? "", `${selfActor}#main-key`);
-
-        if (res.ok) {
+        const fRes = await APSignedPostV2(tActor.inbox, activity, user?.private_key_pem ?? "", `${selfActor}#main-key`);
+        
+        /** RFC 9421 */
+        if (fRes.ok) {
             return true;
+        } else {
+            /** Old version */
+            const sRes = await APSignedPost(tActor.inbox, activity, user?.private_key_pem ?? "", `${selfActor}#main-key`);
+            if (sRes.ok) {
+                return true;
+            }
         }
     } catch (e: any) {}
 
