@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { AppShell } from "@/components/app-shell";
+import { SESSION_TOKEN_COOKIE, SESSION_USERNAME_COOKIE, type SessionInfo } from "@/lib/session";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,11 +15,17 @@ export const viewport: Viewport = {
     themeColor: "#DDF3FF",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+    // 会话存在 cookie 里，SSR 直接渲染登录态，避免注水不一致
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SESSION_TOKEN_COOKIE)?.value ?? null;
+    const username = cookieStore.get(SESSION_USERNAME_COOKIE)?.value ?? null;
+    const initialSession: SessionInfo | null = token && username ? { username, token } : null;
+
     return (
         <html lang="zh-CN">
             <body>
-                <AppShell>{children}</AppShell>
+                <AppShell initialSession={initialSession}>{children}</AppShell>
             </body>
         </html>
     );

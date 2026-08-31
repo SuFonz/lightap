@@ -10,13 +10,15 @@ import {
     type ReactNode,
 } from "react";
 import * as authApi from "@/lib/client/auth-api";
+import {
+    SESSION_TOKEN_COOKIE,
+    SESSION_USERNAME_COOKIE,
+    SESSION_MAX_AGE,
+    takeLegacySession,
+    type SessionInfo,
+} from "@/lib/session";
 
 export type AuthMode = "login" | "register";
-
-interface Session {
-    username: string;
-    token: string;
-}
 
 interface AuthStoreValue {
     isAuthenticated: boolean;
@@ -27,67 +29,80 @@ interface AuthStoreValue {
     logout: () => void;
 }
 
-const SESSION_KEY = "lightap:session";
 const AuthStoreContext = createContext<AuthStoreValue | null>(null);
 
-function readSession(): Session | null {
-    if (typeof window === "undefined") return null;
-    try {
-        const raw = window.localStorage.getItem(SESSION_KEY);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw) as Partial<Session>;
-        if (!parsed.username || !parsed.token) return null;
-        return { username: parsed.username, token: parsed.token };
-    } catch {
-        return null;
-    }
+function writeSessionCookies(session: SessionInfo) {
+    // token(JWT) 与用户名字符集均为 cookie 安全字符，无需编码
+    document.cookie = `${SESSION_TOKEN_COOKIE}=${session.token}; path=/; max-age=${SESSION_MAX_AGE}; samesite=lax`;
+    document.cookie = `${SESSION_USERNAME_COOKIE}=${session.username}; path=/; max-age=${SESSION_MAX_AGE}; samesite=lax`;
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-    // 首次渲染与 SSR 保持一致（未登录），挂载后再从 localStorage 恢复会话，避免注水不一致
-    const [session, setSession] = useState<Session | null>(null);
+function clearSessionCookies() {
+    document.cookie = `${SESSION_TOKEN_COOKIE}=; path=/; max-age=0; samesite=lax`;
+    document.cookie = `${SESSION_USERNAME_COOKIE}=; path=/; max-age=0; samesite=lax`;
+}
+
+export function AuthProvider({
+    children,
+    initialSession = null,
+}: {
+    children: ReactNode;
+    initialSession?: SessionInfo | null;
+}) {
+    // SSR 时由根布局从 cookie 读出并传入，首帧即登录态，无注水不一致
+    const [session, setSession] = useState<SessionInfo | null>(initialSession);
 
     useEffect(() => {
-        const restored = readSession();
-        if (!restored) return;
-        setSession(restored);
-        // 校验 token 是否仍然有效，失效则清除会话
+        // 一次性迁移旧版 localStorage 会话
+        const legacy = takeLegacySession();
+        if (legacy && !session) {
+            writeSessionCookies(legacy);
+            setSession(legacy);
+            return;
+        }
+
+        // 启动时校验 token 是否仍然有效，失效则清除会话
+        if (!session) return;
+        let cancelled = false;
         authApi
-            .me(restored.token)
+            .me(session.token)
             .then((name) => {
-                if (!name) setSession(null);
+                if (!cancelled && !name) {
+                    clearSessionCookies();
+                    setSession(null);
+                }
             })
             .catch(() => {
                 // 网络异常时保留本地会话
             });
+        return () => {
+            cancelled = true;
+        };
+        // 仅在挂载时执行一次（迁移 + 校验）
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    const username = session?.username ?? null;
-    const isAuthenticated = Boolean(session);
-
-    useEffect(() => {
-        try {
-            if (session) {
-                window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-            } else {
-                window.localStorage.removeItem(SESSION_KEY);
-            }
-        } catch {
-            // localStorage 不可用时静默忽略
-        }
-    }, [session]);
 
     const login = useCallback(async (name: string, password: string) => {
         const res = await authApi.login(name, password);
-        setSession({ username: res.username, token: res.token });
+        const next = { username: res.username, token: res.token };
+        writeSessionCookies(next);
+        setSession(next);
     }, []);
 
     const register = useCallback(async (name: string, password: string) => {
         const res = await authApi.register(name, password);
-        setSession({ username: res.username, token: res.token });
+        const next = { username: res.username, token: res.token };
+        writeSessionCookies(next);
+        setSession(next);
     }, []);
 
-    const logout = useCallback(() => setSession(null), []);
+    const logout = useCallback(() => {
+        clearSessionCookies();
+        setSession(null);
+    }, []);
+
+    const username = session?.username ?? null;
+    const isAuthenticated = Boolean(session);
 
     const value = useMemo(
         () => ({

@@ -2,16 +2,22 @@
 
 import { useState, type ReactNode } from "react";
 import { AuthModal } from "@/components/auth/auth-modal";
-import { AuthProvider, type AuthMode } from "@/stores/auth-store";
-import { ComposerModal } from "@/components/composer-modal";
+import { AuthProvider, type AuthMode } from "@/stores/auth-store";import { ComposerModal } from "@/components/composer-modal";
 import { EditProfileModal } from "@/components/edit-profile-modal";
 import { MobileBottomNav, MobileDrawer, MobileTopBar } from "@/components/mobile-nav";
 import { RightRail } from "@/components/right-rail";
 import { ShellContext, type ShellValue } from "@/components/shell-context";
 import { Sidebar } from "@/components/sidebar";
 import { AppStoreProvider } from "@/stores/app-store-provider";
+import type { SessionInfo } from "@/lib/session";
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+    children,
+    initialSession = null,
+}: {
+    children: ReactNode;
+    initialSession?: SessionInfo | null;
+}) {
     const [composerOpen, setComposerOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -32,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     return (
         <ShellContext.Provider value={shell}>
-            <AuthProvider>
+            <AuthProvider initialSession={initialSession}>
                 <AppStoreProvider>
                     {/* 第一层：环境 —— 蓝色天空 + 光晕 + 星光 */}
                     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
