@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
-import { SearchIcon, UserPlusIcon, UsersIcon } from "@/components/icons";
+import { UserPlusIcon, UsersIcon } from "@/components/icons";
 import { useUserStore } from "@/stores/user-store";
 import { pillTones, TagPill } from "@/components/tag-pill";
 import { cn, formatCount } from "@/lib/client/utils";
@@ -13,24 +13,15 @@ type Filter = "all" | "following" | "notFollowing";
 export default function UsersPage() {
     const { users, currentUser, isFollowing } = useUserStore();
     const [filter, setFilter] = useState<Filter>("all");
-    const [query, setQuery] = useState("");
 
     const visible = useMemo(() => {
-        const q = query.trim().toLowerCase();
         return users.filter((user) => {
             if (user.username === currentUser.username) return false;
             if (filter === "following" && !isFollowing(user.username)) return false;
             if (filter === "notFollowing" && isFollowing(user.username)) return false;
-            if (
-                q &&
-                !user.displayName.toLowerCase().includes(q) &&
-                !user.username.toLowerCase().includes(q)
-            ) {
-                return false;
-            }
             return true;
         });
-    }, [users, filter, query, isFollowing, currentUser.username]);
+    }, [users, filter, isFollowing, currentUser.username]);
 
     return (
         <div className="flex flex-col gap-4">
@@ -47,19 +38,7 @@ export default function UsersPage() {
             </section>
 
             <section className="glass-card p-4">
-                <label className="flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-4 py-2.5 transition focus-within:border-brand/40 focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/15">
-                    <SearchIcon size={16} className="shrink-0 text-brand" />
-                    <input
-                        type="search"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="按昵称或用户名筛选…"
-                        aria-label="筛选用户"
-                        className="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
-                    />
-                </label>
-
-                <div className="mt-3 flex gap-1 rounded-[10px] bg-brand/10 p-1" role="tablist" aria-label="关注状态筛选">
+                <div className="flex gap-1 rounded-[10px] bg-brand/10 p-1" role="tablist" aria-label="关注状态筛选">
                     {(
                         [
                             ["all", "全部"],

@@ -34,7 +34,7 @@ export default function ProfilePage() {
 
     if (!user) {
         return (
-            <div className="glass-card mx-auto mt-10 max-w-md px-6 py-16 text-center">
+            <div className="mx-auto mt-10 max-w-md px-6 py-16 text-center">
                 <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 text-brand">
                     <UserIcon size={28} />
                 </span>

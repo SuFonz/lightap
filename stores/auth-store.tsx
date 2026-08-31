@@ -44,7 +44,24 @@ function readSession(): Session | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [session, setSession] = useState<Session | null>(() => readSession());
+    // 首次渲染与 SSR 保持一致（未登录），挂载后再从 localStorage 恢复会话，避免注水不一致
+    const [session, setSession] = useState<Session | null>(null);
+
+    useEffect(() => {
+        const restored = readSession();
+        if (!restored) return;
+        setSession(restored);
+        // 校验 token 是否仍然有效，失效则清除会话
+        authApi
+            .me(restored.token)
+            .then((name) => {
+                if (!name) setSession(null);
+            })
+            .catch(() => {
+                // 网络异常时保留本地会话
+            });
+    }, []);
+
     const username = session?.username ?? null;
     const isAuthenticated = Boolean(session);
 
@@ -59,20 +76,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // localStorage 不可用时静默忽略
         }
     }, [session]);
-
-    // 启动时校验 token 是否仍然有效，失效则清除会话
-    useEffect(() => {
-        if (!session) return;
-        authApi
-            .me(session.token)
-            .then((name) => {
-                if (!name) setSession(null);
-            })
-            .catch(() => {
-                // 网络异常时保留本地会话
-            });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     const login = useCallback(async (name: string, password: string) => {
         const res = await authApi.login(name, password);
