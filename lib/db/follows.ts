@@ -70,6 +70,42 @@ export async function getFollowingOf(
     return result.results;
 }
 
+export async function countFollowersOf(
+    preferredUsername: string
+): Promise<number> {
+    const row = await env.DB
+        .prepare(
+            `
+            SELECT COUNT(*) AS total
+            FROM follows f
+            INNER JOIN users u ON u.id = f.following
+            WHERE u.preferred_username = ?
+            `
+        )
+        .bind(preferredUsername)
+        .first<{ total: number }>();
+
+    return row?.total ?? 0;
+}
+
+export async function countFollowingOf(
+    preferredUsername: string
+): Promise<number> {
+    const row = await env.DB
+        .prepare(
+            `
+            SELECT COUNT(*) AS total
+            FROM follows f
+            INNER JOIN users u ON u.id = f.follower
+            WHERE u.preferred_username = ?
+            `
+        )
+        .bind(preferredUsername)
+        .first<{ total: number }>();
+
+    return row?.total ?? 0;
+}
+
 export async function insertFollow(
     follower: string,
     following: string,

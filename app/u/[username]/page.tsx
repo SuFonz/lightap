@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
@@ -15,24 +16,61 @@ import {
 } from "@/components/icons";
 import { PostCard } from "@/components/post-card";
 import { useShell } from "@/components/shell-context";
+import * as api from "@/lib/client/api";
 import { usePostStore } from "@/stores/post-store";
 import { useUserStore } from "@/stores/user-store";
 import { pillTones, TagPill } from "@/components/tag-pill";
 import { formatCount } from "@/lib/client/utils";
+import type { Post } from "@/lib/client/types";
 
 export default function ProfilePage() {
     const params = useParams<{ username: string }>();
     const username = typeof params?.username === "string" ? params.username : "";
-    const { getUser, currentUser } = useUserStore();
+    const { getUser, currentUser, loadProfile, isProfileMissing } = useUserStore();
     const { posts } = usePostStore();
+    const [remotePosts, setRemotePosts] = useState<Post[] | null>(null);
 
     const user = getUser(username);
-    const isMe = user?.username === currentUser.username;
-    const userPosts = posts
-        .filter((p) => p.authorUsername === username)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const missing = isProfileMissing(username);
+
+    useEffect(() => {
+        void loadProfile(username);
+    }, [username, loadProfile]);
+
+    useEffect(() => {
+        let cancelled = false;
+        setRemotePosts(null);
+        api.fetchUserPosts(username)
+            .then((list) => {
+                if (!cancelled) setRemotePosts(list);
+            })
+            .catch(() => {
+                if (!cancelled) setRemotePosts([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [username]);
+
+    // 远端真实帖子 + 本次会话内发布的帖子（演示时间线），按 id 去重
+    const userPosts = useMemo(() => {
+        const sessionPosts = posts.filter((p) => p.authorUsername === username);
+        const merged = [...(remotePosts ?? []), ...sessionPosts];
+        const seen = new Set<string>();
+        return merged
+            .filter((p) => {
+                if (seen.has(p.id)) return false;
+                seen.add(p.id);
+                return true;
+            })
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }, [remotePosts, posts, username]);
 
     if (!user) {
+        if (!missing) {
+            return <ProfileSkeleton />;
+        }
+
         return (
             <div className="mx-auto mt-10 max-w-md px-6 py-16 text-center">
                 <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 text-brand">
@@ -51,6 +89,8 @@ export default function ProfilePage() {
             </div>
         );
     }
+
+    const isMe = user.username === currentUser.username;
 
     return (
         <div className="flex flex-col gap-4">
@@ -159,6 +199,39 @@ export default function ProfilePage() {
                     ))}
                 </section>
             )}
+        </div>
+    );
+}
+
+function ProfileSkeleton() {
+    return (
+        <div className="flex flex-col gap-4" aria-busy="true" aria-label="资料加载中">
+            <section className="glass-card overflow-hidden">
+                <div className="h-32 animate-pulse bg-gradient-to-r from-sky-100 to-violet-100 sm:h-40" />
+                <div className="px-5 pb-5">
+                    <div className="-mt-11 mb-3">
+                        <div className="h-[92px] w-[92px] animate-pulse rounded-full bg-sky-100 ring-4 ring-white/90" />
+                    </div>
+                    <div className="h-6 w-36 animate-pulse rounded bg-sky-100" />
+                    <div className="mt-2 h-4 w-48 animate-pulse rounded bg-sky-100" />
+                    <div className="mt-4 flex gap-6">
+                        <div className="h-6 w-14 animate-pulse rounded bg-sky-100" />
+                        <div className="h-6 w-14 animate-pulse rounded bg-sky-100" />
+                        <div className="h-6 w-14 animate-pulse rounded bg-sky-100" />
+                    </div>
+                </div>
+            </section>
+            <section className="glass-card divide-y divide-sky-200/50 overflow-hidden">
+                {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex gap-3 px-5 py-4">
+                        <div className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-sky-100" />
+                        <div className="flex-1 space-y-2 py-1.5">
+                            <div className="h-4 w-28 animate-pulse rounded bg-sky-100" />
+                            <div className="h-4 w-full max-w-sm animate-pulse rounded bg-sky-100" />
+                        </div>
+                    </div>
+                ))}
+            </section>
         </div>
     );
 }

@@ -87,7 +87,7 @@ export async function POST(
     // }
 
     // 查询用户
-    const user = getUserByPreferredUsername(params.username);
+    const user = await getUserByPreferredUsername(params.username);
     if (!user) {
         return new Response("User not found", {
             status: 404

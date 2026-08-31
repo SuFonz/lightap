@@ -26,8 +26,35 @@ export async function fetchUser(username: string): Promise<User | null> {
 }
 
 export async function fetchUserPosts(username: string): Promise<Post[]> {
-    await delay(250);
-    return clone(seedPosts.filter((p) => p.authorUsername === username));
+    const res = await fetch(`/api/v1/users/${encodeURIComponent(username)}/posts`);
+    if (res.status === 404) {
+        // 站内演示用户（无真实账号）：回退到本地种子数据
+        await delay(250);
+        return clone(seedPosts.filter((p) => p.authorUsername === username));
+    }
+    if (!res.ok) throw new Error("获取帖子失败");
+    const data = (await res.json()) as { posts: Post[] };
+    return data.posts;
+}
+
+export interface ApiUserProfile {
+    username: string;
+    displayName: string;
+    bio: string;
+    avatarUrl: string | null;
+    followers: number;
+    followingCount: number;
+    postsCount: number;
+    createdAt: string;
+}
+
+export async function fetchUserProfile(
+    username: string,
+): Promise<ApiUserProfile | null> {
+    const res = await fetch(`/api/v1/users/${encodeURIComponent(username)}`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error("获取资料失败");
+    return (await res.json()) as ApiUserProfile;
 }
 
 export async function fetchNotifications(): Promise<AppNotification[]> {
@@ -98,7 +125,30 @@ export interface ProfilePatch {
     avatarUrl?: string;
 }
 
-export async function updateProfile(patch: ProfilePatch) {
-    await delay(400);
-    return clone(patch);
+export async function updateProfile(
+    username: string,
+    patch: ProfilePatch,
+    token: string | null,
+): Promise<void> {
+    if (!token) {
+        // 未登录（演示模式）：仅本地生效
+        await delay(400);
+        return;
+    }
+
+    const res = await fetch(`/api/v1/users/${encodeURIComponent(username)}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(patch),
+    });
+
+    if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as
+            | { error?: string }
+            | null;
+        throw new Error(data?.error ?? "保存失败，请稍后重试");
+    }
 }

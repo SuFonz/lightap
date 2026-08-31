@@ -51,6 +51,45 @@ export async function getUserById(id: string): Promise<UserRow | null> {
     } as UserRow;
 }
 
+export async function updateUserProfile(
+    preferredUsername: string,
+    patch: {
+        name?: string;
+        summary?: string;
+        icon_url?: string;
+    }
+): Promise<void> {
+    const sets: string[] = [];
+    const params: (string | number)[] = [];
+
+    if (patch.name !== undefined) {
+        sets.push("name = ?");
+        params.push(patch.name);
+    }
+    if (patch.summary !== undefined) {
+        sets.push("summary = ?");
+        params.push(patch.summary);
+    }
+    if (patch.icon_url !== undefined) {
+        sets.push("icon_url = ?");
+        params.push(patch.icon_url);
+    }
+
+    sets.push("updated_at = ?");
+    params.push(Date.now(), preferredUsername);
+
+    await env.DB
+        .prepare(
+            `
+            UPDATE users
+            SET ${sets.join(", ")}
+            WHERE preferred_username = ?
+            `
+        )
+        .bind(...params)
+        .run();
+}
+
 export async function createUser(params: {
     origin: string;
     username: string;

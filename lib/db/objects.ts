@@ -93,6 +93,25 @@ export async function getReceivedNotesOf(
     })) as ObjectRow[];
 }
 
+export async function countNotesByPreferredUsername(
+    preferredUsername: string
+): Promise<number> {
+    const row = await env.DB
+        .prepare(
+            `
+            SELECT COUNT(*) AS total
+            FROM objects o
+            INNER JOIN users u ON u.id = o.actor
+            WHERE u.preferred_username = ?
+              AND o.type = 'Note'
+            `
+        )
+        .bind(preferredUsername)
+        .first<{ total: number }>();
+
+    return row?.total ?? 0;
+}
+
 export async function insertNote(
     id: string,
     actorId: string,
