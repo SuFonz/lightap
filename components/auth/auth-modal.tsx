@@ -64,8 +64,14 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
             if (isLogin) await login(username, password);
             else await register(username, password);
             onClose();
-        } catch {
-            setError(isLogin ? "登录失败，请稍后重试" : "注册失败，请稍后重试");
+        } catch (e) {
+            setError(
+                e instanceof Error && e.message
+                    ? e.message
+                    : isLogin
+                      ? "登录失败，请稍后重试"
+                      : "注册失败，请稍后重试",
+            );
         } finally {
             setSubmitting(false);
         }

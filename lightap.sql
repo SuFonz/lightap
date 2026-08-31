@@ -17,6 +17,7 @@ CREATE TABLE users (
     icon_url TEXT,
     public_key_pem TEXT NOT NULL,
     private_key_pem TEXT,
+    password_hash TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );

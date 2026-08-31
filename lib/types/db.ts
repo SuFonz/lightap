@@ -6,6 +6,7 @@ export interface UserRow {
     icon_url: string | null,
     private_key_pem: string | null,
     public_key_pem: string,
+    password_hash: string | null,
     created_at: Date,
     updated_at: Date,
 }

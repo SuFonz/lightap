@@ -50,3 +50,43 @@ export async function getUserById(id: string): Promise<UserRow | null> {
         updated_at: new Date(row.updated_at as number),
     } as UserRow;
 }
+
+export async function createUser(params: {
+    origin: string;
+    username: string;
+    passwordHash: string;
+    publicKeyPem: string;
+    privateKeyPem: string;
+}): Promise<void> {
+    const now = Date.now();
+
+    await env.DB
+        .prepare(
+            `
+            INSERT INTO users (
+                id,
+                name,
+                preferred_username,
+                summary,
+                icon_url,
+                public_key_pem,
+                private_key_pem,
+                password_hash,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?)
+            `
+        )
+        .bind(
+            `${params.origin}/users/${params.username}`,
+            params.username,
+            params.username,
+            params.publicKeyPem,
+            params.privateKeyPem,
+            params.passwordHash,
+            now,
+            now
+        )
+        .run();
+}
