@@ -7,17 +7,17 @@ import { WelcomePanel } from "@/components/auth/welcome-panel";
 import { useAuthStore } from "@/stores/auth-store";
 import { Avatar } from "@/components/avatar";
 import {
-    BellIcon,
+    // BellIcon,
     EditIcon,
     FeatherIcon,
     GlobeIcon,
     HomeIcon,
     SearchIcon,
     UserIcon,
-    UsersIcon,
+    // UsersIcon,
 } from "@/components/icons";
 import { useShell } from "@/components/shell-context";
-import { useNotificationStore } from "@/stores/notification-store";
+// import { useNotificationStore } from "@/stores/notification-store";
 import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
 
@@ -37,15 +37,16 @@ export function SidebarContent({
 }) {
     const pathname = usePathname();
     const { currentUser } = useUserStore();
-    const { unreadCount } = useNotificationStore();
+    // const { unreadCount } = useNotificationStore();
     const { openComposer, openEditProfile } = useShell();
     const { isAuthenticated } = useAuthStore();
 
     const navItems: NavItem[] = [
         { href: "/", label: "首页", icon: HomeIcon },
         { href: "/search", label: "搜索", icon: SearchIcon },
-        { href: "/notifications", label: "通知", icon: BellIcon, badge: unreadCount },
-        { href: "/users", label: "探索", icon: UsersIcon },
+        // 功能未实现，暂时注释：
+        // { href: "/notifications", label: "通知", icon: BellIcon, badge: unreadCount },
+        // { href: "/users", label: "探索", icon: UsersIcon },
         { href: `/u/${currentUser.username}`, label: "我的资料", icon: UserIcon },
     ];
 

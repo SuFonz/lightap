@@ -3,7 +3,7 @@
 import { useState, type ComponentType } from "react";
 import { Avatar } from "@/components/avatar";
 import { ComposerModal } from "@/components/composer-modal";
-import { EmojiIcon, HashIcon, ImageIcon, PollIcon, WarnIcon } from "@/components/icons";
+// import { EmojiIcon, HashIcon, ImageIcon, PollIcon, WarnIcon } from "@/components/icons";
 import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
 
@@ -83,11 +83,13 @@ export function ComposerField({
                 </div>
 
                 <div className="mt-3 flex items-center gap-0.5 border-t border-white/70 pt-3 pl-[54px]">
+                    {/* 功能未实现，暂时注释：
                     <ComposerTool icon={ImageIcon} label="图片" tone="hover:text-brand-deep" />
                     <ComposerTool icon={EmojiIcon} label="表情" tone="hover:text-magic-deep" />
                     <ComposerTool icon={HashIcon} label="话题标签" tone="hover:text-brand-deep" />
                     {showTips && <ComposerTool icon={PollIcon} label="投票" tone="hover:text-magic-deep" />}
                     {showTips && <ComposerTool icon={WarnIcon} label="内容警告" tone="hover:text-sakura-deep" />}
+                    */}
                     <span className="btn-solid ml-auto px-4 py-1.5 font-display text-sm font-bold">
                         {submitLabel}
                     </span>

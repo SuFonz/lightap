@@ -1,25 +1,26 @@
 "use client";
 
-import Link from "next/link";
+// import Link from "next/link";
 import { CommunityRules } from "@/components/auth/community-rules";
 import { useAuthStore } from "@/stores/auth-store";
-import { Avatar } from "@/components/avatar";
-import { FollowButton } from "@/components/follow-button";
-import { GlobeIcon, SparklesIcon } from "@/components/icons";
+// import { Avatar } from "@/components/avatar";
+// import { FollowButton } from "@/components/follow-button";
+import { GlobeIcon /*, SparklesIcon */ } from "@/components/icons";
 import { SearchBox } from "@/components/search/search-box";
-import { useTrendingStore } from "@/stores/trending-store";
-import { useUserStore } from "@/stores/user-store";
-import { pillTones, TagPill } from "@/components/tag-pill";
-import { formatCount } from "@/lib/client/utils";
+// import { useTrendingStore } from "@/stores/trending-store";
+// import { useUserStore } from "@/stores/user-store";
+// import { pillTones, TagPill } from "@/components/tag-pill";
+// import { formatCount } from "@/lib/client/utils";
 
 export function RightRail() {
-    const { trends } = useTrendingStore();
-    const { users, currentUser, isFollowing } = useUserStore();
+    // 功能未实现，暂时注释：
+    // const { trends } = useTrendingStore();
+    // const { users, currentUser, isFollowing } = useUserStore();
     const { isAuthenticated } = useAuthStore();
 
-    const suggestions = users
-        .filter((u) => u.username !== currentUser.username && !isFollowing(u.username))
-        .slice(0, 3);
+    // const suggestions = users
+    //     .filter((u) => u.username !== currentUser.username && !isFollowing(u.username))
+    //     .slice(0, 3);
 
     return (
         <aside
@@ -30,6 +31,7 @@ export function RightRail() {
 
             {isAuthenticated ? (
                 <>
+                    {/* 功能未实现，暂时注释：
                     <section className="glass-card p-4" aria-label="热门标签">
                         <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm font-extrabold text-slate-700">
                             <SparklesIcon size={15} className="text-magic-deep" /> 热门话题
@@ -58,7 +60,9 @@ export function RightRail() {
                             ))}
                         </ul>
                     </section>
+                    */}
 
+                    {/* 功能未实现，暂时注释：
                     <section className="glass-card p-4" aria-label="推荐关注">
                         <h2 className="mb-3 font-display text-sm font-extrabold text-slate-700">推荐关注</h2>
                         <ul className="flex flex-col gap-3">
@@ -88,6 +92,7 @@ export function RightRail() {
                             ))}
                         </ul>
                     </section>
+                    */}
 
                     <p className="flex items-start justify-center gap-1.5 px-2 pb-4 text-center text-[11px] leading-relaxed text-slate-400/90">
                         <GlobeIcon size={12} className="mt-0.5 shrink-0" />

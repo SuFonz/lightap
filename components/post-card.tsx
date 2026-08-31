@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, type ReactNode } from "react";
 import { Avatar } from "@/components/avatar";
-import { BoostIcon, HeartIcon, MoreIcon, ReplyIcon, ShareIcon } from "@/components/icons";
+// import { BoostIcon, HeartIcon, MoreIcon, ReplyIcon, ShareIcon } from "@/components/icons";
+import { MoreIcon, ReplyIcon } from "@/components/icons";
 import { RelativeTime } from "@/components/relative-time";
 import { usePostStore } from "@/stores/post-store";
 import { useUserStore } from "@/stores/user-store";
@@ -22,7 +23,7 @@ export function PostCard({
     /** 嵌入单一玻璃容器的时间线行，不再各自成卡 */
     bare?: boolean;
 }) {
-    const { toggleLike, toggleBoost } = usePostStore();
+    // const { toggleLike, toggleBoost } = usePostStore();
     const { getUser, currentUser } = useUserStore();
     const router = useRouter();
     const author = getUser(post.authorUsername);
@@ -76,33 +77,34 @@ export function PostCard({
             icon: ReplyIcon,
             onClick: openDetail,
         },
-        {
-            key: "boost",
-            label: post.boostedByMe ? "取消转发" : "转发",
-            count: post.boosts,
-            active: post.boostedByMe,
-            color: "hover:text-magic-deep [&:hover_.bubble]:bg-magic/15",
-            icon: BoostIcon,
-            onClick: () => toggleBoost(post.id),
-        },
-        {
-            key: "like",
-            label: post.likedByMe ? "取消喜欢" : "喜欢",
-            count: post.likes,
-            active: post.likedByMe,
-            color: "hover:text-sakura-deep [&:hover_.bubble]:bg-sakura/20",
-            icon: HeartIcon,
-            onClick: () => toggleLike(post.id),
-        },
-        {
-            key: "share",
-            label: "分享",
-            count: 0,
-            active: false,
-            color: "hover:text-brand-deep [&:hover_.bubble]:bg-brand/15",
-            icon: ShareIcon,
-            onClick: openDetail,
-        },
+        // 功能未实现，暂时注释：
+        // {
+        //     key: "boost",
+        //     label: post.boostedByMe ? "取消转发" : "转发",
+        //     count: post.boosts,
+        //     active: post.boostedByMe,
+        //     color: "hover:text-magic-deep [&:hover_.bubble]:bg-magic/15",
+        //     icon: BoostIcon,
+        //     onClick: () => toggleBoost(post.id),
+        // },
+        // {
+        //     key: "like",
+        //     label: post.likedByMe ? "取消喜欢" : "喜欢",
+        //     count: post.likes,
+        //     active: post.likedByMe,
+        //     color: "hover:text-sakura-deep [&:hover_.bubble]:bg-sakura/20",
+        //     icon: HeartIcon,
+        //     onClick: () => toggleLike(post.id),
+        // },
+        // {
+        //     key: "share",
+        //     label: "分享",
+        //     count: 0,
+        //     active: false,
+        //     color: "hover:text-brand-deep [&:hover_.bubble]:bg-brand/15",
+        //     icon: ShareIcon,
+        //     onClick: openDetail,
+        // },
     ];
 
     return (

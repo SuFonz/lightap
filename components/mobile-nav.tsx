@@ -6,7 +6,7 @@ import type { ComponentType } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { Avatar } from "@/components/avatar";
 import {
-    BellIcon,
+    // BellIcon,
     FeatherIcon,
     HomeIcon,
     SearchIcon,
@@ -14,14 +14,14 @@ import {
 } from "@/components/icons";
 import { useShell } from "@/components/shell-context";
 import { SidebarContent } from "@/components/sidebar";
-import { useNotificationStore } from "@/stores/notification-store";
+// import { useNotificationStore } from "@/stores/notification-store";
 import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
 
 export function MobileTopBar() {
     const { setDrawerOpen } = useShell();
     const { currentUser } = useUserStore();
-    const { unreadCount } = useNotificationStore();
+    // const { unreadCount } = useNotificationStore();
     const { isAuthenticated } = useAuthStore();
 
     return (
@@ -58,6 +58,7 @@ export function MobileTopBar() {
                 </Link>
                 {isAuthenticated && (
                     <>
+                        {/* 功能未实现，暂时注释：
                         <Link
                             href="/notifications"
                             aria-label={`通知，${unreadCount} 条未读`}
@@ -68,6 +69,7 @@ export function MobileTopBar() {
                                 <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-sakura" aria-hidden="true" />
                             )}
                         </Link>
+                        */}
                         <Link href={`/u/${currentUser.username}`} aria-label="我的资料" className="ml-1">
                             <Avatar
                                 name={currentUser.displayName}
@@ -93,7 +95,7 @@ interface BottomNavItem {
 export function MobileBottomNav() {
     const pathname = usePathname();
     const { openComposer } = useShell();
-    const { unreadCount } = useNotificationStore();
+    // const { unreadCount } = useNotificationStore();
     const { currentUser } = useUserStore();
     const { isAuthenticated } = useAuthStore();
 
@@ -103,7 +105,8 @@ export function MobileBottomNav() {
         { href: "/search", label: "搜索", icon: SearchIcon },
         ...(isAuthenticated
             ? [
-                  { href: "/notifications", label: "通知", icon: BellIcon, badge: unreadCount },
+                  // 功能未实现，暂时注释：
+                  // { href: "/notifications", label: "通知", icon: BellIcon, badge: unreadCount },
                   { href: profileHref, label: "我的", icon: UserIcon },
               ]
             : []),

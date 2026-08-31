@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import {
     CloseIcon,
-    EmojiIcon,
-    HashIcon,
-    ImageIcon,
-    PollIcon,
+    // EmojiIcon,
+    // HashIcon,
+    // ImageIcon,
+    // PollIcon,
     SendIcon,
-    WarnIcon,
+    // WarnIcon,
 } from "@/components/icons";
 import { usePostStore } from "@/stores/post-store";
 import { useUserStore } from "@/stores/user-store";
@@ -74,22 +74,23 @@ export function ComposerModal({
         }
     }
 
-    const tools: {
-        key: string;
-        icon: typeof ImageIcon;
-        label: string;
-        tone: string;
-    }[] = [
-        { key: "image", icon: ImageIcon, label: "添加图片（占位）", tone: "hover:text-brand-deep" },
-        { key: "emoji", icon: EmojiIcon, label: "添加表情（占位）", tone: "hover:text-magic-deep" },
-        { key: "hash", icon: HashIcon, label: "插入话题标签", tone: "hover:text-brand-deep" },
-        ...(showTips
-            ? [
-                  { key: "poll", icon: PollIcon, label: "发起投票（占位）", tone: "hover:text-magic-deep" },
-                  { key: "cw", icon: WarnIcon, label: "添加内容警告（占位）", tone: "hover:text-sakura-deep" },
-              ]
-            : []),
-    ];
+    // 功能未实现，暂时注释：
+    // const tools: {
+    //     key: string;
+    //     icon: typeof ImageIcon;
+    //     label: string;
+    //     tone: string;
+    // }[] = [
+    //     { key: "image", icon: ImageIcon, label: "添加图片（占位）", tone: "hover:text-brand-deep" },
+    //     { key: "emoji", icon: EmojiIcon, label: "添加表情（占位）", tone: "hover:text-magic-deep" },
+    //     { key: "hash", icon: HashIcon, label: "插入话题标签", tone: "hover:text-brand-deep" },
+    //     ...(showTips
+    //         ? [
+    //               { key: "poll", icon: PollIcon, label: "发起投票（占位）", tone: "hover:text-magic-deep" },
+    //               { key: "cw", icon: WarnIcon, label: "添加内容警告（占位）", tone: "hover:text-sakura-deep" },
+    //           ]
+    //         : []),
+    // ];
 
     return (
         <div
@@ -136,6 +137,7 @@ export function ComposerModal({
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-white/80 pt-3 pl-14">
+                    {/* 功能未实现，暂时注释：
                     {tools.map(({ key, icon: IconCmp, label, tone }) => (
                         <button
                             key={key}
@@ -150,6 +152,7 @@ export function ComposerModal({
                             <IconCmp size={18} />
                         </button>
                     ))}
+                    */}
                     <span
                         className={cn(
                             "ml-auto text-xs font-bold tabular-nums",

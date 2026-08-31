@@ -93,7 +93,10 @@ export default function HomePage() {
                     </span>
                     <p className="font-display font-extrabold text-slate-700">这里还什么都没有</p>
                     <p className="text-sm text-slate-400">
+                        {/* 功能未实现，暂时注释：
                         去 <Link href="/users" className="font-bold text-brand-deep hover:underline">用户浏览</Link> 找些有趣的人关注吧！
+                        */}
+                        找些有趣的人关注吧！
                     </p>
                 </div>
             )}
