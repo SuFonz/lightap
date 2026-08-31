@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { CommunityRules } from "@/components/auth/community-rules";
+import { useAuth } from "@/components/auth/auth-provider";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
 import { GlobeIcon, SparklesIcon } from "@/components/icons";
@@ -11,6 +13,7 @@ import { formatCount } from "@/lib/client/utils";
 
 export function RightRail() {
     const { trends, users, currentUser, isFollowing } = useStore();
+    const { isAuthenticated } = useAuth();
 
     const suggestions = users
         .filter((u) => u.username !== currentUser.username && !isFollowing(u.username))
@@ -23,69 +26,75 @@ export function RightRail() {
         >
             <SearchBox />
 
-            <section className="glass-card p-4" aria-label="热门标签">
-                <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm font-extrabold text-slate-700">
-                    <SparklesIcon size={15} className="text-magic-deep" /> 热门话题
-                </h2>
-                <ul className="flex flex-col">
-                    {trends.map((trend, i) => (
-                        <li key={trend.name}>
-                            <Link
-                                href={`/search?q=${encodeURIComponent(trend.name)}`}
-                                className="group -mx-2 flex items-center gap-2.5 rounded-xl px-2 py-2 transition hover:bg-white/60"
-                            >
-                                <TagPill
-                                    label={`#${trend.name}`}
-                                    tone={pillTones[i % pillTones.length]}
-                                />
-                                <span className="ml-auto shrink-0 text-xs text-slate-400 tabular-nums">
-                                    {formatCount(trend.postsCount)} 条
-                                </span>
-                                {i < 2 && (
-                                    <span className="shrink-0 rounded-full bg-sakura/20 px-2 py-0.5 text-[10px] font-extrabold text-sakura-deep">
-                                        HOT
-                                    </span>
-                                )}
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
-            </section>
+            {isAuthenticated ? (
+                <>
+                    <section className="glass-card p-4" aria-label="热门标签">
+                        <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm font-extrabold text-slate-700">
+                            <SparklesIcon size={15} className="text-magic-deep" /> 热门话题
+                        </h2>
+                        <ul className="flex flex-col">
+                            {trends.map((trend, i) => (
+                                <li key={trend.name}>
+                                    <Link
+                                        href={`/search?q=${encodeURIComponent(trend.name)}`}
+                                        className="group -mx-2 flex items-center gap-2.5 rounded-xl px-2 py-2 transition hover:bg-white/60"
+                                    >
+                                        <TagPill
+                                            label={`#${trend.name}`}
+                                            tone={pillTones[i % pillTones.length]}
+                                        />
+                                        <span className="ml-auto shrink-0 text-xs text-slate-400 tabular-nums">
+                                            {formatCount(trend.postsCount)} 条
+                                        </span>
+                                        {i < 2 && (
+                                            <span className="shrink-0 rounded-full bg-sakura/20 px-2 py-0.5 text-[10px] font-extrabold text-sakura-deep">
+                                                HOT
+                                            </span>
+                                        )}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
 
-            <section className="glass-card p-4" aria-label="推荐关注">
-                <h2 className="mb-3 font-display text-sm font-extrabold text-slate-700">推荐关注</h2>
-                <ul className="flex flex-col gap-3">
-                    {suggestions.map((user) => (
-                        <li key={user.username} className="flex items-center gap-2.5">
-                            <Link
-                                href={`/u/${user.username}`}
-                                className="flex min-w-0 flex-1 items-center gap-2.5"
-                            >
-                                <Avatar
-                                    name={user.displayName}
-                                    src={user.avatarUrl}
-                                    size={38}
-                                    status={user.online}
-                                />
-                                <span className="min-w-0">
-                                    <span className="block truncate font-display text-[13px] font-bold text-slate-700 hover:text-brand-deep">
-                                        {user.displayName}
-                                    </span>
-                                    <span className="block truncate text-xs text-slate-400">
-                                        @{user.username}
-                                    </span>
-                                </span>
-                            </Link>
-                            <FollowButton username={user.username} size="sm" />
-                        </li>
-                    ))}
-                </ul>
-            </section>
+                    <section className="glass-card p-4" aria-label="推荐关注">
+                        <h2 className="mb-3 font-display text-sm font-extrabold text-slate-700">推荐关注</h2>
+                        <ul className="flex flex-col gap-3">
+                            {suggestions.map((user) => (
+                                <li key={user.username} className="flex items-center gap-2.5">
+                                    <Link
+                                        href={`/u/${user.username}`}
+                                        className="flex min-w-0 flex-1 items-center gap-2.5"
+                                    >
+                                        <Avatar
+                                            name={user.displayName}
+                                            src={user.avatarUrl}
+                                            size={38}
+                                            status={user.online}
+                                        />
+                                        <span className="min-w-0">
+                                            <span className="block truncate font-display text-[13px] font-bold text-slate-700 hover:text-brand-deep">
+                                                {user.displayName}
+                                            </span>
+                                            <span className="block truncate text-xs text-slate-400">
+                                                @{user.username}
+                                            </span>
+                                        </span>
+                                    </Link>
+                                    <FollowButton username={user.username} size="sm" />
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
 
-            <p className="flex items-start justify-center gap-1.5 px-2 pb-4 text-center text-[11px] leading-relaxed text-slate-400/90">
-                <GlobeIcon size={12} className="mt-0.5 shrink-0" />
-                基于 ActivityPub 协议 · 与 Mastodon / Misskey / Pleroma 互联互通
-            </p>
+                    <p className="flex items-start justify-center gap-1.5 px-2 pb-4 text-center text-[11px] leading-relaxed text-slate-400/90">
+                        <GlobeIcon size={12} className="mt-0.5 shrink-0" />
+                        基于 ActivityPub 协议 · 与 Mastodon / Misskey / Pleroma 互联互通
+                    </p>
+                </>
+            ) : (
+                <CommunityRules />
+            )}
         </aside>
     );
 }

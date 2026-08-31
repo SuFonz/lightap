@@ -1,11 +1,13 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import type { AuthMode } from "@/components/auth/auth-provider";
 
 export interface ShellValue {
     openComposer: () => void;
     closeComposer: () => void;
     openEditProfile: () => void;
+    openAuth: (mode: AuthMode) => void;
     drawerOpen: boolean;
     setDrawerOpen: (open: boolean) => void;
 }

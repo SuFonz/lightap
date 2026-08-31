@@ -8,6 +8,7 @@ import {
     useState,
     type ReactNode,
 } from "react";
+import { useAuth } from "@/components/auth/auth-provider";
 import * as api from "@/lib/client/api";
 import { CURRENT_USERNAME, seedNotifications, seedPosts, seedTrends, seedUsers } from "@/lib/client/mock-data";
 import type { AppNotification, Post, TrendingTag, User } from "@/lib/client/types";
@@ -60,7 +61,21 @@ function findPath(list: Post[], id: string): Post[] | null {
     return null;
 }
 
+function toUser(username: string): User {
+    return {
+        username,
+        displayName: username,
+        bio: "",
+        instance: "lightap.social",
+        followers: 0,
+        followingCount: 0,
+        postsCount: 0,
+        online: true,
+    };
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
+    const { isAuthenticated, username: sessionUsername } = useAuth();
     const [users, setUsers] = useState<User[]>(seedUsers);
     const [posts, setPosts] = useState<Post[]>(seedPosts);
     const [notifications, setNotifications] = useState<AppNotification[]>(
@@ -68,9 +83,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     );
     const trends = seedTrends;
 
+    const activeUsername =
+        isAuthenticated && sessionUsername ? sessionUsername : CURRENT_USERNAME;
+
     const currentUser = useMemo(
-        () => users.find((u) => u.username === CURRENT_USERNAME)!,
-        [users],
+        () => users.find((u) => u.username === activeUsername) ?? toUser(activeUsername),
+        [users, activeUsername],
     );
 
     const [followingSet, setFollowingSet] = useState<Set<string>>(
@@ -113,62 +131,62 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     : u,
             ),
         );
-        if (username === CURRENT_USERNAME) return;
+        if (username === currentUser.username) return;
         setUsers((prev) =>
             prev.map((u) =>
-                u.username === CURRENT_USERNAME
+                u.username === currentUser.username
                     ? { ...u, followingCount: u.followingCount + (following ? 1 : -1) }
                     : u,
             ),
         );
-    }, [followingSet]);
+    }, [followingSet, currentUser.username]);
     const addPost = useCallback(async (content: string) => {
-        const post = await api.createPost(CURRENT_USERNAME, content);
+        const post = await api.createPost(currentUser.username, content);
         setPosts((prev) => [post, ...prev]);
         setUsers((prev) =>
             prev.map((u) =>
-                u.username === CURRENT_USERNAME
+                u.username === currentUser.username
                     ? { ...u, postsCount: u.postsCount + 1 }
                     : u,
             ),
         );
-    }, []);
+    }, [currentUser.username]);
 
     const addReply = useCallback(async (postId: string, content: string) => {
-        const reply = await api.createReply(postId, content);
+        const reply = await api.createReply(postId, currentUser.username, content);
         setPosts((prev) =>
             updateTree(prev, postId, (p) => ({ ...p, replies: [...p.replies, reply] })),
         );
-    }, []);
+    }, [currentUser.username]);
 
     const toggleLike = useCallback(async (postId: string) => {
         setPosts((prev) =>
             updateTree(prev, postId, (p) => {
-                if (p.authorUsername === CURRENT_USERNAME) return p;
+                if (p.authorUsername === currentUser.username) return p;
                 const liked = !p.likedByMe;
                 void api.toggleLike(postId, liked);
                 return { ...p, likedByMe: liked, likes: p.likes + (liked ? 1 : -1) };
             }),
         );
-    }, []);
+    }, [currentUser.username]);
 
     const toggleBoost = useCallback(async (postId: string) => {
         setPosts((prev) =>
             updateTree(prev, postId, (p) => {
-                if (p.authorUsername === CURRENT_USERNAME) return p;
+                if (p.authorUsername === currentUser.username) return p;
                 const boosted = !p.boostedByMe;
                 void api.toggleBoost(postId, boosted);
                 return { ...p, boostedByMe: boosted, boosts: p.boosts + (boosted ? 1 : -1) };
             }),
         );
-    }, []);
+    }, [currentUser.username]);
 
     const updateProfile = useCallback(async (patch: api.ProfilePatch) => {
         await api.updateProfile(patch);
         setUsers((prev) =>
-            prev.map((u) => (u.username === CURRENT_USERNAME ? { ...u, ...patch } : u)),
+            prev.map((u) => (u.username === currentUser.username ? { ...u, ...patch } : u)),
         );
-    }, []);
+    }, [currentUser.username]);
 
     const markAllNotificationsRead = useCallback(() => {
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

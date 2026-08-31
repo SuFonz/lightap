@@ -1,5 +1,4 @@
 import {
-    CURRENT_USERNAME,
     seedNotifications,
     seedPosts,
     seedTrends,
@@ -42,13 +41,13 @@ export async function fetchTrends(): Promise<TrendingTag[]> {
 }
 
 export async function createPost(
-    _username: string,
+    username: string,
     content: string,
 ): Promise<Post> {
     await delay();
     return {
         id: `p-${Date.now()}`,
-        authorUsername: CURRENT_USERNAME,
+        authorUsername: username,
         content,
         createdAt: new Date().toISOString(),
         likes: 0,
@@ -61,12 +60,13 @@ export async function createPost(
 
 export async function createReply(
     _postId: string,
+    username: string,
     content: string,
 ): Promise<Post> {
     await delay();
     return {
         id: `r-${Date.now()}`,
-        authorUsername: CURRENT_USERNAME,
+        authorUsername: username,
         content,
         createdAt: new Date().toISOString(),
         likes: 0,

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { LoginRequiredPanel } from "@/components/auth/login-required-panel";
+import { useAuth } from "@/components/auth/auth-provider";
 import { ComposerField } from "@/components/composer-field";
 import { ImageIcon, SparklesIcon } from "@/components/icons";
 import { PostCard } from "@/components/post-card";
@@ -10,6 +12,7 @@ import { cn } from "@/lib/client/utils";
 
 export default function HomePage() {
     const { posts, currentUser, addPost } = useStore();
+    const { isAuthenticated } = useAuth();
     const [tab, setTab] = useState<"all" | "following">("all");
     const [greeting, setGreeting] = useState("欢迎回来");
 
@@ -29,40 +32,50 @@ export default function HomePage() {
                 </span>
                 <div>
                     <h1 className="font-display text-lg font-black text-slate-800">
-                        {greeting}，{currentUser.displayName}～
+                        {isAuthenticated
+                            ? `${greeting}，${currentUser.displayName}～`
+                            : "欢迎来到 LightAP～"}
                     </h1>
                     <p className="text-xs font-medium text-slate-400">
-                        今天联邦宇宙里也有有趣的事发生哦
+                        {isAuthenticated
+                            ? "今天联邦宇宙里也有有趣的事发生哦"
+                            : "登录后即可发布动态，和联邦宇宙的伙伴们聊聊天"}
                     </p>
                 </div>
             </section>
 
-            <ComposerField onSubmit={addPost} />
+            {isAuthenticated ? (
+                <ComposerField onSubmit={addPost} />
+            ) : (
+                <LoginRequiredPanel />
+            )}
 
-            <div className="glass-card flex gap-1 p-1.5" role="tablist" aria-label="时间线切换">
-                {(
-                    [
-                        ["all", "全部"],
-                        ["following", "已关注"],
-                    ] as const
-                ).map(([key, label]) => (
-                    <button
-                        key={key}
-                        type="button"
-                        role="tab"
-                        aria-selected={tab === key}
-                        onClick={() => setTab(key)}
-                        className={cn(
-                            "flex-1 cursor-pointer rounded-[10px] py-2 font-display text-sm font-bold transition-all duration-200",
-                            tab === key
-                                ? "bg-brand text-white shadow-[0_6px_16px_-6px_rgba(59,167,255,0.55)]"
-                                : "text-slate-500 hover:bg-white/70 hover:text-brand-deep",
-                        )}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
+            {isAuthenticated && (
+                <div className="glass-card flex gap-1 p-1.5" role="tablist" aria-label="时间线切换">
+                    {(
+                        [
+                            ["all", "全部"],
+                            ["following", "已关注"],
+                        ] as const
+                    ).map(([key, label]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            role="tab"
+                            aria-selected={tab === key}
+                            onClick={() => setTab(key)}
+                            className={cn(
+                                "flex-1 cursor-pointer rounded-[10px] py-2 font-display text-sm font-bold transition-all duration-200",
+                                tab === key
+                                    ? "bg-brand text-white shadow-[0_6px_16px_-6px_rgba(59,167,255,0.55)]"
+                                    : "text-slate-500 hover:bg-white/70 hover:text-brand-deep",
+                            )}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* 时间线：一个玻璃容器，内容优先 */}
             <section className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="时间线">

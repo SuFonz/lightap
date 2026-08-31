@@ -242,3 +242,10 @@ h1, h2, h3, h4 {
     outline-offset: 2px;
     border-radius: 4px;
 }
+
+/* 输入类元素的聚焦反馈由外层容器的 focus-within 边框提供，避免双层边框嵌套 */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: none;
+}

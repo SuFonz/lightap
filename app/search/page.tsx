@@ -14,6 +14,8 @@ function SearchPageInner() {
 
     return (
         <div className="flex flex-col gap-4">
+            <h1 className="font-display text-lg font-black text-slate-800">搜索结果</h1>
+
             {/* 桌面端搜索框在右上角侧栏里；窄屏下由这里的搜索框兜底 */}
             <section className="glass-card p-4 xl:hidden">
                 <SearchBox autoFocus />

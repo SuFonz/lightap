@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
+import { useAuth } from "@/components/auth/auth-provider";
 import { Avatar } from "@/components/avatar";
 import {
     BellIcon,
@@ -19,6 +20,7 @@ import { cn } from "@/lib/client/utils";
 export function MobileTopBar() {
     const { setDrawerOpen } = useShell();
     const { currentUser, unreadCount } = useStore();
+    const { isAuthenticated } = useAuth();
 
     return (
         <header className="glass-bar fixed inset-x-0 top-0 z-40 flex items-center gap-2 px-4 py-2.5 lg:hidden">
@@ -52,24 +54,28 @@ export function MobileTopBar() {
                 >
                     <SearchIcon size={21} />
                 </Link>
-                <Link
-                    href="/notifications"
-                    aria-label={`通知，${unreadCount} 条未读`}
-                    className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/80 hover:text-brand-deep"
-                >
-                    <BellIcon size={21} />
-                    {unreadCount > 0 && (
-                        <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-sakura" aria-hidden="true" />
-                    )}
-                </Link>
-                <Link href={`/u/${currentUser.username}`} aria-label="我的资料" className="ml-1">
-                    <Avatar
-                        name={currentUser.displayName}
-                        src={currentUser.avatarUrl}
-                        size={34}
-                        status={currentUser.online}
-                    />
-                </Link>
+                {isAuthenticated && (
+                    <>
+                        <Link
+                            href="/notifications"
+                            aria-label={`通知，${unreadCount} 条未读`}
+                            className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/80 hover:text-brand-deep"
+                        >
+                            <BellIcon size={21} />
+                            {unreadCount > 0 && (
+                                <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-sakura" aria-hidden="true" />
+                            )}
+                        </Link>
+                        <Link href={`/u/${currentUser.username}`} aria-label="我的资料" className="ml-1">
+                            <Avatar
+                                name={currentUser.displayName}
+                                src={currentUser.avatarUrl}
+                                size={34}
+                                status={currentUser.online}
+                            />
+                        </Link>
+                    </>
+                )}
             </div>
         </header>
     );
@@ -86,13 +92,18 @@ export function MobileBottomNav() {
     const pathname = usePathname();
     const { openComposer } = useShell();
     const { unreadCount, currentUser } = useStore();
+    const { isAuthenticated } = useAuth();
 
     const profileHref = `/u/${currentUser.username}`;
     const items: BottomNavItem[] = [
         { href: "/", label: "首页", icon: HomeIcon },
         { href: "/search", label: "搜索", icon: SearchIcon },
-        { href: "/notifications", label: "通知", icon: BellIcon, badge: unreadCount },
-        { href: profileHref, label: "我的", icon: UserIcon },
+        ...(isAuthenticated
+            ? [
+                  { href: "/notifications", label: "通知", icon: BellIcon, badge: unreadCount },
+                  { href: profileHref, label: "我的", icon: UserIcon },
+              ]
+            : []),
     ];
 
     const isActive = (href: string) =>
@@ -107,16 +118,18 @@ export function MobileBottomNav() {
                 <BottomNavLink key={item.href} item={item} active={isActive(item.href)} />
             ))}
 
-            <div className="flex w-16 justify-center">
-                <button
-                    type="button"
-                    onClick={openComposer}
-                    aria-label="发布新帖"
-                    className="-mt-7 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-xl shadow-brand/50 ring-4 ring-white/70 transition-all duration-200 hover:-translate-y-1 active:scale-90"
-                >
-                    <FeatherIcon size={23} />
-                </button>
-            </div>
+            {isAuthenticated && (
+                <div className="flex w-16 justify-center">
+                    <button
+                        type="button"
+                        onClick={openComposer}
+                        aria-label="发布新帖"
+                        className="-mt-7 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-xl shadow-brand/50 ring-4 ring-white/70 transition-all duration-200 hover:-translate-y-1 active:scale-90"
+                    >
+                        <FeatherIcon size={23} />
+                    </button>
+                </div>
+            )}
 
             {items.slice(2).map((item) => (
                 <BottomNavLink key={item.href} item={item} active={isActive(item.href)} />
