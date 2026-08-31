@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/client/utils";
 
 const gradients = [
     "from-sky-300 to-blue-500",

@@ -15,9 +15,9 @@ import {
 } from "@/components/icons";
 import { PostCard } from "@/components/post-card";
 import { useShell } from "@/components/shell-context";
-import { useStore } from "@/components/store";
+import { useStore } from "@/stores/store";
 import { pillTones, TagPill } from "@/components/tag-pill";
-import { formatCount } from "@/lib/utils";
+import { formatCount } from "@/lib/client/utils";
 
 export default function ProfilePage() {
     const params = useParams<{ username: string }>();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo } from "@/lib/client/utils";
 
 interface RelativeTimeProps {
     iso: string;

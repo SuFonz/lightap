@@ -6,9 +6,9 @@ import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
 import { CloseIcon, SearchIcon, TrendingUpIcon } from "@/components/icons";
 import { PostCard } from "@/components/post-card";
-import { useStore } from "@/components/store";
+import { useStore } from "@/stores/store";
 import { pillTones, TagPill, toneClasses } from "@/components/tag-pill";
-import { cn, formatCount } from "@/lib/utils";
+import { cn, formatCount } from "@/lib/client/utils";
 
 type Tab = "posts" | "users" | "tags";
 

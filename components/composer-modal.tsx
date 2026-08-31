@@ -11,8 +11,8 @@ import {
     SendIcon,
     WarnIcon,
 } from "@/components/icons";
-import { useStore } from "@/components/store";
-import { cn } from "@/lib/utils";
+import { useStore } from "@/stores/store";
+import { cn } from "@/lib/client/utils";
 
 interface ComposerModalProps {
     open: boolean;

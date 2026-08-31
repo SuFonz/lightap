@@ -13,9 +13,9 @@ import {
     UserPlusIcon,
 } from "@/components/icons";
 import { RelativeTime } from "@/components/relative-time";
-import { useStore } from "@/components/store";
-import type { NotificationType } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { useStore } from "@/stores/store";
+import type { NotificationType } from "@/lib/client/types";
+import { cn } from "@/lib/client/utils";
 
 const typeMeta: Record<
     NotificationType,

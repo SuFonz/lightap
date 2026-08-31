@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Avatar } from "@/components/avatar";
 import { CheckIcon, CloseIcon } from "@/components/icons";
-import { useStore } from "@/components/store";
+import { useStore } from "@/stores/store";
 
 interface EditProfileModalProps {
     open: boolean;

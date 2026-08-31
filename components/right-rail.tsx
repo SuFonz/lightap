@@ -6,9 +6,9 @@ import { useState, type FormEvent } from "react";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
 import { GlobeIcon, SearchIcon, SparklesIcon } from "@/components/icons";
-import { useStore } from "@/components/store";
+import { useStore } from "@/stores/store";
 import { pillTones, TagPill } from "@/components/tag-pill";
-import { formatCount } from "@/lib/utils";
+import { formatCount } from "@/lib/client/utils";
 
 export function RightRail() {
     const router = useRouter();

@@ -4,8 +4,8 @@ import { useState, type ComponentType } from "react";
 import { Avatar } from "@/components/avatar";
 import { ComposerModal } from "@/components/composer-modal";
 import { EmojiIcon, HashIcon, ImageIcon, PollIcon, WarnIcon } from "@/components/icons";
-import { useStore } from "@/components/store";
-import { cn } from "@/lib/utils";
+import { useStore } from "@/stores/store";
+import { cn } from "@/lib/client/utils";
 
 interface ComposerFieldProps {
     label?: string;

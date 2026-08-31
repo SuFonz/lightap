@@ -8,9 +8,9 @@ import {
     useState,
     type ReactNode,
 } from "react";
-import * as api from "@/lib/api";
-import { CURRENT_USERNAME, seedNotifications, seedPosts, seedTrends, seedUsers } from "@/lib/mock-data";
-import type { AppNotification, Post, TrendingTag, User } from "@/lib/types";
+import * as api from "@/lib/client/api";
+import { CURRENT_USERNAME, seedNotifications, seedPosts, seedTrends, seedUsers } from "@/lib/client/mock-data";
+import type { AppNotification, Post, TrendingTag, User } from "@/lib/client/types";
 
 interface StoreValue {
     currentUser: User;

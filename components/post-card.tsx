@@ -6,10 +6,10 @@ import { useCallback, type ReactNode } from "react";
 import { Avatar } from "@/components/avatar";
 import { BoostIcon, HeartIcon, MoreIcon, ReplyIcon, ShareIcon } from "@/components/icons";
 import { RelativeTime } from "@/components/relative-time";
-import { useStore } from "@/components/store";
+import { useStore } from "@/stores/store";
 import { TagPill } from "@/components/tag-pill";
-import type { Post } from "@/lib/types";
-import { cn, formatCount } from "@/lib/utils";
+import type { Post } from "@/lib/client/types";
+import { cn, formatCount } from "@/lib/client/utils";
 
 export function PostCard({
     post,

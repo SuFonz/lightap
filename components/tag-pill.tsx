@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/client/utils";
 
 /* 蓝 / 紫 / 粉 三色胶囊：蓝色为主，紫粉点缀 */
 export const toneClasses = {

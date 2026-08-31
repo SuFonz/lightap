@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useStore } from "@/components/store";
-import { cn } from "@/lib/utils";
+import { useStore } from "@/stores/store";
+import { cn } from "@/lib/client/utils";
 
 interface FollowButtonProps {
     username: string;

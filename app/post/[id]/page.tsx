@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ComposerField } from "@/components/composer-field";
 import { PostCard } from "@/components/post-card";
 import { HomeIcon, ReplyIcon } from "@/components/icons";
-import { useStore } from "@/components/store";
+import { useStore } from "@/stores/store";
 
 const MAX_REPLY = 500;
 

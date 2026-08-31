@@ -7,7 +7,7 @@ import { MobileBottomNav, MobileDrawer, MobileTopBar } from "@/components/mobile
 import { RightRail } from "@/components/right-rail";
 import { ShellContext, type ShellValue } from "@/components/shell-context";
 import { Sidebar } from "@/components/sidebar";
-import { StoreProvider } from "@/components/store";
+import { StoreProvider } from "@/stores/store";
 
 export function AppShell({ children }: { children: ReactNode }) {
     const [composerOpen, setComposerOpen] = useState(false);

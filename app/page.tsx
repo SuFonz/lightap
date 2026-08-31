@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { ComposerField } from "@/components/composer-field";
 import { ImageIcon, SparklesIcon } from "@/components/icons";
 import { PostCard } from "@/components/post-card";
-import { useStore } from "@/components/store";
-import { cn } from "@/lib/utils";
+import { useStore } from "@/stores/store";
+import { cn } from "@/lib/client/utils";
 
 export default function HomePage() {
     const { posts, currentUser, addPost } = useStore();
