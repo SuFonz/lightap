@@ -4,7 +4,7 @@ import { useState, type ComponentType } from "react";
 import { Avatar } from "@/components/avatar";
 import { ComposerModal } from "@/components/composer-modal";
 import { EmojiIcon, HashIcon, ImageIcon, PollIcon, WarnIcon } from "@/components/icons";
-import { useStore } from "@/stores/store";
+import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
 
 interface ComposerFieldProps {
@@ -51,7 +51,7 @@ export function ComposerField({
     className,
     onSubmit,
 }: ComposerFieldProps) {
-    const { currentUser } = useStore();
+    const { currentUser } = useUserStore();
     const [open, setOpen] = useState(false);
 
     return (

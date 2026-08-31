@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { CloseIcon, FeatherIcon, LockIcon, UserIcon } from "@/components/icons";
-import { useAuth, type AuthMode } from "@/components/auth/auth-provider";
+import { useAuthStore, type AuthMode } from "@/stores/auth-store";
 import { cn } from "@/lib/client/utils";
 
 interface AuthModalProps {
@@ -13,7 +13,7 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps) {
-    const { login, register } = useAuth();
+    const { login, register } = useAuthStore();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");

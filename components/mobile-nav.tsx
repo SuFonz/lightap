@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
-import { useAuth } from "@/components/auth/auth-provider";
+import { useAuthStore } from "@/stores/auth-store";
 import { Avatar } from "@/components/avatar";
 import {
     BellIcon,
@@ -14,13 +14,15 @@ import {
 } from "@/components/icons";
 import { useShell } from "@/components/shell-context";
 import { SidebarContent } from "@/components/sidebar";
-import { useStore } from "@/stores/store";
+import { useNotificationStore } from "@/stores/notification-store";
+import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
 
 export function MobileTopBar() {
     const { setDrawerOpen } = useShell();
-    const { currentUser, unreadCount } = useStore();
-    const { isAuthenticated } = useAuth();
+    const { currentUser } = useUserStore();
+    const { unreadCount } = useNotificationStore();
+    const { isAuthenticated } = useAuthStore();
 
     return (
         <header className="glass-bar fixed inset-x-0 top-0 z-40 flex items-center gap-2 px-4 py-2.5 lg:hidden">
@@ -91,8 +93,9 @@ interface BottomNavItem {
 export function MobileBottomNav() {
     const pathname = usePathname();
     const { openComposer } = useShell();
-    const { unreadCount, currentUser } = useStore();
-    const { isAuthenticated } = useAuth();
+    const { unreadCount } = useNotificationStore();
+    const { currentUser } = useUserStore();
+    const { isAuthenticated } = useAuthStore();
 
     const profileHref = `/u/${currentUser.username}`;
     const items: BottomNavItem[] = [

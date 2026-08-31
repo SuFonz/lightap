@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LoginRequiredPanel } from "@/components/auth/login-required-panel";
-import { useAuth } from "@/components/auth/auth-provider";
+import { useAuthStore } from "@/stores/auth-store";
 import { ComposerField } from "@/components/composer-field";
 import { ImageIcon, SparklesIcon } from "@/components/icons";
 import { PostCard } from "@/components/post-card";
-import { useStore } from "@/stores/store";
+import { usePostStore } from "@/stores/post-store";
+import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
 
 export default function HomePage() {
-    const { posts, currentUser, addPost } = useStore();
-    const { isAuthenticated } = useAuth();
+    const { posts, addPost } = usePostStore();
+    const { currentUser } = useUserStore();
+    const { isAuthenticated } = useAuthStore();
     const [tab, setTab] = useState<"all" | "following">("all");
     const [greeting, setGreeting] = useState("欢迎回来");
 

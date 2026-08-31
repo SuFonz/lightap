@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import { WelcomePanel } from "@/components/auth/welcome-panel";
-import { useAuth } from "@/components/auth/auth-provider";
+import { useAuthStore } from "@/stores/auth-store";
 import { Avatar } from "@/components/avatar";
 import {
     BellIcon,
@@ -17,7 +17,8 @@ import {
     UsersIcon,
 } from "@/components/icons";
 import { useShell } from "@/components/shell-context";
-import { useStore } from "@/stores/store";
+import { useNotificationStore } from "@/stores/notification-store";
+import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
 
 interface NavItem {
@@ -35,9 +36,10 @@ export function SidebarContent({
     flat?: boolean;
 }) {
     const pathname = usePathname();
-    const { currentUser, unreadCount } = useStore();
+    const { currentUser } = useUserStore();
+    const { unreadCount } = useNotificationStore();
     const { openComposer, openEditProfile } = useShell();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuthStore();
 
     const navItems: NavItem[] = [
         { href: "/", label: "首页", icon: HomeIcon },

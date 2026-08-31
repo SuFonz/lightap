@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { CommunityRules } from "@/components/auth/community-rules";
-import { useAuth } from "@/components/auth/auth-provider";
+import { useAuthStore } from "@/stores/auth-store";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
 import { GlobeIcon, SparklesIcon } from "@/components/icons";
 import { SearchBox } from "@/components/search/search-box";
-import { useStore } from "@/stores/store";
+import { useTrendingStore } from "@/stores/trending-store";
+import { useUserStore } from "@/stores/user-store";
 import { pillTones, TagPill } from "@/components/tag-pill";
 import { formatCount } from "@/lib/client/utils";
 
 export function RightRail() {
-    const { trends, users, currentUser, isFollowing } = useStore();
-    const { isAuthenticated } = useAuth();
+    const { trends } = useTrendingStore();
+    const { users, currentUser, isFollowing } = useUserStore();
+    const { isAuthenticated } = useAuthStore();
 
     const suggestions = users
         .filter((u) => u.username !== currentUser.username && !isFollowing(u.username))

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { AuthMode } from "@/components/auth/auth-provider";
+import type { AuthMode } from "@/stores/auth-store";
 
 export interface ShellValue {
     openComposer: () => void;

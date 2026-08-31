@@ -13,7 +13,8 @@ import {
     UserPlusIcon,
 } from "@/components/icons";
 import { RelativeTime } from "@/components/relative-time";
-import { useStore } from "@/stores/store";
+import { useNotificationStore } from "@/stores/notification-store";
+import { useUserStore } from "@/stores/user-store";
 import type { NotificationType } from "@/lib/client/types";
 import { cn } from "@/lib/client/utils";
 
@@ -46,7 +47,8 @@ const typeMeta: Record<
 type Tab = "all" | "unread" | "mentions";
 
 export default function NotificationsPage() {
-    const { notifications, getUser, currentUser, markAllNotificationsRead } = useStore();
+    const { notifications, markAllNotificationsRead } = useNotificationStore();
+    const { getUser, currentUser } = useUserStore();
     const [tab, setTab] = useState<Tab>("all");
 
     const visible = notifications.filter((n) => {

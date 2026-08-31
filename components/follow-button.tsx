@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useStore } from "@/stores/store";
+import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
 
 interface FollowButtonProps {
@@ -11,7 +11,7 @@ interface FollowButtonProps {
 }
 
 export function FollowButton({ username, size = "md", className }: FollowButtonProps) {
-    const { isFollowing, toggleFollow, currentUser } = useStore();
+    const { isFollowing, toggleFollow, currentUser } = useUserStore();
     const [pending, setPending] = useState(false);
     const following = isFollowing(username);
 

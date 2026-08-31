@@ -15,14 +15,16 @@ import {
 } from "@/components/icons";
 import { PostCard } from "@/components/post-card";
 import { useShell } from "@/components/shell-context";
-import { useStore } from "@/stores/store";
+import { usePostStore } from "@/stores/post-store";
+import { useUserStore } from "@/stores/user-store";
 import { pillTones, TagPill } from "@/components/tag-pill";
 import { formatCount } from "@/lib/client/utils";
 
 export default function ProfilePage() {
     const params = useParams<{ username: string }>();
     const username = typeof params?.username === "string" ? params.username : "";
-    const { getUser, posts, currentUser } = useStore();
+    const { getUser, currentUser } = useUserStore();
+    const { posts } = usePostStore();
 
     const user = getUser(username);
     const isMe = user?.username === currentUser.username;

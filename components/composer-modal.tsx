@@ -11,7 +11,8 @@ import {
     SendIcon,
     WarnIcon,
 } from "@/components/icons";
-import { useStore } from "@/stores/store";
+import { usePostStore } from "@/stores/post-store";
+import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
 
 interface ComposerModalProps {
@@ -35,7 +36,8 @@ export function ComposerModal({
     showTips = true,
     onSubmit,
 }: ComposerModalProps) {
-    const { currentUser, addPost } = useStore();
+    const { currentUser } = useUserStore();
+    const { addPost } = usePostStore();
     const [content, setContent] = useState("");
     const [sending, setSending] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);

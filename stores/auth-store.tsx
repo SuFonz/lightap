@@ -13,7 +13,7 @@ import * as authApi from "@/lib/client/auth-api";
 
 export type AuthMode = "login" | "register";
 
-interface AuthValue {
+interface AuthStoreValue {
     isAuthenticated: boolean;
     username: string | null;
     login: (username: string, password: string) => Promise<void>;
@@ -22,7 +22,7 @@ interface AuthValue {
 }
 
 const SESSION_KEY = "lightap:session";
-const AuthContext = createContext<AuthValue | null>(null);
+const AuthStoreContext = createContext<AuthStoreValue | null>(null);
 
 function readSession(): string | null {
     if (typeof window === "undefined") return null;
@@ -63,11 +63,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         [isAuthenticated, username, login, register, logout],
     );
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return <AuthStoreContext.Provider value={value}>{children}</AuthStoreContext.Provider>;
 }
 
-export function useAuth() {
-    const ctx = useContext(AuthContext);
-    if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+export function useAuthStore() {
+    const ctx = useContext(AuthStoreContext);
+    if (!ctx) throw new Error("useAuthStore must be used within AuthProvider");
     return ctx;
 }

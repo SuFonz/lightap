@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Avatar } from "@/components/avatar";
 import { CheckIcon, CloseIcon } from "@/components/icons";
-import { useStore } from "@/stores/store";
+import { useUserStore } from "@/stores/user-store";
 
 interface EditProfileModalProps {
     open: boolean;
@@ -11,7 +11,7 @@ interface EditProfileModalProps {
 }
 
 export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
-    const { currentUser, updateProfile } = useStore();
+    const { currentUser, updateProfile } = useUserStore();
     const [displayName, setDisplayName] = useState("");
     const [bio, setBio] = useState("");
     const [avatarUrl, setAvatarUrl] = useState("");

@@ -4,14 +4,14 @@ import { useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
 import { SearchIcon, UserPlusIcon, UsersIcon } from "@/components/icons";
-import { useStore } from "@/stores/store";
+import { useUserStore } from "@/stores/user-store";
 import { pillTones, TagPill } from "@/components/tag-pill";
 import { cn, formatCount } from "@/lib/client/utils";
 
 type Filter = "all" | "following" | "notFollowing";
 
 export default function UsersPage() {
-    const { users, currentUser, isFollowing } = useStore();
+    const { users, currentUser, isFollowing } = useUserStore();
     const [filter, setFilter] = useState<Filter>("all");
     const [query, setQuery] = useState("");
 

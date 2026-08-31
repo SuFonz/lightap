@@ -3,19 +3,19 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { LoginRequiredPanel } from "@/components/auth/login-required-panel";
-import { useAuth } from "@/components/auth/auth-provider";
+import { useAuthStore } from "@/stores/auth-store";
 import { ComposerField } from "@/components/composer-field";
 import { PostCard } from "@/components/post-card";
 import { HomeIcon, ReplyIcon } from "@/components/icons";
-import { useStore } from "@/stores/store";
+import { usePostStore } from "@/stores/post-store";
 
 const MAX_REPLY = 500;
 
 export default function PostDetailPage() {
     const params = useParams<{ id: string }>();
     const id = typeof params?.id === "string" ? params.id : "";
-    const { getPostPath, addReply } = useStore();
-    const { isAuthenticated } = useAuth();
+    const { getPostPath, addReply } = usePostStore();
+    const { isAuthenticated } = useAuthStore();
     const router = useRouter();
     const chain = id ? getPostPath(id) ?? [] : [];
 

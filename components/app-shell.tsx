@@ -2,14 +2,14 @@
 
 import { useState, type ReactNode } from "react";
 import { AuthModal } from "@/components/auth/auth-modal";
-import { AuthProvider, type AuthMode } from "@/components/auth/auth-provider";
+import { AuthProvider, type AuthMode } from "@/stores/auth-store";
 import { ComposerModal } from "@/components/composer-modal";
 import { EditProfileModal } from "@/components/edit-profile-modal";
 import { MobileBottomNav, MobileDrawer, MobileTopBar } from "@/components/mobile-nav";
 import { RightRail } from "@/components/right-rail";
 import { ShellContext, type ShellValue } from "@/components/shell-context";
 import { Sidebar } from "@/components/sidebar";
-import { StoreProvider } from "@/stores/store";
+import { AppStoreProvider } from "@/stores/app-store-provider";
 
 export function AppShell({ children }: { children: ReactNode }) {
     const [composerOpen, setComposerOpen] = useState(false);
@@ -33,7 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
         <ShellContext.Provider value={shell}>
             <AuthProvider>
-                <StoreProvider>
+                <AppStoreProvider>
                     {/* 第一层：环境 —— 蓝色天空 + 光晕 + 星光 */}
                     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
                         <div className="blob absolute -top-32 -left-24 h-96 w-96 bg-brand/25" />
@@ -71,7 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                         onClose={() => setAuthOpen(false)}
                         onSwitchMode={setAuthMode}
                     />
-                </StoreProvider>
+                </AppStoreProvider>
             </AuthProvider>
         </ShellContext.Provider>
     );

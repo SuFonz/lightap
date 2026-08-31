@@ -6,7 +6,8 @@ import { useCallback, type ReactNode } from "react";
 import { Avatar } from "@/components/avatar";
 import { BoostIcon, HeartIcon, MoreIcon, ReplyIcon, ShareIcon } from "@/components/icons";
 import { RelativeTime } from "@/components/relative-time";
-import { useStore } from "@/stores/store";
+import { usePostStore } from "@/stores/post-store";
+import { useUserStore } from "@/stores/user-store";
 import { TagPill } from "@/components/tag-pill";
 import type { Post } from "@/lib/client/types";
 import { cn, formatCount } from "@/lib/client/utils";
@@ -21,7 +22,8 @@ export function PostCard({
     /** 嵌入单一玻璃容器的时间线行，不再各自成卡 */
     bare?: boolean;
 }) {
-    const { getUser, toggleLike, toggleBoost, currentUser } = useStore();
+    const { toggleLike, toggleBoost } = usePostStore();
+    const { getUser, currentUser } = useUserStore();
     const router = useRouter();
     const author = getUser(post.authorUsername);
     const isMine = post.authorUsername === currentUser.username;
