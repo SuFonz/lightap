@@ -36,3 +36,15 @@ export interface FollowRow {
     following: string,
     created_at: Date,
 }
+
+export interface UserSearchRow {
+    id: string,
+    name: string,
+    preferred_username: string,
+    summary: string | null,
+    icon_url: string | null,
+    created_at: number,
+    followers_count: number,
+    following_count: number,
+    posts_count: number,
+}

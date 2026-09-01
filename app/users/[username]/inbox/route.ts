@@ -16,12 +16,15 @@ const handlers: Partial<
 > = {
     Create: handleCreate,
     Follow: handleFollow,
+    Accept: handleAccept,
 };
 
 export async function GET(
     request: Request,
     { params }: { params: { username: string } },
 ) {
+    console.log("inbox GET request:", request.url, params);
+
     const url = new URL(request.url);
     const headers = request.headers;
     const username = params.username;
@@ -106,8 +109,6 @@ export async function POST(
     }
 
     try {
-        console.log(activity);
-        console.log();
         const handler = handlers[activity.type];
         if (!handler) {
             return new Response("Unsupported activity type", {
@@ -161,6 +162,7 @@ async function handleFollow(baseUrl: string, activity: APActivity): Promise<void
     const targetActor = activity.actor;
     const selfId = typeof(selfActor) === "string" ? selfActor : selfActor.id;
     const targetId = typeof(targetActor) === "string" ? targetActor : targetActor.id;
+    console.log("handleFollow:", selfId, targetId);
 
     const acceptFollow = buildAcceptFollow(baseUrl, selfId, activity);
     
@@ -168,4 +170,20 @@ async function handleFollow(baseUrl: string, activity: APActivity): Promise<void
     if (success) {
         await insertFollow(targetId, selfId);
     }
+}
+
+// 我方 Follow 被对方接受：对方回 Accept{object: 原Follow}，落库关注关系
+async function handleAccept(baseUrl: string, activity: APActivity): Promise<void> {
+    const inner = activity.object as APActivity | undefined;
+    if (!inner || inner.type !== "Follow") {
+        return;
+    }
+
+    const followerId = typeof(inner.actor) === "string" ? inner.actor : inner.actor?.id;
+    const followingId = typeof(inner.object) === "string" ? inner.object : inner.object?.id;
+    if (!followerId || !followingId) {
+        return;
+    }
+
+    await insertFollow(followerId, followingId);
 }

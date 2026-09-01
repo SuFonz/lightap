@@ -7,6 +7,14 @@ import type { UserJwtPayload } from "@/lib/types/http";
 
 export const dynamic = "force-dynamic";
 
+function safeHost(id: string): string | null {
+    try {
+        return new URL(id).host;
+    } catch {
+        return null;
+    }
+}
+
 async function getAuthenticatedUsername(
     request: Request
 ): Promise<string | null> {
@@ -29,6 +37,7 @@ export async function GET(
     request: Request,
     { params }: { params: { username: string } }
 ) {
+    const url = new URL(request.url);
     const username = params.username;
 
     if (!username) {
@@ -47,11 +56,18 @@ export async function GET(
             countNotesByPreferredUsername(user.preferred_username),
         ]);
 
+        // 远端用户（搜索解析时落库）的 id 是其原实例的 Actor URL
+        const localId = `${url.origin}/users/${user.preferred_username}`;
+        const instance = user.id === localId ? null : safeHost(user.id);
+
         return Response.json({
             username: user.preferred_username,
             displayName: user.name,
             bio: user.summary ?? "",
             avatarUrl: user.icon_url ?? null,
+            instance,
+            // 本站用户的 id 即 Actor URL；远端落库用户是其原实例的 Actor URL
+            actorUrl: user.id,
             followers,
             followingCount,
             postsCount,

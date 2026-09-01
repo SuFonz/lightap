@@ -1,15 +1,26 @@
 import { getUserByPreferredUsername } from "@/lib/db/users";
 import { APActivity, APActivityType, APNote } from "@/lib/types/activitypub";
 import { getNotesByPreferredUsername, insertNote } from "@/lib/db/objects";
-import { buildNote, buildOrderedCollection, convertNote } from "@/lib/activitypub/tools";
+import { buildOrderedCollection, convertNote } from "@/lib/activitypub/tools";
 import { insertActivity } from "@/lib/db/activities";
+import { insertFollow, deleteFollow } from "@/lib/db/follows";
+import { postActivity } from "@/lib/activitypub/fetch";
+import { verify } from "@/lib/util/jwt";
+import { env } from "cloudflare:workers";
+import { UserJwtPayload } from "@/lib/types/http";
 
 export const dynamic = "force-dynamic";
 
+// 发件方向：本地用户把 activity 投递到自己的 outbox，由服务器签名转发
 const handlers: Partial<
-    Record<APActivityType, (baseUrl: string, activity: APActivity) => Promise<void>>
+    Record<
+        APActivityType,
+        (baseUrl: string, activity: APActivity) => Promise<void>
+    >
 > = {
     Create: handleCreate,
+    Follow: handleFollow,
+    Undo: handleUndo,
 };
 
 export async function GET(
@@ -55,86 +66,148 @@ export async function POST(
     { params }: { params: { username: string }}
 ) {
     const url = new URL(request.url);
-    const headers = await request.headers;
-    const activity = await request.json<APActivity>();
+    const username = params.username;
+
+    if (!username) {
+        return new Response("Empty username", {
+            status: 400,
+        });
+    }
 
     // 验证jwt
-    // const authorization = headers.get("Authorization");
-    // if (!authorization) {
-    //     return new Response("Unauthorized", {
-    //         status: 403,
-    //     });
-    // }
+    const authorization = request.headers.get("Authorization");
+    if (!authorization) {
+        return new Response("Unauthorized", {
+            status: 403,
+        });
+    }
 
-    // const token = authorization.startsWith("Bearer ")
-    //     ? authorization.slice(7)
-    //     : authorization;
+    const token = authorization.startsWith("Bearer ")
+        ? authorization.slice(7)
+        : authorization;
 
-    // let payload: UserJwtPayload;
-    // try {
-    //     payload = await verify(token, env.JWT_SECRET);
-    // } catch {
-    //     return new Response("Unauthorized", {
-    //         status: 403,
-    //     });
-    // }
+    let payload: UserJwtPayload;
+    try {
+        payload = await verify(token, env.JWT_SECRET);
+    } catch {
+        return new Response("Unauthorized", {
+            status: 403,
+        });
+    }
 
-    // // 用户名与路径不匹配
-    // if (params.username != payload.username) {
-    //     return new Response("Unauthorized", {
-    //         status: 403,
-    //     });
-    // }
+    // 用户名与路径不匹配
+    if (params.username !== payload.username) {
+        return new Response("Unauthorized", {
+            status: 403,
+        });
+    }
 
     // 查询用户
     const user = await getUserByPreferredUsername(params.username);
     if (!user) {
         return new Response("User not found", {
-            status: 404
+            status: 404,
         });
+    }
+
+    let activity: APActivity;
+    try {
+        activity = (await request.json()) as APActivity;
+    } catch {
+        return new Response("Invalid activity", {
+            status: 400,
+        });
+    }
+
+    console.log("outbox activity:", activity);
+
+    // actor 以 JWT 身份为准，id 由服务端补全，防止伪造
+    const actorId = `${url.origin}/users/${user.preferred_username}`;
+    activity.actor = actorId;
+    if (!activity.id) {
+        activity.id = `${url.origin}/activities/${crypto.randomUUID()}`;
     }
 
     try {
         // 处理 Activity
         const handler = handlers[activity.type];
 
-        if (handler) {
-            await handler(url.origin, activity);
+        if (!handler) {
+            return new Response("Unsupported activity type", {
+                status: 400,
+            });
         }
 
-        return new Response(null, {
+        await handler(url.origin, activity);
+
+        return new Response(JSON.stringify(activity), {
             status: 201,
             headers: {
-                "Content-Type": `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`,
-                Location: "xxx", // TODO:
+                "Content-Type": "application/activity+json",
+                Location: activity.id,
             }
         });
-    } catch (e: unknown) {}
+    } catch (e: unknown) {
+        console.error("outbox delivery failed:", e);
+    }
 
     return new Response(null, {
         status: 500,
     });
 }
 
-async function handleCreate(baseUrl: string, activity: APActivity) {
-    const actor = activity.actor;
+async function handleCreate(baseUrl: string, activity: APActivity): Promise<void> {
+    const selfActor = activity.actor;
+    const selfId = typeof(selfActor) === "string" ? selfActor : selfActor.id;
     const note = activity.object as APNote;
-    const actorText = typeof(actor) === "string" ? actor : JSON.stringify(actor);
 
-    const noteId = await insertNote(
-        `${baseUrl}/notes/${crypto.randomUUID()}`, 
-        actorText,
-        note.name, 
+    const noteId = note?.id ?? `${baseUrl}/notes/${crypto.randomUUID()}`;
+    await insertNote(
+        noteId,
+        selfId,
+        note.name,
         note.content
     );
 
     await insertActivity(
-        `${baseUrl}/activities/${crypto.randomUUID()}`, 
-        activity.type, 
-        actorText, 
-        noteId, 
+        activity.id,
+        activity.type,
+        selfId,
+        noteId,
         activity.to ?? [],
         activity.cc ?? []
     );
+}
+
+// 关注：把 Follow 转发到对方的 inbox，投递成功后本地记录关注关系
+async function handleFollow(baseUrl: string, activity: APActivity): Promise<void> {
+    console.log("handleFollow:", activity);
+
+    const selfActor = activity.actor;
+    const targetActor = activity.object;
+    const selfId = typeof(selfActor) === "string" ? selfActor : selfActor.id;
+    const targetId = typeof(targetActor) === "string" ? targetActor : targetActor.id;
+
+    const success = await postActivity(selfId, targetId, activity);
+    if (!success) {
+        throw new Error("Follow delivery failed");
+    }
+
+    await insertFollow(selfId, targetId);
+}
+
+// 取消关注：转发 Undo{Follow}，投递成功后删除本地关注关系
+async function handleUndo(baseUrl: string, activity: APActivity): Promise<void> {
+    const selfActor = activity.actor;
+    const targetActor = activity.object;
+    const selfId = typeof(selfActor) === "string" ? selfActor : selfActor.id;
+    const targetId = typeof(targetActor) === "string" ? targetActor : targetActor.id;
+
+    const success = await postActivity(selfId, targetId, activity);
+    if (!success) {
+        throw new Error("Undo delivery failed");
+    }
+
+    await deleteFollow(selfId, targetId);
 }
 

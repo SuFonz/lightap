@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers"
-import { UserRow } from "@/lib/types/db"
+import { UserRow, UserSearchRow } from "@/lib/types/db"
 
 export async function getUserByPreferredUsername(
     preferredUsername: string
@@ -49,6 +49,102 @@ export async function getUserById(id: string): Promise<UserRow | null> {
         created_at: new Date(row.created_at as number),
         updated_at: new Date(row.updated_at as number),
     } as UserRow;
+}
+
+export async function searchUsersWithCounts(
+    query: string,
+    limit: number = 20
+): Promise<UserSearchRow[]> {
+    const escaped = query.replace(/[\\%_]/g, (c) => `\\${c}`);
+    const like = `%${escaped}%`;
+
+    const rows = await env.DB
+        .prepare(
+            `
+            SELECT u.*,
+                (SELECT COUNT(*) FROM follows f WHERE f.following = u.id) AS followers_count,
+                (SELECT COUNT(*) FROM follows f WHERE f.follower = u.id) AS following_count,
+                (SELECT COUNT(*) FROM objects o WHERE o.actor = u.id AND o.type = 'Note') AS posts_count
+            FROM users u
+            WHERE u.preferred_username LIKE ? ESCAPE '\\'
+               OR u.name LIKE ? ESCAPE '\\'
+               OR u.summary LIKE ? ESCAPE '\\'
+            ORDER BY (u.preferred_username = ?) DESC, u.created_at DESC
+            LIMIT ?
+            `
+        )
+        .bind(like, like, like, query, limit)
+        .all<UserSearchRow>();
+
+    return rows.results;
+}
+
+export async function upsertRemoteUser(params: {
+    id: string;
+    username: string;
+    displayName: string;
+    summary: string | null;
+    iconUrl: string | null;
+    publicKeyPem: string;
+}): Promise<void> {
+    const now = Date.now();
+    const existing = await getUserByPreferredUsername(params.username);
+
+    if (existing && existing.id === params.id) {
+        await env.DB
+            .prepare(
+                `
+                UPDATE users
+                SET name = ?, summary = ?, icon_url = ?, public_key_pem = ?, updated_at = ?
+                WHERE id = ?
+                `
+            )
+            .bind(
+                params.displayName,
+                params.summary,
+                params.iconUrl,
+                params.publicKeyPem,
+                now,
+                params.id
+            )
+            .run();
+        return;
+    }
+
+    if (existing) {
+        // 同名柄已被本站用户占用，不落库，仅返回搜索结果
+        return;
+    }
+
+    await env.DB
+        .prepare(
+            `
+            INSERT INTO users (
+                id,
+                name,
+                preferred_username,
+                summary,
+                icon_url,
+                public_key_pem,
+                private_key_pem,
+                password_hash,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)
+            `
+        )
+        .bind(
+            params.id,
+            params.displayName,
+            params.username,
+            params.summary,
+            params.iconUrl,
+            params.publicKeyPem,
+            now,
+            now
+        )
+        .run();
 }
 
 export async function updateUserProfile(

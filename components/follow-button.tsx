@@ -1,21 +1,22 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
+import { User } from "@/lib/client/types";
 
 interface FollowButtonProps {
-    username: string;
+    user: User;
     size?: "sm" | "md";
     className?: string;
 }
 
-export function FollowButton({ username, size = "md", className }: FollowButtonProps) {
+export function FollowButton({ user, size = "md", className }: FollowButtonProps) {
     const { isFollowing, toggleFollow, currentUser } = useUserStore();
     const [pending, setPending] = useState(false);
-    const following = isFollowing(username);
+    const following = isFollowing(user.username);
 
-    if (username === currentUser.username) return null;
+    if (user.username === currentUser.username) return null;
 
     async function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
         e.preventDefault();
@@ -23,13 +24,15 @@ export function FollowButton({ username, size = "md", className }: FollowButtonP
         if (pending) return;
         setPending(true);
         try {
-            await toggleFollow(username);
+            await toggleFollow(user);
+        } catch {
+            // 失败时 store 已回滚状态，这里仅结束 pending
         } finally {
             setPending(false);
         }
     }
 
-    function handleSubmit(e: FormEvent) {
+    function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault();
     }
 

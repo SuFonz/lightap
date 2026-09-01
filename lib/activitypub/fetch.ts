@@ -16,7 +16,40 @@ export async function APRequest(
             "Content-Type": "application/activity+json",
         },
         body: data ? JSON.stringify(data) : undefined,
+        signal: AbortSignal.timeout(8000),
     });
+}
+
+export async function APSignedGet(
+    url: string,
+    privateKeyPem: string,
+    keyId: string,
+): Promise<Response> {
+    const method = "GET";
+
+    const parsedUrl = new URL(url);
+    const headers = new Headers({
+        "Accept": "application/activity+json",
+        "Content-Type": "application/activity+json",
+        "Host": parsedUrl.host,
+        "Date": new Date().toUTCString(),
+    });
+
+    const signingRequest: SigningRequest = {
+        method,
+        url: `${parsedUrl.pathname}${parsedUrl.search}`,
+        getHeader: (name) => headers.get(name) ?? null,
+    };
+
+    const signResult = await signRequest(privateKeyPem, keyId, signingRequest) as SignResult;
+    headers.set("Signature", signResult.Signature);
+
+    const res = await fetch(url, {
+        method,
+        headers,
+    });
+
+    return res;
 }
 
 export async function APSignedPost(
@@ -65,9 +98,14 @@ export async function APSignedPostV2(
 ): Promise<Response> {
     const method = "POST";
     const body = JSON.stringify(data);
+
+    console.log("APSignedPostV2 createDigest");
     const digest = await createDigest(body);
 
+    console.log("APSignedPostV2 url:", url);
     const parsedUrl = new URL(url);
+
+    console.log("APSignedPostV2 parsing URL:", parsedUrl);
     const headers = new Headers({
         "Accept": "application/activity+json",
         "Content-Type": "application/activity+json",
@@ -82,11 +120,13 @@ export async function APSignedPostV2(
         getHeader: (name) => headers.get(name) ?? null,
     };
 
+    console.log("APSignedPostV2 signing request:", signingRequest);
     const signResult = await signRequest(privateKeyPem, keyId, signingRequest, "rfc9421") as SignResultRFC9421;
     for (const [key, value] of Object.entries(signResult)) {
         headers.set(key, value);
     }
 
+    console.log("APSignedPostV2 fetching:", url, method, headers, body);
     const res = await fetch(url, {
         method,
         headers,
@@ -125,7 +165,13 @@ export async function fetchWebfinger(
     throw new Error("WebFinger lookup failed");
 }
 
-export async function fetchActor(actor: string): Promise<APActor> {
+export async function fetchActor(actor: string, privateKeyPem?: string, keyId?: string): Promise<APActor> {
+    if (privateKeyPem && keyId) {
+        const res = await APSignedGet(actor, privateKeyPem, keyId);
+        const data = await res.json<APActor>();
+        return data;
+    }
+
     const res = await APRequest(actor);
     const data = await res.json<APActor>();
     return data;
@@ -138,10 +184,12 @@ export async function getActorUrlFromWebfinger(webfinger: APWebfinger): Promise<
 
 export async function postActivity(selfActor: string, targetActor: string, activity: APActivity): Promise<boolean> {
     try {
-        const tActor = await fetchActor(targetActor);
         const user = await getUserById(selfActor);
+        const tActor = await fetchActor(targetActor);
         const fRes = await APSignedPostV2(tActor.inbox, activity, user?.private_key_pem ?? "", `${selfActor}#main-key`);
-        
+        console.log("postActivity response:", fRes.status, await fRes.text());
+        console.log("response");
+
         /** RFC 9421 */
         if (fRes.ok) {
             return true;

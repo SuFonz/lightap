@@ -113,7 +113,7 @@ export default function UsersPage() {
                                 </div>
                                 <div className="flex gap-1">
                                     <dt>关注</dt>
-                                    <dd className="font-bold text-slate-600 tabular-nums">{formatCount(user.followingCount)}</dd>
+                                    <dd className="font-bold text-slate-600 tabular-nums">{formatCount(user.following)}</dd>
                                 </div>
                                 <div className="flex gap-1">
                                     <dt>粉丝</dt>

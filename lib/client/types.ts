@@ -4,8 +4,10 @@ export interface User {
     bio: string;
     avatarUrl?: string;
     instance: string;
+    /** Actor URL，未知的用户可省略（发 Follow 时服务端兜底） */
+    actorUrl?: string;
     followers: number;
-    followingCount: number;
+    following: number;
     postsCount: number;
     /** 二次元风小徽章，如「插画师」 */
     badges?: string[];

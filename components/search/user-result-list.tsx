@@ -36,7 +36,7 @@ export function UserResultList({ users }: { users: User[] }) {
                         </p>
                         <p className="mt-0.5 truncate text-xs text-slate-500">{user.bio}</p>
                     </div>
-                    <FollowButton username={user.username} />
+                    <FollowButton user={user} />
                 </li>
             ))}
         </ul>

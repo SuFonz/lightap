@@ -106,6 +106,22 @@ export async function countFollowingOf(
     return row?.total ?? 0;
 }
 
+export async function deleteFollow(
+    follower: string,
+    following: string
+): Promise<void> {
+    await env.DB
+        .prepare(
+            `
+            DELETE FROM follows
+            WHERE follower = ?
+              AND following = ?
+            `
+        )
+        .bind(follower, following)
+        .run();
+}
+
 export async function insertFollow(
     follower: string,
     following: string,

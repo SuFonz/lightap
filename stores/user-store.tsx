@@ -23,7 +23,7 @@ interface UserStoreValue {
     /** 从服务端拉取并缓存真实资料（演示用户会得到 404，走种子数据兜底） */
     loadProfile: (username: string) => Promise<void>;
     isFollowing: (username: string) => boolean;
-    toggleFollow: (username: string) => Promise<void>;
+    toggleFollow: (user: User) => Promise<void>;
     updateProfile: (patch: api.ProfilePatch) => Promise<void>;
     incrementPostsCount: (username: string, delta: number) => void;
 }
@@ -39,7 +39,7 @@ function toFallbackUser(username: string): User {
         bio: "",
         instance: LOCAL_INSTANCE,
         followers: 0,
-        followingCount: 0,
+        following: 0,
         postsCount: 0,
         online: true,
     };
@@ -51,9 +51,10 @@ function toUser(profile: api.ApiUserProfile): User {
         displayName: profile.displayName,
         bio: profile.bio,
         avatarUrl: profile.avatarUrl ?? undefined,
-        instance: LOCAL_INSTANCE,
+        instance: profile.instance ?? LOCAL_INSTANCE,
+        actorUrl: profile.actorUrl ?? undefined,
         followers: profile.followers,
-        followingCount: profile.followingCount,
+        following: profile.followingCount,
         postsCount: profile.postsCount,
         online: true,
     };
@@ -131,16 +132,46 @@ export function UserStoreProvider({ children }: { children: ReactNode }) {
     );
 
     const toggleFollow = useCallback(
-        async (username: string) => {
-            const following = !followingSet.has(username);
+        async (user: User) => {
+            const username = user.username;
+            const following = !followingSet.has(user.username);
+            const delta = following ? 1 : -1;
+
+            // 演示用户（seed 数据，无真实账号）或未登录时走本地 mock
+            const isDemoUser = seedUsers.some((u) => u.username === username);
+            const useActivity = isAuthenticated && !!token && !isDemoUser;
+
             setFollowingSet((prev) => {
                 const next = new Set(prev);
                 if (following) next.add(username);
                 else next.delete(username);
                 return next;
             });
-            await api.setFollow(username, following);
-            const delta = following ? 1 : -1;
+
+            try {
+                if (useActivity) {
+                    // 真实用户：投递 Follow / Undo activity 到自己的 outbox
+                    const target = profiles[username];
+                    await api.sendFollowActivity(
+                        currentUser.username,
+                        user.actorUrl ?? "",
+                        following,
+                        token,
+                    );
+                } else {
+                    await api.setFollow(username, following);
+                }
+            } catch (e) {
+                // 投递失败：回滚关注状态
+                setFollowingSet((prev) => {
+                    const next = new Set(prev);
+                    if (following) next.delete(username);
+                    else next.add(username);
+                    return next;
+                });
+                throw e;
+            }
+
             setUsers((prev) =>
                 prev.map((u) =>
                     u.username === username
@@ -163,7 +194,7 @@ export function UserStoreProvider({ children }: { children: ReactNode }) {
             setUsers((prev) =>
                 prev.map((u) =>
                     u.username === currentUser.username
-                        ? { ...u, followingCount: u.followingCount + delta }
+                        ? { ...u, following: u.following + delta }
                         : u,
                 ),
             );
@@ -174,12 +205,12 @@ export function UserStoreProvider({ children }: { children: ReactNode }) {
                     ...prev,
                     [me]: {
                         ...prev[me],
-                        followingCount: Math.max(0, prev[me].followingCount + delta),
+                        following: Math.max(0, prev[me].following + delta),
                     },
                 };
             });
         },
-        [followingSet, currentUser.username],
+        [followingSet, currentUser.username, isAuthenticated, token, profiles],
     );
 
     const updateProfile = useCallback(

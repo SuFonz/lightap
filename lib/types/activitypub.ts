@@ -49,6 +49,11 @@ export interface APActor extends APObject {
     name: string,
     preferredUsername: string,
     summary: string | null,
+    url?: string,
+    icon?: {
+        type?: string,
+        url?: string,
+    },
     publicKey: {
         id: string,
         owner: string,

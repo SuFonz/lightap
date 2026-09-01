@@ -32,7 +32,7 @@ export function SearchBox({
         router.push(`/search?q=${encodeURIComponent(t)}`);
     }
 
-    function handleSubmit(e: FormEvent) {
+    function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault();
         runSearch(query);
     }

@@ -165,7 +165,7 @@ export default function ProfilePage() {
                         {(
                             [
                                 ["帖子", user.postsCount],
-                                ["关注", user.followingCount],
+                                ["关注", user.following],
                                 ["粉丝", user.followers],
                             ] as const
                         ).map(([label, count]) => (

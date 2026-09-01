@@ -1,5 +1,20 @@
 import { APWebfinger, APActor, APNote, APOrderedCollection, APActivity, APPerson, APObject, APAccept } from "@/lib/types/activitypub"
 
+export function htmlToPlainText(html: string): string {
+    return html
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/p>\s*<p[^>]*>/gi, "\n\n")
+        .replace(/<\/p>/gi, "\n")
+        .replace(/<[^>]*>/g, "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, "&")
+        .trim();
+}
+
 export function parseResource(
     resource: string
 ): [username: string, host: string] {

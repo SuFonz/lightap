@@ -1,23 +1,8 @@
 import { getNotesByPreferredUsername } from "@/lib/db/objects";
 import { getUserByPreferredUsername } from "@/lib/db/users";
+import { htmlToPlainText } from "@/lib/activitypub/tools";
 
 export const dynamic = "force-dynamic";
-
-// AP Note 的 content 可能是 HTML，转成纯文本供前端直接渲染
-function toPlainText(html: string): string {
-    return html
-        .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/<\/p>\s*<p[^>]*>/gi, "\n\n")
-        .replace(/<\/p>/gi, "\n")
-        .replace(/<[^>]*>/g, "")
-        .replace(/&nbsp;/g, " ")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&amp;/g, "&")
-        .trim();
-}
 
 export async function GET(
     request: Request,
@@ -43,7 +28,7 @@ export async function GET(
                 return {
                     id,
                     authorUsername: username,
-                    content: toPlainText(note.content),
+                    content: htmlToPlainText(note.content),
                     createdAt: note.created_at.toISOString(),
                     likes: 0,
                     likedByMe: false,

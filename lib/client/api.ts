@@ -42,6 +42,8 @@ export interface ApiUserProfile {
     displayName: string;
     bio: string;
     avatarUrl: string | null;
+    instance: string | null;
+    actorUrl: string | null;
     followers: number;
     followingCount: number;
     postsCount: number;
@@ -123,6 +125,56 @@ export interface ProfilePatch {
     displayName?: string;
     bio?: string;
     avatarUrl?: string;
+}
+
+const AP_CONTEXT = "https://www.w3.org/ns/activitystreams";
+
+/**
+ * 关注 / 取消关注：把 Follow（或 Undo{Follow}）activity 投递到自己的 outbox，
+ * 由服务器签名转发给对方 inbox
+ */
+export async function sendFollowActivity(
+    me: string,
+    targetUrl: string,
+    following: boolean,
+    token: string,
+): Promise<void> {
+    const origin = window.location.origin;
+    const actor = `${origin}/users/${me}`;
+    const object = targetUrl;
+
+    const activity = following
+        ? {
+              "@context": AP_CONTEXT,
+              type: "Follow",
+              actor,
+              object,
+              to: [object],
+          }
+        : {
+              "@context": AP_CONTEXT,
+              type: "Undo",
+              actor,
+              object: {
+                  type: "Follow",
+                  actor,
+                  object,
+              },
+              to: [object],
+          };
+
+    const res = await fetch(`/users/${encodeURIComponent(me)}/outbox`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/activity+json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(activity),
+    });
+
+    if (!res.ok) {
+        throw new Error("关注操作失败，请稍后重试");
+    }
 }
 
 export async function updateProfile(
