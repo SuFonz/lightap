@@ -198,9 +198,17 @@ async function handleFollow(baseUrl: string, activity: APActivity): Promise<void
 // 取消关注：转发 Undo{Follow}，投递成功后删除本地关注关系
 async function handleUndo(baseUrl: string, activity: APActivity): Promise<void> {
     const selfActor = activity.actor;
-    const targetActor = activity.object;
-    const selfId = typeof(selfActor) === "string" ? selfActor : selfActor.id;
-    const targetId = typeof(targetActor) === "string" ? targetActor : targetActor.id;
+    const inner = activity.object;
+    const innerActivity = inner as APActivity;
+    // Undo 的 object 一般是内层 Follow 活动；兼容直接传目标 actor 的情况
+    const targetActor =
+        typeof inner === "string"
+            ? inner
+            : innerActivity.type === "Follow"
+                ? innerActivity.object
+                : inner;
+    const selfId = typeof selfActor === "string" ? selfActor : selfActor.id;
+    const targetId = typeof targetActor === "string" ? targetActor : targetActor.id;
 
     const success = await postActivity(selfId, targetId, activity);
     if (!success) {

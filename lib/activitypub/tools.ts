@@ -151,3 +151,37 @@ export function buildAcceptFollow(
 
     return accept;
 }
+
+export function buildFollow(
+    origin: string,
+    selfActor: string,
+    targetActor: string,
+): APActivity {
+    const follow: APActivity = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        type: "Follow",
+        id: `${origin}/activities/${crypto.randomUUID()}`,
+        actor: selfActor,
+        object: targetActor,
+        to: [targetActor],
+    };
+
+    return follow;
+}
+
+export function buildUnfollow(
+    origin: string,
+    selfActor: string,
+    targetActor: string,
+): APActivity {
+    const undo: APActivity = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        type: "Undo",
+        id: `${origin}/activities/${crypto.randomUUID()}`,
+        actor: selfActor,
+        object: buildFollow(origin, selfActor, targetActor),
+        to: [targetActor],
+    };
+
+    return undo;
+}

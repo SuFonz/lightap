@@ -1,3 +1,4 @@
+import { buildFollow, buildUnfollow } from "@/lib/activitypub/tools";
 import { AuthToken, Post, SearchResult, User, UserProfile } from "@/lib/types/http";
 
 const delay = (ms = 350) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -112,7 +113,7 @@ export async function createPost(
 }
 
 export async function createReply(
-    _postId: string,
+    postId: string,
     username: string,
     content: string,
 ): Promise<Post> {
@@ -130,12 +131,12 @@ export async function createReply(
     };
 }
 
-export async function toggleLike(_postId: string, liked: boolean) {
+export async function toggleLike(postId: string, liked: boolean) {
     await delay(180);
     return liked;
 }
 
-export async function toggleBoost(_postId: string, boosted: boolean) {
+export async function toggleBoost(postId: string, boosted: boolean) {
     await delay(180);
     return boosted;
 }
@@ -151,8 +152,6 @@ export interface ProfilePatch {
     avatarUrl?: string;
 }
 
-const AP_CONTEXT = "https://www.w3.org/ns/activitystreams";
-
 /**
  * 关注 / 取消关注：把 Follow（或 Undo{Follow}）activity 投递到自己的 outbox，
  * 由服务器签名转发给对方 inbox
@@ -165,27 +164,10 @@ export async function sendFollowActivity(
 ): Promise<void> {
     const origin = window.location.origin;
     const actor = `${origin}/users/${me}`;
-    const object = targetUrl;
 
     const activity = following
-        ? {
-              "@context": AP_CONTEXT,
-              type: "Follow",
-              actor,
-              object,
-              to: [object],
-          }
-        : {
-              "@context": AP_CONTEXT,
-              type: "Undo",
-              actor,
-              object: {
-                  type: "Follow",
-                  actor,
-                  object,
-              },
-              to: [object],
-          };
+        ? buildFollow(origin, actor, targetUrl)
+        : buildUnfollow(origin, actor, targetUrl);
 
     const res = await fetch(`/users/${encodeURIComponent(me)}/outbox`, {
         method: "POST",
