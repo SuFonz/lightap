@@ -1,6 +1,7 @@
 import { getNotesByPreferredUsername } from "@/lib/db/objects";
 import { getUserByPreferredUsername } from "@/lib/db/users";
 import { htmlToPlainText } from "@/lib/activitypub/tools";
+import { HttpError, PostResult } from "@/lib/types/http";
 
 export const dynamic = "force-dynamic";
 
@@ -11,13 +12,13 @@ export async function GET(
     const username = params.username;
 
     if (!username) {
-        return Response.json({ error: "用户名为空" }, { status: 400 });
+        return Response.json({ error: "用户名为空" } satisfies HttpError, { status: 400 });
     }
 
     try {
         const user = await getUserByPreferredUsername(username);
         if (!user) {
-            return Response.json({ error: "用户不存在" }, { status: 404 });
+            return Response.json({ error: "用户不存在" } satisfies HttpError, { status: 404 });
         }
 
         const notes = await getNotesByPreferredUsername(username, 50);
@@ -36,11 +37,11 @@ export async function GET(
                     replies: [],
                 };
             }),
-        });
+        } satisfies PostResult);
     } catch (e) {
         console.error("get user posts failed:", e);
         return Response.json(
-            { error: "获取帖子失败，请稍后重试" },
+            { error: "获取帖子失败，请稍后重试" } satisfies HttpError,
             { status: 500 }
         );
     }

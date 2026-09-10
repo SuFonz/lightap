@@ -5,6 +5,7 @@ import {
     upsertRemoteUser,
 } from "@/lib/db/users";
 import { UserSearchRow } from "@/lib/types/db";
+import { SearchResult, User } from "@/lib/types/http";
 
 export const dynamic = "force-dynamic";
 
@@ -12,32 +13,6 @@ export const dynamic = "force-dynamic";
 const REMOTE_ACCOUNT_RE = /^@?([A-Za-z0-9_]+)@([A-Za-z0-9.\-]+\.[A-Za-z]{2,})$/;
 
 const SEARCH_LIMIT = 20;
-
-interface SearchUserDto {
-    username: string;
-    displayName: string;
-    bio: string;
-    avatarUrl: string | null;
-    instance: string | null;
-    actorUrl: string | null;
-    followers: number;
-    following: number;
-    postsCount: number;
-}
-
-function localRowToDto(row: UserSearchRow, host: string): SearchUserDto {
-    return {
-        username: row.preferred_username,
-        displayName: row.name,
-        bio: row.summary ?? "",
-        avatarUrl: row.icon_url,
-        instance: host,
-        actorUrl: row.actor_url,
-        followers: row.followers_count,
-        following: row.following_count,
-        postsCount: row.posts_count,
-    };
-}
 
 export async function GET(request: Request) {
     const url = new URL(request.url);
@@ -53,7 +28,7 @@ export async function GET(request: Request) {
         remoteMatch !== null &&
         remoteMatch[2].toLowerCase() !== url.host.toLowerCase();
 
-    const results: SearchUserDto[] = [];
+    const results: User[] = [];
 
     if (isRemote && remoteMatch) {
         const [, username, host] = remoteMatch;
@@ -65,18 +40,18 @@ export async function GET(request: Request) {
             if (actorUrl) {
                 const actor = await fetchActor(actorUrl);
 
-                const dto: SearchUserDto = {
+                const user: User = {
                     username: actor.preferredUsername || username,
                     displayName: actor.name || username,
                     bio: htmlToPlainText(actor.summary ?? ""),
-                    avatarUrl: actor.icon?.url ?? null,
+                    avatarUrl: actor.icon?.url,
                     instance: host,
                     actorUrl,
                     followers: 0,
                     following: 0,
                     postsCount: 0,
                 };
-                results.push(dto);
+                results.push(user);
 
                 // 落库远端用户，资料页与后续交互可直接使用
                 try {
@@ -101,11 +76,21 @@ export async function GET(request: Request) {
     try {
         const locals = await searchUsersWithCounts(localQuery, SEARCH_LIMIT);
         for (const row of locals) {
-            results.push(localRowToDto(row, url.host));
+            results.push({
+                username: row.preferred_username,
+                displayName: row.name,
+                bio: row.summary ?? "",
+                avatarUrl: row.icon_url ?? undefined,
+                instance: url.host,
+                actorUrl: row.actor_url,
+                followers: row.followers_count,
+                following: row.following_count,
+                postsCount: row.posts_count,
+            });
         }
     } catch (e) {
         console.error("local search failed:", e);
     }
 
-    return Response.json({ users: results });
+    return Response.json({ users: results } satisfies SearchResult);
 }

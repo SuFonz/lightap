@@ -1,5 +1,6 @@
 import { getUserByPreferredUsername } from "@/lib/db/users";
 import { APPerson } from "@/lib/types/activitypub";
+import { HttpError } from "@/lib/types/http";
 
 export const dynamic = "force-dynamic";
 
@@ -11,16 +12,18 @@ export async function GET(
     const username = params.username;
 
     if (!username) {
-        return new Response("Empty username", {
-            status: 400,
-        });
+        return Response.json(
+            { error: "Empty username" } satisfies HttpError,
+            { status: 400 }
+        );
     }
 
     const user = await getUserByPreferredUsername(username);
     if (!user) {
-        return new Response("User not found", {
-            status: 404,
-        });
+        return Response.json(
+            { error: "User not found" } satisfies HttpError,
+            { status: 404 }
+        );
     }
 
     // TODO: 关注功能尚未实现，这里使用占位数据
@@ -46,7 +49,7 @@ export async function GET(
         orderedItems: placeholderFollowers,
     };
 
-    return new Response(JSON.stringify(orderedCollection), {
+    return Response.json(orderedCollection, {
         status: 200,
         headers: {
             "Content-Type": "application/activity+json",

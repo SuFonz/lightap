@@ -11,6 +11,10 @@ export interface JwtPayload {
     jti?: string;
 }
 
+export interface HttpError {
+    error: string;
+}
+
 export interface UserJwtPayload extends JwtPayload {
     username: string,
 }
@@ -27,6 +31,10 @@ export interface AuthToken {
 
 export interface SearchResult {
     users: User[];
+}
+
+export interface PostResult {
+    posts: Post[];
 }
 
 export interface User {
@@ -84,4 +92,10 @@ export interface UserProfile {
     followingCount: number;
     postsCount: number;
     createdAt: string;
+}
+
+export interface ProfilePatch {
+    displayName?: string;
+    bio?: string;
+    avatarUrl?: string;
 }

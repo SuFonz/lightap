@@ -3,7 +3,7 @@ import { getUserByPreferredUsername, updateUserProfile } from "@/lib/db/users";
 import { countFollowersOf, countFollowingOf } from "@/lib/db/follows";
 import { countNotesByPreferredUsername } from "@/lib/db/objects";
 import { verify } from "@/lib/util/jwt";
-import type { UserJwtPayload } from "@/lib/types/http";
+import type { HttpError, ProfilePatch, UserJwtPayload } from "@/lib/types/http";
 
 export const dynamic = "force-dynamic";
 
@@ -41,13 +41,13 @@ export async function GET(
     const username = params.username;
 
     if (!username) {
-        return Response.json({ error: "用户名为空" }, { status: 400 });
+        return Response.json({ error: "用户名为空" } satisfies HttpError, { status: 400 });
     }
 
     try {
         const user = await getUserByPreferredUsername(username);
         if (!user) {
-            return Response.json({ error: "用户不存在" }, { status: 404 });
+            return Response.json({ error: "用户不存在" } satisfies HttpError, { status: 404 });
         }
 
         const [followers, followingCount, postsCount] = await Promise.all([
@@ -76,16 +76,10 @@ export async function GET(
     } catch (e) {
         console.error("get user profile failed:", e);
         return Response.json(
-            { error: "获取资料失败，请稍后重试" },
+            { error: "获取资料失败，请稍后重试" } satisfies HttpError,
             { status: 500 }
         );
     }
-}
-
-interface ProfilePatchBody {
-    displayName?: string;
-    bio?: string;
-    avatarUrl?: string;
 }
 
 export async function PATCH(
@@ -95,22 +89,22 @@ export async function PATCH(
     const username = params.username;
 
     if (!username) {
-        return Response.json({ error: "用户名为空" }, { status: 400 });
+        return Response.json({ error: "用户名为空" } satisfies HttpError, { status: 400 });
     }
 
     const authUsername = await getAuthenticatedUsername(request);
     if (!authUsername) {
-        return Response.json({ error: "未登录" }, { status: 401 });
+        return Response.json({ error: "未登录" } satisfies HttpError, { status: 401 });
     }
     if (authUsername !== username) {
-        return Response.json({ error: "只能修改自己的资料" }, { status: 403 });
+        return Response.json({ error: "只能修改自己的资料" } satisfies HttpError, { status: 403 });
     }
 
-    let body: ProfilePatchBody;
+    let body: ProfilePatch;
     try {
         body = await request.json();
     } catch {
-        return Response.json({ error: "请求格式错误" }, { status: 400 });
+        return Response.json({ error: "请求格式错误" } satisfies HttpError, { status: 400 });
     }
 
     const displayName = body.displayName?.trim();
@@ -119,24 +113,24 @@ export async function PATCH(
 
     if (displayName !== undefined && (!displayName || displayName.length > 20)) {
         return Response.json(
-            { error: "昵称需为 1-20 个字符" },
+            { error: "昵称需为 1-20 个字符" } satisfies HttpError,
             { status: 400 }
         );
     }
     if (bio !== undefined && bio.length > 160) {
         return Response.json(
-            { error: "简介最长 160 个字符" },
+            { error: "简介最长 160 个字符" } satisfies HttpError,
             { status: 400 }
         );
     }
     if (avatarUrl !== undefined && avatarUrl.length > 2048) {
-        return Response.json({ error: "头像链接过长" }, { status: 400 });
+        return Response.json({ error: "头像链接过长" } satisfies HttpError, { status: 400 });
     }
 
     try {
         const user = await getUserByPreferredUsername(username);
         if (!user) {
-            return Response.json({ error: "用户不存在" }, { status: 404 });
+            return Response.json({ error: "用户不存在" } satisfies HttpError, { status: 404 });
         }
 
         await updateUserProfile(user.preferred_username, {
@@ -149,7 +143,7 @@ export async function PATCH(
     } catch (e) {
         console.error("update user profile failed:", e);
         return Response.json(
-            { error: "保存失败，请稍后重试" },
+            { error: "保存失败，请稍后重试" } satisfies HttpError,
             { status: 500 }
         );
     }

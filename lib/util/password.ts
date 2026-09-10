@@ -83,3 +83,8 @@ export async function verifyPassword(
 
     return diff === 0;
 }
+
+export function getDummyHash(): Promise<string> {
+    const dummyHashPromise = hashPassword("dummy-password");
+    return dummyHashPromise;
+}

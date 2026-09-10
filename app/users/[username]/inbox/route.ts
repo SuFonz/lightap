@@ -2,7 +2,7 @@ import { APActivity, APActivityType, APNote } from "@/lib/types/activitypub";
 import { buildAcceptFollow, buildNote, buildOrderedCollection, convertNote } from "@/lib/activitypub/tools";
 import { insertActivity } from "@/lib/db/activities";
 import { getUserByPreferredUsername } from "@/lib/db/users";
-import { UserJwtPayload } from "@/lib/types/http";
+import { HttpError, UserJwtPayload } from "@/lib/types/http";
 import { verify } from "@/lib/util/jwt";
 import { env } from "cloudflare:workers";
 import { getReceivedNotesOf, insertNote } from "@/lib/db/objects";
@@ -28,17 +28,19 @@ export async function GET(
     const username = params.username;
 
     if (!username) {
-        return new Response("Empty username", {
-            status: 400,
-        });
+        return Response.json(
+            { error: "Empty username" } satisfies HttpError, 
+            { status: 400 }
+        );
     }
 
     // 验证jwt
     const authorization = headers.get("Authorization");
     if (!authorization) {
-        return new Response("Unauthorized", {
-            status: 403,
-        });
+        return Response.json(
+            { error: "Unauthorized" } satisfies HttpError,
+            { status: 403 }
+        );
     }
 
     const token = authorization.startsWith("Bearer ")
@@ -49,16 +51,18 @@ export async function GET(
     try {
         payload = await verify(token, env.JWT_SECRET);
     } catch {
-        return new Response("Unauthorized", {
-            status: 403,
-        });
+        return Response.json(
+            { error: "Unauthorized" } satisfies HttpError,
+            { status: 403 }
+        );
     }
 
     // 用户名与路径不匹配
     if (params.username != payload.username) {
-        return new Response("Unauthorized", {
-            status: 403,
-        });
+        return Response.json(
+            { error: "Unauthorized" } satisfies HttpError,
+            { status: 403 }
+        );
     }
 
     const notes = await getReceivedNotesOf(params.username, 10);
@@ -73,9 +77,10 @@ export async function GET(
 
     const orderedCollection = buildOrderedCollection(url.origin, username, apNotes, "inbox");
     if (!orderedCollection) {
-        return new Response("Server error", {
-            status: 500,
-        });
+        return Response.json(
+            { error: "Server error" } satisfies HttpError,
+            { status: 500 }
+        );
     }
 
     return Response.json(orderedCollection, {
@@ -96,31 +101,34 @@ export async function POST(
     console.log("outbox POST request:", activity);
 
     if (!username) {
-        return new Response("Empty username", {
-            status: 400,
-        });
+        return Response.json(
+            { error: "Empty username" } satisfies HttpError,
+            { status: 400 }
+        );
     }
 
     const user = await getUserByPreferredUsername(username);
     if (!user) {
-        return new Response("User not found", {
-            status: 404,
-        });
+        return Response.json(
+            { error: "User not found" } satisfies HttpError,
+            { status: 404 }
+        );
     }
 
     try {
         const handler = handlers[activity.type];
         if (!handler) {
-            return new Response("Unsupported activity type", {
-                status: 400,
-            });
+            return Response.json(
+                { error: "Unsupported activity type" } satisfies HttpError,
+                { status: 400 }
+            );
         }
 
         if (handler) {
             await handler(url.origin, activity);
         }
 
-        return new Response(null, {
+        return Response.json(null, {
             status: 202,
             headers: {
                 "Content-Type": "application/activity+json",
@@ -129,9 +137,10 @@ export async function POST(
         });
     } catch (e: unknown) {}
 
-    return new Response(null, {
-        status: 500,
-    });
+    return Response.json(
+        { error: "Server error" } satisfies HttpError,
+        { status: 500 }
+    );
 }
 
 async function handleCreate(baseUrl: string, activity: APActivity): Promise<void> {

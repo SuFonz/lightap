@@ -7,7 +7,7 @@ import { insertFollow, deleteFollow } from "@/lib/db/follows";
 import { postActivity } from "@/lib/activitypub/fetch";
 import { verify } from "@/lib/util/jwt";
 import { env } from "cloudflare:workers";
-import { UserJwtPayload } from "@/lib/types/http";
+import { HttpError, UserJwtPayload } from "@/lib/types/http";
 
 export const dynamic = "force-dynamic";
 
@@ -48,12 +48,13 @@ export async function GET(
 
     const orderedCollection = buildOrderedCollection(url.origin, username, apNotes);
     if (!orderedCollection) {
-        return new Response("Server error", {
-            status: 500
-        });
+        return Response.json(
+            { error: "Server error" } satisfies HttpError,
+            { status: 500 }
+        );
     }
 
-    return new Response(JSON.stringify(orderedCollection), {
+    return Response.json(orderedCollection, {
         status: 200,
         headers: {
             "Content-Type": "application/jrd+json",
@@ -132,14 +133,15 @@ export async function POST(
         const handler = handlers[activity.type];
 
         if (!handler) {
-            return new Response("Unsupported activity type", {
-                status: 400,
-            });
+            return Response.json(
+                { error: "Unsupported activity type" } satisfies HttpError,
+                { status: 400 }
+            );
         }
 
         await handler(url.origin, activity);
 
-        return new Response(JSON.stringify(activity), {
+        return Response.json(activity, {
             status: 201,
             headers: {
                 "Content-Type": "application/activity+json",
@@ -150,9 +152,10 @@ export async function POST(
         console.error("outbox delivery failed:", e);
     }
 
-    return new Response(null, {
-        status: 500,
-    });
+    return Response.json(
+        { error: "Server error" } satisfies HttpError,
+        { status: 500 }
+    );
 }
 
 async function handleCreate(baseUrl: string, activity: APActivity): Promise<void> {

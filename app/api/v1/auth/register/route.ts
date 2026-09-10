@@ -3,6 +3,7 @@ import { getUserByPreferredUsername, createUser } from "@/lib/db/users";
 import { generateActivityPubKeyPair } from "@/lib/util/keypair";
 import { hashPassword } from "@/lib/util/password";
 import { sign } from "@/lib/util/jwt";
+import { AuthToken, HttpError } from "@/lib/types/http";
 
 const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     try {
         body = await request.json();
     } catch {
-        return Response.json({ error: "请求格式错误" }, { status: 400 });
+        return Response.json({ error: "请求格式错误" } satisfies HttpError, { status: 400 });
     }
 
     const username = (body.username ?? "").trim();
@@ -67,9 +68,9 @@ export async function POST(request: Request) {
             TOKEN_TTL
         );
 
-        return Response.json({ username, token }, { status: 201 });
+        return Response.json({ username, token } satisfies AuthToken, { status: 201 });
     } catch (e) {
         console.error("register failed:", e);
-        return Response.json({ error: "注册失败，请稍后重试" }, { status: 500 });
+        return Response.json({ error: "注册失败，请稍后重试" } satisfies HttpError, { status: 500 });
     }
 }
