@@ -1,37 +1,10 @@
-import {
-    seedNotifications,
-    seedPosts,
-    seedTrends,
-    seedUsers,
-} from "./mock-data";
-import { Notification, AuthToken, Post, User, UserProfile, TrendingTag } from "@/lib/types/http";
+import { AuthToken, Post, UserProfile } from "@/lib/types/http";
 
 const delay = (ms = 350) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-
-export async function fetchFeed(): Promise<Post[]> {
-    await delay();
-    return clone(seedPosts);
-}
-
-export async function fetchUsers(): Promise<User[]> {
-    await delay();
-    return clone(seedUsers);
-}
-
-export async function fetchUser(username: string): Promise<User | null> {
-    await delay(250);
-    return clone(seedUsers.find((u) => u.username === username) ?? null);
-}
-
 export async function fetchUserPosts(username: string): Promise<Post[]> {
     const res = await fetch(`/api/v1/users/${encodeURIComponent(username)}/posts`);
-    if (res.status === 404) {
-        // 站内演示用户（无真实账号）：回退到本地种子数据
-        await delay(250);
-        return clone(seedPosts.filter((p) => p.authorUsername === username));
-    }
+    if (res.status === 404) return [];
     if (!res.ok) throw new Error("获取帖子失败");
     const data = (await res.json()) as { posts: Post[] };
     return data.posts;
@@ -103,16 +76,6 @@ export async function fetchUserProfile(
     if (res.status === 404) return null;
     if (!res.ok) throw new Error("获取资料失败");
     return (await res.json()) as UserProfile;
-}
-
-export async function fetchNotifications(): Promise<Notification[]> {
-    await delay();
-    return clone(seedNotifications);
-}
-
-export async function fetchTrends(): Promise<TrendingTag[]> {
-    await delay(200);
-    return clone(seedTrends);
 }
 
 export async function createPost(

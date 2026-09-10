@@ -21,7 +21,7 @@ import { usePostStore } from "@/stores/post-store";
 import { useUserStore } from "@/stores/user-store";
 import { pillTones, TagPill } from "@/components/tag-pill";
 import { formatCount } from "@/lib/client/utils";
-import type { Post } from "@/lib/client/types";
+import type { Post } from "@/lib/types/http";
 
 export default function ProfilePage() {
     const params = useParams<{ username: string }>();
@@ -123,7 +123,7 @@ export default function ProfilePage() {
                                     >
                                         <BellIcon size={17} />
                                     </button>
-                                    <FollowButton username={user.username} />
+                                    <FollowButton user={user} />
                                 </>
                             )}
                         </div>

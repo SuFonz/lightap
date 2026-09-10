@@ -13,7 +13,7 @@ import { cn } from "@/lib/client/utils";
 
 export default function HomePage() {
     const { posts, addPost } = usePostStore();
-    const { currentUser } = useUserStore();
+    const { currentUser, isFollowing } = useUserStore();
     const { isAuthenticated } = useAuthStore();
     const [tab, setTab] = useState<"all" | "following">("all");
     const [greeting, setGreeting] = useState("欢迎回来");
@@ -23,7 +23,7 @@ export default function HomePage() {
         setGreeting(hour < 5 ? "夜深了" : hour < 12 ? "早上好" : hour < 18 ? "下午好" : "晚上好");
     }, []);
 
-    const followingOnly = posts.filter((p) => p.authorUsername !== "kuro" && p.authorUsername !== "taro");
+    const followingOnly = posts.filter((p) => isFollowing(p.authorUsername));
     const visible = tab === "all" ? posts : followingOnly;
 
     return (

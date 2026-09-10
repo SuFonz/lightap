@@ -1,4 +1,4 @@
-import type { Post } from "@/lib/client/types";
+import type { Post } from "@/lib/types/http";
 
 export function updatePostTree(list: Post[], id: string, fn: (p: Post) => Post): Post[] {
     return list.map((p) => {

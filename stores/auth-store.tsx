@@ -9,7 +9,7 @@ import {
     useState,
     type ReactNode,
 } from "react";
-import * as authApi from "@/lib/client/auth-api";
+import * as authApi from "@/lib/client/api";
 import {
     SESSION_TOKEN_COOKIE,
     SESSION_USERNAME_COOKIE,

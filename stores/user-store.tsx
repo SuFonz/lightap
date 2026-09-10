@@ -12,8 +12,7 @@ import {
 } from "react";
 import { useAuthStore } from "./auth-store";
 import * as api from "@/lib/client/api";
-import { CURRENT_USERNAME, seedUsers } from "@/lib/client/mock-data";
-import type { User } from "@/lib/client/types";
+import type { User, UserProfile } from "@/lib/types/http";
 
 interface UserStoreValue {
     users: User[];
@@ -45,7 +44,7 @@ function toFallbackUser(username: string): User {
     };
 }
 
-function toUser(profile: api.UserProfile): User {
+function toUser(profile: UserProfile): User {
     return {
         username: profile.username,
         displayName: profile.displayName,
@@ -62,15 +61,15 @@ function toUser(profile: api.UserProfile): User {
 
 export function UserStoreProvider({ children }: { children: ReactNode }) {
     const { isAuthenticated, username: sessionUsername, token } = useAuthStore();
-    const [users, setUsers] = useState<User[]>(seedUsers);
+    const [users, setUsers] = useState<User[]>([]);
     const [profiles, setProfiles] = useState<Record<string, User>>({});
     const [missing, setMissing] = useState<ReadonlySet<string>>(() => new Set());
     const [followingSet, setFollowingSet] = useState<Set<string>>(
-        () => new Set(["sakura", "yuki"]),
+        () => new Set(),
     );
 
     const activeUsername =
-        isAuthenticated && sessionUsername ? sessionUsername : CURRENT_USERNAME;
+        isAuthenticated && sessionUsername ? sessionUsername : "";
 
     const currentUser = useMemo(
         () =>
@@ -137,9 +136,8 @@ export function UserStoreProvider({ children }: { children: ReactNode }) {
             const following = !followingSet.has(user.username);
             const delta = following ? 1 : -1;
 
-            // 演示用户（seed 数据，无真实账号）或未登录时走本地 mock
-            const isDemoUser = seedUsers.some((u) => u.username === username);
-            const useActivity = isAuthenticated && !!token && !isDemoUser;
+            // 已登录：通过 outbox 投递 Follow / Undo activity；未登录保持本地状态
+            const useActivity = isAuthenticated && !!token;
 
             setFollowingSet((prev) => {
                 const next = new Set(prev);
@@ -151,7 +149,6 @@ export function UserStoreProvider({ children }: { children: ReactNode }) {
             try {
                 if (useActivity) {
                     // 真实用户：投递 Follow / Undo activity 到自己的 outbox
-                    const target = profiles[username];
                     await api.sendFollowActivity(
                         currentUser.username,
                         user.actorUrl ?? "",

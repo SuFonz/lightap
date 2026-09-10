@@ -101,7 +101,7 @@ export default function UsersPage() {
                                         {user.instance !== "lightap.social" && `@${user.instance}`}
                                     </p>
                                 </div>
-                                <FollowButton username={user.username} size="sm" />
+                                <FollowButton user={user} size="sm" />
                             </div>
                             <p className="mt-2.5 line-clamp-2 min-h-10 text-[13px] leading-relaxed text-slate-500">
                                 {user.bio}

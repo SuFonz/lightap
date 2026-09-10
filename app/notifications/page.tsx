@@ -15,7 +15,7 @@ import {
 import { RelativeTime } from "@/components/relative-time";
 import { useNotificationStore } from "@/stores/notification-store";
 import { useUserStore } from "@/stores/user-store";
-import type { NotificationType } from "@/lib/client/types";
+import type { NotificationType } from "@/lib/types/http";
 import { cn } from "@/lib/client/utils";
 
 const typeMeta: Record<

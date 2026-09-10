@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
-import type { User } from "@/lib/client/types";
+import type { User } from "@/lib/types/http";
 
 export function UserResultList({ users }: { users: User[] }) {
     return (

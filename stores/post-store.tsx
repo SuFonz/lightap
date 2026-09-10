@@ -9,8 +9,7 @@ import {
     type ReactNode,
 } from "react";
 import * as api from "@/lib/client/api";
-import { seedPosts } from "@/lib/client/mock-data";
-import type { Post } from "@/lib/client/types";
+import type { Post } from "@/lib/types/http";
 import { findPostInTree, findPostPath, updatePostTree } from "./post-tree";
 import { useUserStore } from "./user-store";
 
@@ -28,7 +27,7 @@ const PostStoreContext = createContext<PostStoreValue | null>(null);
 
 export function PostStoreProvider({ children }: { children: ReactNode }) {
     const { currentUser, incrementPostsCount } = useUserStore();
-    const [posts, setPosts] = useState<Post[]>(seedPosts);
+    const [posts, setPosts] = useState<Post[]>([]);
 
     const getPost = useCallback(
         (postId: string) => findPostInTree(posts, postId),

@@ -10,7 +10,7 @@ import { RelativeTime } from "@/components/relative-time";
 import { usePostStore } from "@/stores/post-store";
 import { useUserStore } from "@/stores/user-store";
 import { TagPill } from "@/components/tag-pill";
-import type { Post } from "@/lib/client/types";
+import type { Post } from "@/lib/types/http";
 import { cn, formatCount } from "@/lib/client/utils";
 
 export function PostCard({

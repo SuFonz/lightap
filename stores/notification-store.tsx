@@ -8,8 +8,7 @@ import {
     useState,
     type ReactNode,
 } from "react";
-import { seedNotifications } from "@/lib/client/mock-data";
-import type { AppNotification } from "@/lib/client/types";
+import type { Notification as AppNotification } from "@/lib/types/http";
 
 interface NotificationStoreValue {
     notifications: AppNotification[];
@@ -20,7 +19,7 @@ interface NotificationStoreValue {
 const NotificationStoreContext = createContext<NotificationStoreValue | null>(null);
 
 export function NotificationStoreProvider({ children }: { children: ReactNode }) {
-    const [notifications, setNotifications] = useState<AppNotification[]>(seedNotifications);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
     const markAllNotificationsRead = useCallback(() => {
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

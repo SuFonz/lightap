@@ -1,10 +1,9 @@
-import { seedTrends } from "@/lib/client/mock-data";
-import type { TrendingTag } from "@/lib/client/types";
+import type { TrendingTag } from "@/lib/types/http";
 
 export interface TrendingStoreValue {
     trends: TrendingTag[];
 }
 
 export function useTrendingStore(): TrendingStoreValue {
-    return { trends: seedTrends };
+    return { trends: [] };
 }

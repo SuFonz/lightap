@@ -2,7 +2,7 @@
 
 import { UsersIcon } from "@/components/icons";
 import { UserResultList } from "@/components/search/user-result-list";
-import type { User } from "@/lib/client/types";
+import type { User } from "@/lib/types/http";
 
 interface SearchResultPanelProps {
     query: string;

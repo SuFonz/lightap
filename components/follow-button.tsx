@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
-import { User } from "@/lib/client/types";
+import type { User } from "@/lib/types/http";
 
 interface FollowButtonProps {
     user: User;
