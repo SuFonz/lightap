@@ -23,8 +23,6 @@ export async function GET(
     request: Request,
     { params }: { params: { username: string } },
 ) {
-    console.log("inbox GET request:", request.url, params);
-
     const url = new URL(request.url);
     const headers = request.headers;
     const username = params.username;
@@ -95,6 +93,8 @@ export async function POST(
     const username = params.username;
     const activity = await request.json<APActivity>();
 
+    console.log("outbox POST request:", activity);
+
     if (!username) {
         return new Response("Empty username", {
             status: 400,
@@ -162,7 +162,6 @@ async function handleFollow(baseUrl: string, activity: APActivity): Promise<void
     const targetActor = activity.actor;
     const selfId = typeof(selfActor) === "string" ? selfActor : selfActor.id;
     const targetId = typeof(targetActor) === "string" ? targetActor : targetActor.id;
-    console.log("handleFollow:", selfId, targetId);
 
     const acceptFollow = buildAcceptFollow(baseUrl, selfId, activity);
     
@@ -174,6 +173,7 @@ async function handleFollow(baseUrl: string, activity: APActivity): Promise<void
 
 // 我方 Follow 被对方接受：对方回 Accept{object: 原Follow}，落库关注关系
 async function handleAccept(baseUrl: string, activity: APActivity): Promise<void> {
+    console.log("handleAccept:", activity);
     const inner = activity.object as APActivity | undefined;
     if (!inner || inner.type !== "Follow") {
         return;

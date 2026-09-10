@@ -36,8 +36,6 @@ export async function GET(
         });
     }
 
-    console.log(actor);
-
     return new Response(JSON.stringify(actor), {
         status: 200,
         headers: {

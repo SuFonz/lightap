@@ -45,7 +45,7 @@ function toFallbackUser(username: string): User {
     };
 }
 
-function toUser(profile: api.ApiUserProfile): User {
+function toUser(profile: api.UserProfile): User {
     return {
         username: profile.username,
         displayName: profile.displayName,

@@ -119,7 +119,6 @@ export async function POST(
         });
     }
 
-    console.log("outbox activity:", activity);
 
     // actor 以 JWT 身份为准，id 由服务端补全，防止伪造
     const actorId = `${url.origin}/users/${user.preferred_username}`;
@@ -181,8 +180,6 @@ async function handleCreate(baseUrl: string, activity: APActivity): Promise<void
 
 // 关注：把 Follow 转发到对方的 inbox，投递成功后本地记录关注关系
 async function handleFollow(baseUrl: string, activity: APActivity): Promise<void> {
-    console.log("handleFollow:", activity);
-
     const selfActor = activity.actor;
     const targetActor = activity.object;
     const selfId = typeof(selfActor) === "string" ? selfActor : selfActor.id;

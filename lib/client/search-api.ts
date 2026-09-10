@@ -1,22 +1,11 @@
+import { SearchUser, User } from "@/lib/types/http";
 import { seedUsers } from "./mock-data";
-import type { User } from "./types";
 
 const LOCAL_INSTANCE = "lightap.social";
 
-export interface ApiSearchUser {
-    username: string;
-    displayName: string;
-    bio: string;
-    avatarUrl: string | null;
-    /** null 表示本站用户 */
-    instance: string | null;
-    actorUrl: string | null;
-    followers: number;
-    following: number;
-    postsCount: number;
-}
 
-function toUser(dto: ApiSearchUser): User {
+
+function toUser(dto: SearchUser): User {
     return {
         username: dto.username,
         displayName: dto.displayName,
@@ -45,7 +34,7 @@ export async function searchUsers(query: string): Promise<User[]> {
     try {
         const res = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}`);
         if (res.ok) {
-            const data = (await res.json()) as { users: ApiSearchUser[] };
+            const data = (await res.json()) as { users: SearchUser[] };
             return data.users.map(toUser);
         }
     } catch {

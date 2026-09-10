@@ -1,6 +1,6 @@
 import { APActivity, APActor, APNote, APWebfinger } from "../types/activitypub";
 import { buildAcceptFollow } from "./tools";
-import { SignResult, SignResultRFC9421, SigningRequest, createDigest, signRequest } from "../util/signature";
+import { SigningRequest, createDigest, signRequest } from "../util/signature";
 import { getUserById } from "../db/users";
 
 export async function APRequest(
@@ -26,22 +26,28 @@ export async function APSignedGet(
     keyId: string,
 ): Promise<Response> {
     const method = "GET";
+    const body = "";
+    const digest = await createDigest(body);
 
     const parsedUrl = new URL(url);
     const headers = new Headers({
         "Accept": "application/activity+json",
         "Content-Type": "application/activity+json",
         "Host": parsedUrl.host,
+        "Digest": digest,
         "Date": new Date().toUTCString(),
     });
 
     const signingRequest: SigningRequest = {
         method,
-        url: `${parsedUrl.pathname}${parsedUrl.search}`,
+        url,
         getHeader: (name) => headers.get(name) ?? null,
     };
 
-    const signResult = await signRequest(privateKeyPem, keyId, signingRequest) as SignResult;
+    const signResult = await signRequest(privateKeyPem, keyId, signingRequest);
+    if (!signResult) {
+        throw new Error("signRequest failed");
+    }
     headers.set("Signature", signResult.Signature);
 
     const res = await fetch(url, {
@@ -73,11 +79,14 @@ export async function APSignedPost(
 
     const signingRequest: SigningRequest = {
         method,
-        url: `${parsedUrl.pathname}${parsedUrl.search}`,
+        url,
         getHeader: (name) => headers.get(name) ?? null,
     };
 
-    const signResult = await signRequest(privateKeyPem, keyId, signingRequest) as SignResult;
+    const signResult = await signRequest(privateKeyPem, keyId, signingRequest);
+    if (!signResult) {
+        throw new Error("signRequest failed");
+    }
     headers.set("Signature", signResult.Signature);
 
     const res = await fetch(url, {
@@ -99,13 +108,10 @@ export async function APSignedPostV2(
     const method = "POST";
     const body = JSON.stringify(data);
 
-    console.log("APSignedPostV2 createDigest");
-    const digest = await createDigest(body);
+    const digest = await createDigest(body, "rfc9421");
 
-    console.log("APSignedPostV2 url:", url);
     const parsedUrl = new URL(url);
 
-    console.log("APSignedPostV2 parsing URL:", parsedUrl);
     const headers = new Headers({
         "Accept": "application/activity+json",
         "Content-Type": "application/activity+json",
@@ -116,17 +122,18 @@ export async function APSignedPostV2(
 
     const signingRequest: SigningRequest = {
         method,
-        url: `${parsedUrl.pathname}${parsedUrl.search}`,
+        url,
         getHeader: (name) => headers.get(name) ?? null,
     };
 
-    console.log("APSignedPostV2 signing request:", signingRequest);
-    const signResult = await signRequest(privateKeyPem, keyId, signingRequest, "rfc9421") as SignResultRFC9421;
+    const signResult = await signRequest(privateKeyPem, keyId, signingRequest, "rfc9421");
+    if (!signResult) {
+        throw new Error("signRequest failed");
+    }
     for (const [key, value] of Object.entries(signResult)) {
         headers.set(key, value);
     }
 
-    console.log("APSignedPostV2 fetching:", url, method, headers, body);
     const res = await fetch(url, {
         method,
         headers,
@@ -185,10 +192,8 @@ export async function getActorUrlFromWebfinger(webfinger: APWebfinger): Promise<
 export async function postActivity(selfActor: string, targetActor: string, activity: APActivity): Promise<boolean> {
     try {
         const user = await getUserById(selfActor);
-        const tActor = await fetchActor(targetActor);
+        const tActor = await fetchActor(targetActor, user?.private_key_pem ?? "", `${selfActor}#main-key`);
         const fRes = await APSignedPostV2(tActor.inbox, activity, user?.private_key_pem ?? "", `${selfActor}#main-key`);
-        console.log("postActivity response:", fRes.status, await fRes.text());
-        console.log("response");
 
         /** RFC 9421 */
         if (fRes.ok) {
@@ -200,7 +205,9 @@ export async function postActivity(selfActor: string, targetActor: string, activ
                 return true;
             }
         }
-    } catch (e: any) {}
+    } catch (e: any) {
+        console.error("postActivity failed:", e);
+    }
 
     return false;
 }
