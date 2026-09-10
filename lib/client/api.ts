@@ -1,4 +1,4 @@
-import { AuthToken, Post, UserProfile } from "@/lib/types/http";
+import { AuthToken, Post, SearchResult, User, UserProfile } from "@/lib/types/http";
 
 const delay = (ms = 350) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -76,6 +76,21 @@ export async function fetchUserProfile(
     if (res.status === 404) return null;
     if (!res.ok) throw new Error("获取资料失败");
     return (await res.json()) as UserProfile;
+}
+
+export async function searchUsers(query: string): Promise<User[]> {
+    const q = query.trim();
+    if (!q) return [];
+
+    try {
+        const res = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}`);
+        if (!res.ok) return [];
+        const data = (await res.json()) as SearchResult;
+        return data.users;
+    } catch {
+        // 网络异常时返回空结果
+        return [];
+    }
 }
 
 export async function createPost(

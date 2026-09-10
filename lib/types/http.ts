@@ -26,20 +26,7 @@ export interface AuthToken {
 }
 
 export interface SearchResult {
-    users: SearchUser[];
-}
-
-export interface SearchUser {
-    username: string;
-    displayName: string;
-    bio: string;
-    avatarUrl: string | null;
-    /** null 表示本站用户 */
-    instance: string | null;
-    actorUrl: string | null;
-    followers: number;
-    following: number;
-    postsCount: number;
+    users: User[];
 }
 
 export interface User {

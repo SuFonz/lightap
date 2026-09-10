@@ -10,7 +10,8 @@ DROP TABLE IF EXISTS oauth_grants;
 
 -- 创建 users 表
 CREATE TABLE users (
-    id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
+    actor_url TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL UNIQUE,
     preferred_username TEXT NOT NULL,
     summary TEXT,
@@ -24,7 +25,8 @@ CREATE TABLE users (
 
 -- 创建 objects 表
 CREATE TABLE objects (
-    id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
+    url TEXT NOT NULL UNIQUE,
     name TEXT,
     type TEXT NOT NULL,
     actor TEXT NOT NULL,
@@ -35,10 +37,10 @@ CREATE TABLE objects (
 
 -- 创建 activities 表
 CREATE TABLE activities (
-    id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     type TEXT NOT NULL,
     actor TEXT NOT NULL,
-    object TEXT NOT NULL,
+    object INTEGER NOT NULL,
 
     -- Test
     to_json TEXT,
