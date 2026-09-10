@@ -1,5 +1,6 @@
 export interface UserRow {
-    id: string,
+    id: number,
+    actor_url: string,
     name: string,
     preferred_username: string,
     summary: string | null,
@@ -12,7 +13,8 @@ export interface UserRow {
 }
 
 export interface ObjectRow {
-    id: string,
+    id: number,
+    url: string,
     name: string | null,
     type: string,
     actor: string,
@@ -21,12 +23,12 @@ export interface ObjectRow {
 }
 
 export interface ActivityRow {
-    id: string,
+    id: number,
     type: string,
     actor: string,
-    object: string,
-    to_json: string,
-    cc_json: string,
+    object: number,
+    to_json: string | null,
+    cc_json: string | null,
     created_at: Date,
 }
 
@@ -38,7 +40,8 @@ export interface FollowRow {
 }
 
 export interface UserSearchRow {
-    id: string,
+    id: number,
+    actor_url: string,
     name: string,
     preferred_username: string,
     summary: string | null,

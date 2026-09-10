@@ -1,7 +1,7 @@
 import { APActivity, APActor, APNote, APWebfinger } from "../types/activitypub";
 import { buildAcceptFollow } from "./tools";
 import { SigningRequest, createDigest, signRequest } from "../util/signature";
-import { getUserById } from "../db/users";
+import { getUserByActorUrl } from "../db/users";
 
 export async function APRequest(
     url: string,
@@ -191,7 +191,7 @@ export async function getActorUrlFromWebfinger(webfinger: APWebfinger): Promise<
 
 export async function postActivity(selfActor: string, targetActor: string, activity: APActivity): Promise<boolean> {
     try {
-        const user = await getUserById(selfActor);
+        const user = await getUserByActorUrl(selfActor);
         const tActor = await fetchActor(targetActor, user?.private_key_pem ?? "", `${selfActor}#main-key`);
         const fRes = await APSignedPostV2(tActor.inbox, activity, user?.private_key_pem ?? "", `${selfActor}#main-key`);
 

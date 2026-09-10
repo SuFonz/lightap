@@ -9,7 +9,7 @@ export async function getNotesByPreferredUsername(
     let sql = `
         SELECT o.*
         FROM objects o
-        INNER JOIN users u ON u.id = o.actor
+        INNER JOIN users u ON u.actor_url = o.actor
         WHERE u.preferred_username = ?
           AND o.type = 'Note'
         ORDER BY o.created_at DESC
@@ -50,19 +50,19 @@ export async function getReceivedNotesOf(
         INNER JOIN objects o
             ON o.id = a.object
         INNER JOIN users u
-            ON u.id = ?
+            ON u.preferred_username = ?
         WHERE o.type = 'Note'
           AND (
               EXISTS (
                   SELECT 1
                   FROM json_each(a.to_json)
-                  WHERE json_each.value = u.id
+                  WHERE json_each.value = u.actor_url
               )
               OR
               EXISTS (
                   SELECT 1
                   FROM json_each(a.cc_json)
-                  WHERE json_each.value = u.id
+                  WHERE json_each.value = u.actor_url
               )
           )
         ORDER BY o.created_at DESC
@@ -101,7 +101,7 @@ export async function countNotesByPreferredUsername(
             `
             SELECT COUNT(*) AS total
             FROM objects o
-            INNER JOIN users u ON u.id = o.actor
+            INNER JOIN users u ON u.actor_url = o.actor
             WHERE u.preferred_username = ?
               AND o.type = 'Note'
             `
@@ -113,17 +113,17 @@ export async function countNotesByPreferredUsername(
 }
 
 export async function insertNote(
-    id: string,
-    actorId: string,
-    name: string,
+    url: string,
+    actorUrl: string,
+    name: string | null,
     content: string,
-): Promise<string> {
-    await env.DB
+): Promise<number> {
+    const result = await env.DB
         .prepare(
             `
             INSERT INTO objects
             (
-                id,
+                url,
                 name,
                 type,
                 actor,
@@ -134,14 +134,14 @@ export async function insertNote(
             `
         )
         .bind(
-            id,
+            url,
             name,
             "Note",
-            actorId,
+            actorUrl,
             content,
             Date.now()
         )
         .run();
 
-    return id;
+    return result.meta.last_row_id;
 }

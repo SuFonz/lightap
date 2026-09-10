@@ -65,7 +65,7 @@ export async function GET(
     const apNotes: APNote[] = [];
 
     for (const note of notes) {
-        const apNote = convertNote(note.id, note.name ?? "", note.content);
+        const apNote = convertNote(note.url, note.name ?? "", note.content);
         if (apNote) {
             apNotes.push(apNote);
         }
@@ -137,20 +137,19 @@ export async function POST(
 async function handleCreate(baseUrl: string, activity: APActivity): Promise<void> {
     const actor = activity.actor;
     const note = activity.object as APNote;
-    const actorText = typeof(actor) === "string" ? actor : JSON.stringify(actor);
+    const actorUrl = typeof(actor) === "string" ? actor : actor.id;
 
-    await insertNote(
-        note.id, 
-        actorText,
-        note.name, 
+    const objectId = await insertNote(
+        note.id,
+        actorUrl,
+        note.name ?? null,
         note.content
     );
 
     await insertActivity(
-        activity.id,
         "Create",
-        actorText,
-        note.id,
+        actorUrl,
+        objectId,
         activity.to ?? [],
         activity.cc ?? []
     );

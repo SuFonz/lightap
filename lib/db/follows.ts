@@ -9,7 +9,7 @@ export async function getFollowersOf(
     let sql = `
         SELECT f.*
         FROM follows f
-        INNER JOIN users u ON u.id = f.following
+        INNER JOIN users u ON u.actor_url = f.following
         WHERE u.preferred_username = ?
         ORDER BY f.created_at DESC
     `;
@@ -45,7 +45,7 @@ export async function getFollowingOf(
     let sql = `
         SELECT f.*
         FROM follows f
-        INNER JOIN users u ON u.id = f.follower
+        INNER JOIN users u ON u.actor_url = f.follower
         WHERE u.preferred_username = ?
         ORDER BY f.created_at DESC
     `;
@@ -78,7 +78,7 @@ export async function countFollowersOf(
             `
             SELECT COUNT(*) AS total
             FROM follows f
-            INNER JOIN users u ON u.id = f.following
+            INNER JOIN users u ON u.actor_url = f.following
             WHERE u.preferred_username = ?
             `
         )
@@ -96,7 +96,7 @@ export async function countFollowingOf(
             `
             SELECT COUNT(*) AS total
             FROM follows f
-            INNER JOIN users u ON u.id = f.follower
+            INNER JOIN users u ON u.actor_url = f.follower
             WHERE u.preferred_username = ?
             `
         )

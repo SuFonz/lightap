@@ -40,7 +40,7 @@ export async function GET(
     const apNotes: APNote[] = [];
 
     for (const note of notes) {
-        const apNote = convertNote(note.id, note.name ?? "", note.content);
+        const apNote = convertNote(note.url, note.name ?? "", note.content);
         if (apNote) {
             apNotes.push(apNote);
         }
@@ -160,19 +160,18 @@ async function handleCreate(baseUrl: string, activity: APActivity): Promise<void
     const selfId = typeof(selfActor) === "string" ? selfActor : selfActor.id;
     const note = activity.object as APNote;
 
-    const noteId = note?.id ?? `${baseUrl}/notes/${crypto.randomUUID()}`;
-    await insertNote(
-        noteId,
+    const noteUrl = note?.id ?? `${baseUrl}/notes/${crypto.randomUUID()}`;
+    const objectId = await insertNote(
+        noteUrl,
         selfId,
-        note.name,
+        note.name ?? null,
         note.content
     );
 
     await insertActivity(
-        activity.id,
-        activity.type,
+        "Create",
         selfId,
-        noteId,
+        objectId,
         activity.to ?? [],
         activity.cc ?? []
     );

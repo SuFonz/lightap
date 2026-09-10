@@ -27,17 +27,17 @@ export async function getUserByPreferredUsername(
     } as UserRow;
 }
 
-export async function getUserById(id: string): Promise<UserRow | null> {
+export async function getUserByActorUrl(actorUrl: string): Promise<UserRow | null> {
     const row = await env.DB
         .prepare(
             `
             SELECT *
             FROM users
-            WHERE id = ?
+            WHERE actor_url = ?
             LIMIT 1
             `
         )
-        .bind(id)
+        .bind(actorUrl)
         .first();
 
     if (!row) {
@@ -62,9 +62,9 @@ export async function searchUsersWithCounts(
         .prepare(
             `
             SELECT u.*,
-                (SELECT COUNT(*) FROM follows f WHERE f.following = u.id) AS followers_count,
-                (SELECT COUNT(*) FROM follows f WHERE f.follower = u.id) AS following_count,
-                (SELECT COUNT(*) FROM objects o WHERE o.actor = u.id AND o.type = 'Note') AS posts_count
+                (SELECT COUNT(*) FROM follows f WHERE f.following = u.actor_url) AS followers_count,
+                (SELECT COUNT(*) FROM follows f WHERE f.follower = u.actor_url) AS following_count,
+                (SELECT COUNT(*) FROM objects o WHERE o.actor = u.actor_url AND o.type = 'Note') AS posts_count
             FROM users u
             WHERE u.preferred_username LIKE ? ESCAPE '\\'
                OR u.name LIKE ? ESCAPE '\\'
@@ -80,7 +80,7 @@ export async function searchUsersWithCounts(
 }
 
 export async function upsertRemoteUser(params: {
-    id: string;
+    actorUrl: string;
     username: string;
     displayName: string;
     summary: string | null;
@@ -90,13 +90,13 @@ export async function upsertRemoteUser(params: {
     const now = Date.now();
     const existing = await getUserByPreferredUsername(params.username);
 
-    if (existing && existing.id === params.id) {
+    if (existing && existing.actor_url === params.actorUrl) {
         await env.DB
             .prepare(
                 `
                 UPDATE users
                 SET name = ?, summary = ?, icon_url = ?, public_key_pem = ?, updated_at = ?
-                WHERE id = ?
+                WHERE actor_url = ?
                 `
             )
             .bind(
@@ -105,7 +105,7 @@ export async function upsertRemoteUser(params: {
                 params.iconUrl,
                 params.publicKeyPem,
                 now,
-                params.id
+                params.actorUrl
             )
             .run();
         return;
@@ -120,7 +120,7 @@ export async function upsertRemoteUser(params: {
         .prepare(
             `
             INSERT INTO users (
-                id,
+                actor_url,
                 name,
                 preferred_username,
                 summary,
@@ -135,7 +135,7 @@ export async function upsertRemoteUser(params: {
             `
         )
         .bind(
-            params.id,
+            params.actorUrl,
             params.displayName,
             params.username,
             params.summary,
@@ -192,6 +192,9 @@ export async function createUser(params: {
     passwordHash: string;
     publicKeyPem: string;
     privateKeyPem: string;
+    /** 显示昵称，默认与用户名相同 */
+    name?: string;
+    summary?: string | null;
 }): Promise<void> {
     const now = Date.now();
 
@@ -199,7 +202,7 @@ export async function createUser(params: {
         .prepare(
             `
             INSERT INTO users (
-                id,
+                actor_url,
                 name,
                 preferred_username,
                 summary,
@@ -210,13 +213,14 @@ export async function createUser(params: {
                 created_at,
                 updated_at
             )
-            VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)
             `
         )
         .bind(
             `${params.origin}/users/${params.username}`,
+            params.name ?? params.username,
             params.username,
-            params.username,
+            params.summary ?? null,
             params.publicKeyPem,
             params.privateKeyPem,
             params.passwordHash,

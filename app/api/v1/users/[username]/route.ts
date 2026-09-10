@@ -56,9 +56,9 @@ export async function GET(
             countNotesByPreferredUsername(user.preferred_username),
         ]);
 
-        // 远端用户（搜索解析时落库）的 id 是其原实例的 Actor URL
-        const localId = `${url.origin}/users/${user.preferred_username}`;
-        const instance = user.id === localId ? null : safeHost(user.id);
+        // 远端用户（搜索解析时落库）的 actor_url 是其原实例的 Actor URL
+        const localActorUrl = `${url.origin}/users/${user.preferred_username}`;
+        const instance = user.actor_url === localActorUrl ? null : safeHost(user.actor_url);
 
         return Response.json({
             username: user.preferred_username,
@@ -66,8 +66,8 @@ export async function GET(
             bio: user.summary ?? "",
             avatarUrl: user.icon_url ?? null,
             instance,
-            // 本站用户的 id 即 Actor URL；远端落库用户是其原实例的 Actor URL
-            actorUrl: user.id,
+            // 本站用户的 actor_url 即 Actor URL；远端落库用户是其原实例的 Actor URL
+            actorUrl: user.actor_url,
             followers,
             followingCount,
             postsCount,

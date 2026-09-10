@@ -8,8 +8,8 @@ export async function getActivitiesByPreferredUsername(
 ): Promise<ActivityRow[] | null> {
     let sql = `
         SELECT a.*
-        FROM activity a
-        INNER JOIN users u ON u.id = a.actor
+        FROM activities a
+        INNER JOIN users u ON u.actor_url = a.actor
         WHERE u.preferred_username = ?
         ORDER BY a.created_at DESC
     `;
@@ -33,19 +33,17 @@ export async function getActivitiesByPreferredUsername(
 }
 
 export async function insertActivity(
-    id: string,
     type: APActivityType,
-    actorId: string,
-    objectId: string,
+    actorUrl: string,
+    objectId: number,
     to: string[] | null,
     cc: string[] | null,
-): Promise<string> {
-    await env.DB
+): Promise<number> {
+    const result = await env.DB
         .prepare(
             `
             INSERT INTO activities
             (
-                id,
                 type,
                 actor,
                 object,
@@ -53,13 +51,12 @@ export async function insertActivity(
                 cc_json,
                 created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             `
         )
         .bind(
-            id,
             type,
-            actorId,
+            actorUrl,
             objectId,
             to ? JSON.stringify(to) : null,
             cc ? JSON.stringify(cc) : null,
@@ -67,5 +64,5 @@ export async function insertActivity(
         )
         .run();
 
-    return id;
+    return result.meta.last_row_id;
 }

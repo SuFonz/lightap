@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { searchUsers } from "@/lib/client/search-api";
+import { searchUsers } from "@/lib/client/api";
 import type { User } from "@/lib/types/http";
 
 export function useSearchUsers(query: string) {

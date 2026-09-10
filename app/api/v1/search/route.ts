@@ -25,14 +25,14 @@ interface SearchUserDto {
     postsCount: number;
 }
 
-function localRowToDto(row: UserSearchRow): SearchUserDto {
+function localRowToDto(row: UserSearchRow, host: string): SearchUserDto {
     return {
         username: row.preferred_username,
         displayName: row.name,
         bio: row.summary ?? "",
         avatarUrl: row.icon_url,
-        instance: null,
-        actorUrl: null,
+        instance: host,
+        actorUrl: row.actor_url,
         followers: row.followers_count,
         following: row.following_count,
         postsCount: row.posts_count,
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
                 try {
                     // 暂时不放入数据库
                     // await upsertRemoteUser({
-                    //     id: actorUrl,
+                    //     actorUrl,
                     //     username: dto.username,
                     //     displayName: dto.displayName,
                     //     summary: dto.bio || null,
@@ -101,7 +101,7 @@ export async function GET(request: Request) {
     try {
         const locals = await searchUsersWithCounts(localQuery, SEARCH_LIMIT);
         for (const row of locals) {
-            results.push(localRowToDto(row));
+            results.push(localRowToDto(row, url.host));
         }
     } catch (e) {
         console.error("local search failed:", e);

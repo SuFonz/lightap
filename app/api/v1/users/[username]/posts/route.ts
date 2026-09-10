@@ -24,9 +24,8 @@ export async function GET(
 
         return Response.json({
             posts: notes.map((note) => {
-                const id = note.id.split("/").pop() ?? note.id;
                 return {
-                    id,
+                    id: note.url,
                     authorUsername: username,
                     content: htmlToPlainText(note.content),
                     createdAt: note.created_at.toISOString(),
