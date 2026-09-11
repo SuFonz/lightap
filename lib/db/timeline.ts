@@ -26,6 +26,28 @@ export async function addToTimeline(
 }
 
 /**
+ * 关注线写入：给「关注了该 actor 的本站用户」各插一行
+ */
+export async function addToTimelineByAuthorFollowers(
+    objectId: number,
+    createdAt: number,
+    authorActorUrl: string,
+): Promise<void> {
+    await env.DB
+        .prepare(
+            `
+            INSERT OR IGNORE INTO timeline (user_id, object_id, created_at)
+            SELECT u.id, ?, ?
+            FROM follows f
+            INNER JOIN users u ON u.actor_url = f.follower
+            WHERE f.following = ?
+            `
+        )
+        .bind(objectId, createdAt, authorActorUrl)
+        .run();
+}
+
+/**
  * 关注线读取：某个用户的 timeline
  */
 export async function getTimelineForUser(

@@ -1,4 +1,4 @@
-import { APActivity, APActivityType, APNote } from "@/lib/types/activitypub";
+import { AP_CONTEXT_PUBLIC, APActivity, APActivityType, APNote } from "@/lib/types/activitypub";
 import { buildAcceptFollow, buildNote, buildOrderedCollection, convertNote } from "@/lib/activitypub/tools";
 import { insertActivity } from "@/lib/db/activities";
 import { getUserByPreferredUsername } from "@/lib/db/users";
@@ -6,7 +6,7 @@ import { HttpError, UserJwtPayload } from "@/lib/types/http";
 import { verify } from "@/lib/util/jwt";
 import { env } from "cloudflare:workers";
 import { getOrCreateNote, getReceivedNotesOf } from "@/lib/db/objects";
-import { addToTimeline } from "@/lib/db/timeline";
+import { addToTimelineByAuthorFollowers } from "@/lib/db/timeline";
 import { postActivity } from "@/lib/activitypub/fetch";
 import { insertFollow } from "@/lib/db/follows";
 
@@ -144,6 +144,12 @@ export async function POST(
     );
 }
 
+// 公开 / 未列出（to/cc 含 #Public）才 fan-out，避免私信进关注线
+function isPublicActivity(activity: APActivity): boolean {
+    const recipients = [...(activity.to ?? []), ...(activity.cc ?? [])];
+    return recipients.includes(AP_CONTEXT_PUBLIC);
+}
+
 async function handleCreate(baseUrl: string, activity: APActivity): Promise<void> {
     const actor = activity.actor;
     const note = activity.object as APNote;
@@ -166,11 +172,10 @@ async function handleCreate(baseUrl: string, activity: APActivity): Promise<void
         activity.cc ?? []
     );
 
-    // 关注线：命中 to/cc 的本站用户
-    await addToTimeline(objectId, Date.now(), [
-        ...(activity.to ?? []),
-        ...(activity.cc ?? []),
-    ]);
+    // 关注线：给「关注了该作者」的本站用户插行（仅公开/未列出的帖）
+    if (isPublicActivity(activity)) {
+        await addToTimelineByAuthorFollowers(objectId, Date.now(), actorUrl);
+    }
 }
 
 async function handleFollow(baseUrl: string, activity: APActivity): Promise<void> {
