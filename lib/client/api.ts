@@ -11,6 +11,35 @@ export async function fetchUserPosts(username: string): Promise<Post[]> {
     return data.posts;
 }
 
+export type FeedType = "public" | "following";
+
+/**
+ * 时间线：public 无需登录；following 需要 token
+ */
+export async function fetchFeed(
+    type: FeedType,
+    token?: string | null,
+    limit: number = 50,
+    offset: number = 0,
+): Promise<Post[]> {
+    const params = new URLSearchParams({
+        type,
+        limit: String(limit),
+        offset: String(offset),
+    });
+
+    const headers: Record<string, string> = {};
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`/api/v1/feed?${params.toString()}`, { headers });
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as { posts: Post[] };
+    return data.posts;
+}
+
 async function requestAuth(
     path: string,
     body: { username: string; password: string }

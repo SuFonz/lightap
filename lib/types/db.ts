@@ -18,8 +18,15 @@ export interface ObjectRow {
     name: string | null,
     type: string,
     actor: string,
+    to_json: string | null,
+    cc_json: string | null,
     content: string,
     created_at: Date,
+}
+
+/** feed 查询结果：Note + 作者用户名 */
+export interface FeedNoteRow extends ObjectRow {
+    author_username: string,
 }
 
 export interface ActivityRow {

@@ -29,6 +29,11 @@ export interface APObject {
     type: string,
     id: string,
     name?: string,
+    
+    to?: string[],
+    bto?: string[],
+    cc?: string[],
+    bcc?: string[],
 }
 
 export interface APCollection extends APObject {

@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LoginRequiredPanel } from "@/components/auth/login-required-panel";
 import { useAuthStore } from "@/stores/auth-store";
 import { ComposerField } from "@/components/composer-field";
@@ -12,8 +11,8 @@ import { useUserStore } from "@/stores/user-store";
 import { cn } from "@/lib/client/utils";
 
 export default function HomePage() {
-    const { posts, addPost } = usePostStore();
-    const { currentUser, isFollowing } = useUserStore();
+    const { posts, loading, loadFeed, addPost } = usePostStore();
+    const { currentUser } = useUserStore();
     const { isAuthenticated } = useAuthStore();
     const [tab, setTab] = useState<"all" | "following">("all");
     const [greeting, setGreeting] = useState("欢迎回来");
@@ -23,8 +22,19 @@ export default function HomePage() {
         setGreeting(hour < 5 ? "夜深了" : hour < 12 ? "早上好" : hour < 18 ? "下午好" : "晚上好");
     }, []);
 
-    const followingOnly = posts.filter((p) => isFollowing(p.authorUsername));
-    const visible = tab === "all" ? posts : followingOnly;
+    const feedType = tab === "all" ? "public" : "following";
+
+    useEffect(() => {
+        void loadFeed(feedType);
+    }, [feedType, loadFeed]);
+
+    const handlePost = useCallback(
+        async (content: string) => {
+            await addPost(content);
+            await loadFeed(feedType);
+        },
+        [addPost, loadFeed, feedType],
+    );
 
     return (
         <div className="flex flex-col gap-4">
@@ -47,7 +57,7 @@ export default function HomePage() {
             </section>
 
             {isAuthenticated ? (
-                <ComposerField onSubmit={addPost} />
+                <ComposerField onSubmit={handlePost} />
             ) : (
                 <LoginRequiredPanel />
             )}
@@ -81,23 +91,20 @@ export default function HomePage() {
 
             {/* 时间线：一个玻璃容器，内容优先 */}
             <section className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="时间线">
-                {visible.map((post) => (
+                {posts.map((post) => (
                     <PostCard key={post.id} post={post} bare />
                 ))}
             </section>
 
-            {visible.length === 0 && (
+            {posts.length === 0 && (
                 <div className="glass-card flex flex-col items-center gap-2 px-6 py-14 text-center">
                     <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand/15 text-brand">
                         <ImageIcon size={24} />
                     </span>
-                    <p className="font-display font-extrabold text-slate-700">这里还什么都没有</p>
-                    <p className="text-sm text-slate-400">
-                        {/* 功能未实现，暂时注释：
-                        去 <Link href="/users" className="font-bold text-brand-deep hover:underline">用户浏览</Link> 找些有趣的人关注吧！
-                        */}
-                        找些有趣的人关注吧！
+                    <p className="font-display font-extrabold text-slate-700">
+                        {loading ? "加载中…" : "这里还什么都没有"}
                     </p>
+                    <p className="text-sm text-slate-400">找些有趣的人关注吧！</p>
                 </div>
             )}
         </div>

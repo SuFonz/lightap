@@ -55,15 +55,14 @@ export async function GET(request: Request) {
 
                 // 落库远端用户，资料页与后续交互可直接使用
                 try {
-                    // 暂时不放入数据库
-                    // await upsertRemoteUser({
-                    //     actorUrl,
-                    //     username: dto.username,
-                    //     displayName: dto.displayName,
-                    //     summary: dto.bio || null,
-                    //     iconUrl: dto.avatarUrl,
-                    //     publicKeyPem: actor.publicKey?.publicKeyPem ?? "",
-                    // });
+                    await upsertRemoteUser({
+                        actorUrl,
+                        username: user.username,
+                        displayName: user.displayName,
+                        summary: user.bio || null,
+                        iconUrl: user.avatarUrl ?? "",
+                        publicKeyPem: actor.publicKey?.publicKeyPem ?? "",
+                    });
                 } catch (e) {
                     console.error("upsert remote user failed:", e);
                 }

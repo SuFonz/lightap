@@ -4,6 +4,7 @@ import { getNotesByPreferredUsername, insertNote } from "@/lib/db/objects";
 import { buildOrderedCollection, convertNote } from "@/lib/activitypub/tools";
 import { insertActivity } from "@/lib/db/activities";
 import { getFollowersOf, insertFollow, deleteFollow } from "@/lib/db/follows";
+import { addToTimeline } from "@/lib/db/timeline";
 import { postActivity } from "@/lib/activitypub/fetch";
 import { verify } from "@/lib/util/jwt";
 import { env } from "cloudflare:workers";
@@ -168,7 +169,9 @@ async function handleCreate(baseUrl: string, activity: APActivity): Promise<void
         noteUrl,
         selfId,
         note.name ?? null,
-        note.content
+        note.content,
+        note.to ?? activity.to ?? null,
+        note.cc ?? activity.cc ?? null
     );
 
     await insertActivity(
@@ -178,6 +181,16 @@ async function handleCreate(baseUrl: string, activity: APActivity): Promise<void
         activity.to ?? [],
         activity.cc ?? []
     );
+
+    // 关注线：作者自己 + 本地 followers
+    const user = await getUserByActorUrl(selfId);
+    if (user) {
+        const followers = await getFollowersOf(user.preferred_username);
+        await addToTimeline(objectId, Date.now(), [
+            user.actor_url,
+            ...(followers ?? []).map((f) => f.follower),
+        ]);
+    }
 
     // 把 Create 投递到所有关注者的 inbox（联邦转发）
     await deliverToFollowers(selfId, activity);

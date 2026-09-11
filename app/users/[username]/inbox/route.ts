@@ -5,7 +5,8 @@ import { getUserByPreferredUsername } from "@/lib/db/users";
 import { HttpError, UserJwtPayload } from "@/lib/types/http";
 import { verify } from "@/lib/util/jwt";
 import { env } from "cloudflare:workers";
-import { getReceivedNotesOf, insertNote } from "@/lib/db/objects";
+import { getOrCreateNote, getReceivedNotesOf } from "@/lib/db/objects";
+import { addToTimeline } from "@/lib/db/timeline";
 import { postActivity } from "@/lib/activitypub/fetch";
 import { insertFollow } from "@/lib/db/follows";
 
@@ -148,11 +149,13 @@ async function handleCreate(baseUrl: string, activity: APActivity): Promise<void
     const note = activity.object as APNote;
     const actorUrl = typeof(actor) === "string" ? actor : actor.id;
 
-    const objectId = await insertNote(
+    const objectId = await getOrCreateNote(
         note.id,
         actorUrl,
         note.name ?? null,
-        note.content
+        note.content,
+        note.to ?? activity.to ?? null,
+        note.cc ?? activity.cc ?? null
     );
 
     await insertActivity(
@@ -163,6 +166,11 @@ async function handleCreate(baseUrl: string, activity: APActivity): Promise<void
         activity.cc ?? []
     );
 
+    // 关注线：命中 to/cc 的本站用户
+    await addToTimeline(objectId, Date.now(), [
+        ...(activity.to ?? []),
+        ...(activity.cc ?? []),
+    ]);
 }
 
 async function handleFollow(baseUrl: string, activity: APActivity): Promise<void> {
