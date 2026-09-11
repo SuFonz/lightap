@@ -1,4 +1,4 @@
-import { APWebfinger, APActor, APNote, APOrderedCollection, APActivity, APPerson, APObject, APAccept } from "@/lib/types/activitypub"
+import { AP_CONTEXT_PUBLIC, APWebfinger, APActor, APNote, APOrderedCollection, APActivity, APPerson, APObject, APAccept } from "@/lib/types/activitypub"
 
 export function htmlToPlainText(html: string): string {
     return html
@@ -150,6 +150,26 @@ export function buildAcceptFollow(
     };
 
     return accept;
+}
+
+export function buildCreateNote(
+    origin: string,
+    selfActor: string,
+    content: string,
+    name: string = "",
+): APActivity {
+    const note: APNote = buildNote(origin, name, content);
+
+    const create: APActivity = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        type: "Create",
+        id: `${origin}/activities/${crypto.randomUUID()}`,
+        actor: selfActor,
+        object: note,
+        to: [AP_CONTEXT_PUBLIC],
+    };
+
+    return create;
 }
 
 export function buildFollow(

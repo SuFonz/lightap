@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useAuthStore } from "./auth-store";
 import * as api from "@/lib/client/api";
-import type { User, UserProfile } from "@/lib/types/http";
+import type { ProfilePatch, User, UserProfile } from "@/lib/types/http";
 
 interface UserStoreValue {
     users: User[];
@@ -23,7 +23,7 @@ interface UserStoreValue {
     loadProfile: (username: string) => Promise<void>;
     isFollowing: (username: string) => boolean;
     toggleFollow: (user: User) => Promise<void>;
-    updateProfile: (patch: api.ProfilePatch) => Promise<void>;
+    updateProfile: (patch: ProfilePatch) => Promise<void>;
     incrementPostsCount: (username: string, delta: number) => void;
 }
 
@@ -132,12 +132,13 @@ export function UserStoreProvider({ children }: { children: ReactNode }) {
 
     const toggleFollow = useCallback(
         async (user: User) => {
+            if (!isAuthenticated || !token) {
+                throw new Error("请先登录后再关注");
+            }
+
             const username = user.username;
             const following = !followingSet.has(user.username);
             const delta = following ? 1 : -1;
-
-            // 已登录：通过 outbox 投递 Follow / Undo activity；未登录保持本地状态
-            const useActivity = isAuthenticated && !!token;
 
             setFollowingSet((prev) => {
                 const next = new Set(prev);
@@ -147,17 +148,13 @@ export function UserStoreProvider({ children }: { children: ReactNode }) {
             });
 
             try {
-                if (useActivity) {
-                    // 真实用户：投递 Follow / Undo activity 到自己的 outbox
-                    await api.sendFollowActivity(
-                        currentUser.username,
-                        user.actorUrl ?? "",
-                        following,
-                        token,
-                    );
-                } else {
-                    await api.setFollow(username, following);
-                }
+                // 投递 Follow / Undo activity 到自己的 outbox
+                await api.sendFollowActivity(
+                    currentUser.username,
+                    user.actorUrl ?? "",
+                    following,
+                    token,
+                );
             } catch (e) {
                 // 投递失败：回滚关注状态
                 setFollowingSet((prev) => {
@@ -207,11 +204,11 @@ export function UserStoreProvider({ children }: { children: ReactNode }) {
                 };
             });
         },
-        [followingSet, currentUser.username, isAuthenticated, token, profiles],
+        [followingSet, currentUser.username, isAuthenticated, token],
     );
 
     const updateProfile = useCallback(
-        async (patch: api.ProfilePatch) => {
+        async (patch: ProfilePatch) => {
             await api.updateProfile(currentUser.username, patch, token);
             setProfiles((prev) => {
                 const base =

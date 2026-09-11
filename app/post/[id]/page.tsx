@@ -2,20 +2,14 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { LoginRequiredPanel } from "@/components/auth/login-required-panel";
-import { useAuthStore } from "@/stores/auth-store";
-import { ComposerField } from "@/components/composer-field";
 import { PostCard } from "@/components/post-card";
 import { HomeIcon, ReplyIcon } from "@/components/icons";
 import { usePostStore } from "@/stores/post-store";
 
-const MAX_REPLY = 500;
-
 export default function PostDetailPage() {
     const params = useParams<{ id: string }>();
     const id = typeof params?.id === "string" ? params.id : "";
-    const { getPostPath, addReply } = usePostStore();
-    const { isAuthenticated } = useAuthStore();
+    const { getPostPath } = usePostStore();
     const router = useRouter();
     const chain = id ? getPostPath(id) ?? [] : [];
 
@@ -39,7 +33,6 @@ export default function PostDetailPage() {
 
     const post = chain[chain.length - 1];
     const isThread = chain.length > 1;
-    const postId = post.id;
     const replies = [...post.replies].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
     return (
@@ -77,19 +70,11 @@ export default function PostDetailPage() {
                 ))}
             </section>
 
-            {isAuthenticated ? (
-                <ComposerField
-                    label="写回复…"
-                    title="发表回复"
-                    placeholder={`回复一下 @${post.authorUsername} 吧～`}
-                    submitLabel="发表回复"
-                    showTips={false}
-                    maxLength={MAX_REPLY}
-                    onSubmit={(content) => addReply(postId, content)}
-                />
-            ) : (
-                <LoginRequiredPanel />
-            )}
+            {/* 功能未实现，暂时占位：回复需要后端支持 */}
+            <div className="glass-card px-6 py-8 text-center">
+                <p className="font-display font-extrabold text-slate-700">回复功能开发中</p>
+                <p className="mt-1 text-sm text-slate-400">敬请期待～</p>
+            </div>
 
             <h2 className="glass-card px-5 py-3 font-display text-sm font-extrabold text-slate-700">
                 回复 · {post.replies.length}

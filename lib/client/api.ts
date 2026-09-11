@@ -1,5 +1,5 @@
-import { buildFollow, buildUnfollow } from "@/lib/activitypub/tools";
-import { AuthToken, Post, SearchResult, User, UserProfile } from "@/lib/types/http";
+import { buildCreateNote, buildFollow, buildUnfollow } from "@/lib/activitypub/tools";
+import { AuthToken, Post, ProfilePatch, SearchResult, User, UserProfile } from "@/lib/types/http";
 
 const delay = (ms = 350) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -94,64 +94,6 @@ export async function searchUsers(query: string): Promise<User[]> {
     }
 }
 
-export async function createPost(
-    username: string,
-    content: string,
-): Promise<Post> {
-    await delay();
-    return {
-        id: `p-${Date.now()}`,
-        authorUsername: username,
-        content,
-        createdAt: new Date().toISOString(),
-        likes: 0,
-        likedByMe: false,
-        boosts: 0,
-        boostedByMe: false,
-        replies: [],
-    };
-}
-
-export async function createReply(
-    postId: string,
-    username: string,
-    content: string,
-): Promise<Post> {
-    await delay();
-    return {
-        id: `r-${Date.now()}`,
-        authorUsername: username,
-        content,
-        createdAt: new Date().toISOString(),
-        likes: 0,
-        likedByMe: false,
-        boosts: 0,
-        boostedByMe: false,
-        replies: [],
-    };
-}
-
-export async function toggleLike(postId: string, liked: boolean) {
-    await delay(180);
-    return liked;
-}
-
-export async function toggleBoost(postId: string, boosted: boolean) {
-    await delay(180);
-    return boosted;
-}
-
-export async function setFollow(username: string, following: boolean) {
-    await delay(280);
-    return { username, following };
-}
-
-export interface ProfilePatch {
-    displayName?: string;
-    bio?: string;
-    avatarUrl?: string;
-}
-
 /**
  * 关注 / 取消关注：把 Follow（或 Undo{Follow}）activity 投递到自己的 outbox，
  * 由服务器签名转发给对方 inbox
@@ -180,6 +122,34 @@ export async function sendFollowActivity(
 
     if (!res.ok) {
         throw new Error("关注操作失败，请稍后重试");
+    }
+}
+
+/**
+ * 发布新帖：把 Create{Note} activity 投递到自己的 outbox，
+ * 由服务器落库并转发给关注者
+ */
+export async function sendCreateNoteActivity(
+    me: string,
+    content: string,
+    token: string,
+): Promise<void> {
+    const origin = window.location.origin;
+    const actor = `${origin}/users/${me}`;
+
+    const activity = buildCreateNote(origin, actor, content);
+
+    const res = await fetch(`/users/${encodeURIComponent(me)}/outbox`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/activity+json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(activity),
+    });
+
+    if (!res.ok) {
+        throw new Error("发布失败，请稍后重试");
     }
 }
 
