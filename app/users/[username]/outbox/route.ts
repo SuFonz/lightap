@@ -1,9 +1,9 @@
-import { getUserByPreferredUsername } from "@/lib/db/users";
+import { getUserByActorUrl, getUserByPreferredUsername } from "@/lib/db/users";
 import { APActivity, APActivityType, APNote } from "@/lib/types/activitypub";
 import { getNotesByPreferredUsername, insertNote } from "@/lib/db/objects";
 import { buildOrderedCollection, convertNote } from "@/lib/activitypub/tools";
 import { insertActivity } from "@/lib/db/activities";
-import { insertFollow, deleteFollow } from "@/lib/db/follows";
+import { getFollowersOf, insertFollow, deleteFollow } from "@/lib/db/follows";
 import { postActivity } from "@/lib/activitypub/fetch";
 import { verify } from "@/lib/util/jwt";
 import { env } from "cloudflare:workers";
@@ -178,6 +178,38 @@ async function handleCreate(baseUrl: string, activity: APActivity): Promise<void
         activity.to ?? [],
         activity.cc ?? []
     );
+
+    // 把 Create 投递到所有关注者的 inbox（联邦转发）
+    await deliverToFollowers(selfId, activity);
+}
+
+// 把活动投递到该 actor 的所有关注者 inbox
+async function deliverToFollowers(
+    selfActorUrl: string,
+    activity: APActivity,
+): Promise<void> {
+    const user = await getUserByActorUrl(selfActorUrl);
+    if (!user) return;
+
+    const followers = await getFollowersOf(user.preferred_username);
+    if (!followers || followers.length === 0) return;
+
+    const results = await Promise.allSettled(
+        followers.map((f) => {
+            // 让每个收件人的 actor 出现在 cc 中，接收端才能把这条活动归属到自己
+            const addressed: APActivity = {
+                ...activity,
+                cc: [...new Set([...(activity.cc ?? []), f.follower])],
+            };
+            return postActivity(selfActorUrl, f.follower, addressed);
+        })
+    );
+
+    for (const result of results) {
+        if (result.status === "rejected" || result.value === false) {
+            console.error("deliver Create to follower failed");
+        }
+    }
 }
 
 // 关注：把 Follow 转发到对方的 inbox，投递成功后本地记录关注关系
