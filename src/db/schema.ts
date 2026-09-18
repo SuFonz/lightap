@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
     id: integer().primaryKey({ autoIncrement: true }),
@@ -19,3 +19,12 @@ export const users = sqliteTable("users", {
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
     updatedAt: integer("updated_at").notNull().default(sql`(unixepoch())`),
 });
+
+export const follows = sqliteTable("follows", {
+    id: integer().primaryKey({ autoIncrement: true }),
+    follower: text().notNull(),
+    following: text().notNull(),
+    createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
+}, (table) => [
+    unique().on(table.follower, table.following),
+]);
