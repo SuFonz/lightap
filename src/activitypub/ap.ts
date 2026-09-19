@@ -71,10 +71,10 @@ export interface APActor extends APObject {
 
 // Activity Types
 
-export interface APActivity<TObject = APObject> extends APObject {
+export interface APActivity<TObject extends APObject = APObject> extends APObject {
     type: APActivityType | "Activity",
     summary?: string,
-    actor: TObject | string,
+    actor: string,
     object: TObject | string,
 }
 

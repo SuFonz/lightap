@@ -1,4 +1,4 @@
-import { APWebfinger } from "./ap";
+import { AP_CONTEXT, APActivity, APActivityType, APObject, APWebfinger } from "./ap";
 
 export function parseResource(
     resource: string
@@ -20,6 +20,13 @@ export function parseResource(
     const domain = acct.slice(index + 1);
 
     return [username, domain];
+}
+
+export function parseWebfinger(webfinger: APWebfinger) {
+    const link = webfinger.links.find(l => l.rel === "self" && l.type === "application/activity+json")?.href ?? "";
+    return {
+        actorUrl: link ?? "",
+    };
 }
 
 export function buildWebfinger(
@@ -47,4 +54,43 @@ export function buildWebfinger(
     };
 
     return webfinger;
+}
+
+export function buildObjecrUri(url: URL, uuid: string, type: APActivityType) {
+    return `${url.origin}/${type.toLocaleLowerCase()}/${uuid}`;
+}
+
+export function buildActivity<TObject extends APObject = APObject>(
+    url: URL,
+    uuid: string,
+    type: APActivityType,
+    actor: string,
+    object: TObject | string
+) {
+    const activity: APActivity = {
+        "@context": AP_CONTEXT,
+        id: buildObjecrUri(url, uuid, type),
+        type,
+        actor,
+        object,
+    }
+
+    return activity;
+}
+
+export function buildActivityWithUri<TObject extends APObject = APObject>(
+    id: string,
+    type: APActivityType,
+    actor: string,
+    object: TObject | string
+) {
+    const activity: APActivity = {
+        "@context": AP_CONTEXT,
+        id: id,
+        type,
+        actor,
+        object,
+    }
+
+    return activity;
 }

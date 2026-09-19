@@ -21,10 +21,9 @@ export async function GET(request: Request) {
     });
 }
 
+// 不实现 POST /users/[username]/outbox
 export async function POST(request: Request) {
-    // （当前实例）用户认证
-
-    // 认证通过则递送
-
-    // 存入数据库
+    return new Response(null, {
+        status: 501,
+    });
 }
