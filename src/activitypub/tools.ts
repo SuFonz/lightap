@@ -1,4 +1,4 @@
-import { AP_CONTEXT, APActivity, APActivityType, APObject, APWebfinger } from "./ap";
+import { AP_CONTEXT, APActivity, APActivityType, APNote, APObject, APObjectType, APWebfinger } from "./ap";
 
 export function parseResource(
     resource: string
@@ -56,7 +56,7 @@ export function buildWebfinger(
     return webfinger;
 }
 
-export function buildObjecrUri(url: URL, uuid: string, type: APActivityType) {
+export function buildObjecrUri(url: URL, uuid: string, type: APActivityType | APObjectType) {
     return `${url.origin}/${type.toLocaleLowerCase()}/${uuid}`;
 }
 
@@ -93,4 +93,17 @@ export function buildActivityWithUri<TObject extends APObject = APObject>(
     }
 
     return activity;
+}
+
+export function buildNote(url: URL, uuid: string, content: string, inReplyTo?: string) {
+    const note: APNote = {
+        "@context": AP_CONTEXT,
+        id: `${url.origin}/notes/${uuid}`,
+        type: "Note",
+        name: "Light AP Note",
+        content: content,
+        inReplyTo: inReplyTo,
+    };
+
+    return note;
 }

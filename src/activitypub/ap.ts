@@ -12,6 +12,8 @@ export type APActivityType = "Activity" |
                              "Follow" | 
                              "Undo";
 
+export type APObjectType = "Note";
+
 // Core Types
 
 export interface APWebfinger {
@@ -88,6 +90,7 @@ export interface APNote extends APObject {
     type: "Note",
     name: string,
     content: string,
+    inReplyTo?: string,
 }
 
 export interface APPerson extends APObject {
