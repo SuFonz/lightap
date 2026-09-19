@@ -1,7 +1,7 @@
-import { APActivity, APActor, APOrderedCollection } from "@/src/activitypub/ap";
+import { APActivity, APActor, APObject, APOrderedCollection } from "@/src/activitypub/ap";
 import { getActor, getWebfinger, postInbox } from "@/src/activitypub/network";
 import { buildActivity } from "@/src/activitypub/tools";
-import { users } from "@/src/db/schema";
+import { activities, follows, users } from "@/src/db/schema";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
@@ -67,43 +67,64 @@ export async function POST(request: Request, { params }: { params: Params }) {
     }
 
     // 根据类型进行处理
-    const db = drizzle(env.DB);
-    const result = await db.select().from(users).where(eq(users.username, params.username));
-    if (result.length == 0) {
-        return Response.json({
-            error: "User not found."
-        }, {
-            status: 404,
+    const success = await handleActivity(url, params.username, actor, body);
+    if (success) {
+        return Response.json({}, {
+            status: 200,
         });
     }
-    const user = result[0];
-    const success = await handleActivity(url, user, actor, body);
 
-    // TODO: 如果成功处理，看数据库是否有重复，如果没有则存入数据库
-    if (success) {
-
-    }
+    return Response.json({
+        error: "Server internal error.",
+    }, {
+        status: 500,
+    });
 }
 
-async function handleActivity(url: URL, user: DBUser, remoteActor: APActor, activity: APActivity) {
-    const actType = activity.type;
-    switch (actType) {
-        case "Create":
-            break;
-        case "Follow": // 远程用户关注自动同意请求
-            // 构建 Accept Activity
-            const acceptAct = buildActivity(url, crypto.randomUUID(), "Accept", user.actorUrl, activity);
+// 返回：[Success, Activity, ActivityObject]
+async function handleActivity(
+    url: URL,
+    username: string,
+    remoteActor: APActor, 
+    activity: APActivity
+) {
+    const db = drizzle(env.DB);
 
-            // Post Activity
-            const res = await postInbox(remoteActor.inbox, user.privateKey, `${user.actorUrl}#main-key`, acceptAct);
+    try {
+        const user = (await db.select().from(users).where(eq(users.username, username)))[0];
+        const actType = activity.type;
+        switch (actType) {
+            case "Create":
+                break;
+            case "Follow": // 远程用户关注自动同意请求
+                // 构建 Accept Activity
+                const accept = buildActivity(url, crypto.randomUUID(), "Accept", user.actorUrl, activity);
 
-            if (res.ok) {
-                return true;
-            }
+                // Post Activity
+                const res = await postInbox(remoteActor.inbox, user.privateKey, `${user.actorUrl}#main-key`, accept);
 
-            break;
-        case "Undo":
-            break;
+                if (!res.ok) {
+                    return false;
+                }
+
+                const objIns = (await db.insert(follows).values({
+                    follower: activity.actor,
+                    following: activity.object as string,
+                }).returning({ insertedId: follows.id }))[0];
+
+                const actIns = (await db.insert(activities).values({
+                    uri: accept.id,
+                    type: accept.type,
+                    actor: accept.actor,
+                    objectId: objIns.insertedId,
+                }).returning({ insertedId: activities.id }))[0];
+
+                break;
+            case "Undo":
+                break;
+        }
+    } catch (error: any) {
+        console.log(error.message);
     }
 
     return false;
