@@ -1,4 +1,4 @@
-import { AP_CONTEXT, APActivity, APActivityType, APNote, APObject, APObjectType, APWebfinger } from "./ap";
+import { AP_CONTEXT, APActivity, APActivityType, APActor, APNote, APObject, APObjectType, APWebfinger } from "./ap";
 
 export function parseResource(
     resource: string
@@ -29,6 +29,14 @@ export function parseWebfinger(webfinger: APWebfinger) {
     };
 }
 
+export function convertDomainToUrl(domain: string) {
+    return `https://${domain}/`;
+}
+
+export function convertActorUrlToMainKey(actor: string) {
+    return `${actor}#main-key`;
+}
+
 export function buildWebfinger(
     url: URL,
     username: string,
@@ -54,6 +62,34 @@ export function buildWebfinger(
     };
 
     return webfinger;
+}
+
+export function buildActor(
+    url: URL,
+    name: string,
+    preferredUsername: string,
+    summary: string | null,
+    publicKeyPem: string | null,
+) {
+    const actor: APActor = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        type: "Person",
+        id: `${url.origin}/users/${preferredUsername}`,
+        name: name,
+        preferredUsername: preferredUsername,
+        summary: summary,
+        publicKey: {
+            id: convertActorUrlToMainKey(`${url.origin}/users/${preferredUsername}`),
+            owner: `${url.origin}/users/${preferredUsername}`,
+            publicKeyPem: publicKeyPem ?? "",
+        },
+        inbox: `${url.origin}/users/${preferredUsername}/inbox`,
+        outbox: `${url.origin}/users/${preferredUsername}/outbox`,
+        followers: `${url.origin}/users/${preferredUsername}/followers`,
+        following: `${url.origin}/users/${preferredUsername}/following`,
+    };
+
+    return actor;
 }
 
 export function buildObjecrUri(url: URL, uuid: string, type: APActivityType | APObjectType) {

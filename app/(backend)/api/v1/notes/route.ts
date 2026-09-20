@@ -1,6 +1,6 @@
 import { AP_CONTEXT, APActor, APNote } from "@/src/activitypub/ap";
 import { getActor, postInbox } from "@/src/activitypub/network";
-import { buildActivity, buildNote } from "@/src/activitypub/tools";
+import { buildActivity, buildNote, convertActorUrlToMainKey } from "@/src/activitypub/tools";
 import { activities, follows, notes, users } from "@/src/db/schema";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
@@ -100,7 +100,8 @@ export async function POST(request: Request) {
                 return;
             }
             const actor = await atRes.json<APActor>();
-            await postInbox(actor.inbox, user.privateKey, `${user.actorUrl}#main-key`, create);
+            const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
+            await postInbox(actor.inbox, user.privateKey, userMkUrl, create);
         }));
     } catch (error: any) {
         console.log(error.message);

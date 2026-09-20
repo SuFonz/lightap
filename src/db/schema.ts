@@ -5,7 +5,7 @@ import { APActivityType } from "@/src/activitypub/ap"
 export const users = sqliteTable("users", {
     id: integer().primaryKey({ autoIncrement: true }),
     username: text().notNull(),
-    displayName: text("display_name"),
+    displayName: text("display_name").notNull(),
     // 总结
     summary: text(),
     // 头像
@@ -23,7 +23,7 @@ export const users = sqliteTable("users", {
 
 export const activities = sqliteTable("activities", {
     id: integer().primaryKey({ autoIncrement: true }),
-    uri: text().notNull(),
+    uri: text().notNull().unique(),
     type: text().$type<APActivityType>().notNull(),
     actor: text().notNull(),
     objectId: integer("object_id"),
@@ -32,7 +32,7 @@ export const activities = sqliteTable("activities", {
 
 export const notes = sqliteTable("notes", {
     id: integer().primaryKey({ autoIncrement: true }),
-    uri: text().notNull(),
+    uri: text().notNull().unique(),
     actor: text().notNull(),
     content: text().notNull(),
     inReplyTo: integer(),

@@ -1,6 +1,6 @@
 import { APActor } from "@/src/activitypub/ap";
 import { getActor, postInbox } from "@/src/activitypub/network";
-import { buildActivity, buildActivityWithUri } from "@/src/activitypub/tools";
+import { buildActivity, buildActivityWithUri, convertActorUrlToMainKey } from "@/src/activitypub/tools";
 import { activities, follows, users } from "@/src/db/schema";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
@@ -123,7 +123,8 @@ export async function POST(request: Request) {
             // 给远程用户发送 Unfollow Activity
             const follow = buildActivityWithUri(dbActivity.uri, "Follow", dbFollow.follower, dbFollow.following);
             const undo = buildActivity(url, crypto.randomUUID(), "Undo", user.actorUrl, follow);
-            const faRes = await postInbox(actor.inbox, user.privateKey, `${user.actorUrl}#main-key`, undo);
+            const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
+            const faRes = await postInbox(actor.inbox, user.privateKey, userMkUrl, undo);
             if (!faRes.ok) {
                 return Response.json({
                     error: "Follow failed."

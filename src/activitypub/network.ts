@@ -132,7 +132,40 @@ export async function apTrySignedFetch(
 }
 
 export async function getWebfinger(username: string, domain: string) {
-    return await apFetch(`https://${domain}/.well-knwon/webfinger?resource=acct:${username}@${domain}`);
+    // return await apFetch(`https://${domain}/.well-knwon/webfinger?resource=acct:${username}@${domain}`);
+
+    const resource = encodeURIComponent(
+        `acct:${username}@${domain}`
+    );
+
+    const paths = [
+        `https://${domain}/.well-known/webfinger?resource=${resource}`,
+        `http://${domain}/.well-known/webfinger?resource=${resource}`,
+    ];
+
+    for (const url of paths) {
+        try {
+            const res = await apFetch(url);
+
+            if (res.ok) {
+                return res;
+            }
+        } catch {
+            // HTTPS 失败，继续尝试 HTTP
+        }
+    }
+
+    return new Response(
+        JSON.stringify({
+            error: "WebFinger not found"
+        }),
+        {
+            status: 404,
+            headers: {
+                "Content-Type": "application/json"
+            }
+        }
+    );
 }
 
 export async function getActor(actorUrl: string, privateKey?: string, keyId?: string) {

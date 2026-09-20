@@ -1,11 +1,12 @@
 import { APActivity, APActor, APObject, APOrderedCollection } from "@/src/activitypub/ap";
 import { getActor, getWebfinger, postInbox } from "@/src/activitypub/network";
-import { buildActivity } from "@/src/activitypub/tools";
+import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
 import { activities, follows, users } from "@/src/db/schema";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import { rm } from "fs";
 
 export const dynamic = "force-dynamic";
 
@@ -36,98 +37,77 @@ export async function POST(request: Request, { params }: { params: Params }) {
     const url = new URL(request.url);
     const body = await request.json<APActivity>();
 
-    // 获取 Actor
-    const atRes = await getActor(body.actor);
-    if (!atRes.ok) {
-        return Response.json({
-            error: "Actor not found.",
-        }, {
-            status: 400,
-        });
-    }
-    const actor = await atRes.json<APActor>();
+    // 处理活动
+    await handleActivity(request, body);
 
-    // 验证签名
-    const valid = await tryVerifySignature(
-        request.method, 
-        request.url,
-        request.headers,
-        actor.publicKey.publicKeyPem,
-        actor.publicKey.id,
-    );
-
-
-    // 签名通过则接收
-    if (valid) {
-        return Response.json({
-            error: "Signature is invalid.",
-        }, {
-            status: 401,
-        });
-    }
-
-    // 根据类型进行处理
-    const success = await handleActivity(url, params.username, actor, body);
-    if (success) {
-        return Response.json({}, {
-            status: 200,
-        });
-    }
-
-    return Response.json({
-        error: "Server internal error.",
-    }, {
-        status: 500,
+    return Response.json({}, {
+        status: 200,
     });
 }
 
-// 返回：[Success, Activity, ActivityObject]
-async function handleActivity(
-    url: URL,
-    username: string,
-    remoteActor: APActor, 
-    activity: APActivity
-) {
+async function handleActivity(request: Request, activity: APActivity) {
     const db = drizzle(env.DB);
-
+    const type = activity.type;
     try {
-        const user = (await db.select().from(users).where(eq(users.username, username)))[0];
-        const actType = activity.type;
-        switch (actType) {
-            case "Create":
-                break;
-            case "Follow": // 远程用户关注自动同意请求
-                // 构建 Accept Activity
-                const accept = buildActivity(url, crypto.randomUUID(), "Accept", user.actorUrl, activity);
+        switch (type) {
+            case "Accept": {
+                // 提取对象
+                const obj = await extractObject(activity) as APActivity;
 
-                // Post Activity
-                const res = await postInbox(remoteActor.inbox, user.privateKey, `${user.actorUrl}#main-key`, accept);
+                // 获取 User (getActor 签名用)
+                const user = (await db.select().from(users).where(eq(users.actorUrl, obj.actor)))[0];
+                
+                // 获取远程 Actor 公钥 (如果已经存数据库了可以从数据库里提取)
+                const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
+                if (!rmRes.ok) {
+                    throw new Error("Remote user not found.");
+                }
+                const rmActor = await rmRes.json<APActor>();
 
-                if (!res.ok) {
-                    return false;
+                console.log(activity);
+
+                // 用公钥验证
+                const success = await tryVerifySignature(
+                    request.method, 
+                    request.url, 
+                    request.headers, 
+                    rmActor.publicKey.publicKeyPem,
+                    rmActor.publicKey.id,
+                );
+                if (!success) {
+                    throw new Error("Sinature is invalid.");
                 }
 
-                const objIns = (await db.insert(follows).values({
-                    follower: activity.actor,
-                    following: activity.object as string,
+                // 存入数据库
+                console.log(user);
+                console.log(rmActor);
+                const followsIns = (await db.insert(follows).values({
+                    follower: user.actorUrl,
+                    following: rmActor.id,
                 }).returning({ insertedId: follows.id }))[0];
 
-                const actIns = (await db.insert(activities).values({
-                    uri: accept.id,
-                    type: accept.type,
-                    actor: accept.actor,
-                    objectId: objIns.insertedId,
-                }).returning({ insertedId: activities.id }))[0];
+                const activityIns = (await db.insert(activities).values({
+                    uri: activity.id,
+                    type: activity.type,
+                    actor: activity.actor,
+                    objectId: followsIns.insertedId,
+                }).returning({ insertedId: activities.id }));
+
 
                 break;
-            case "Undo":
-                break;
+            }
         }
     } catch (error: any) {
         console.log(error.message);
     }
 
-    return false;
+}
+
+async function extractObject(activity: APActivity) {
+    if (typeof activity.object === "object") {
+        return activity.object;
+    }
+    return activity;
 }
 
 async function tryVerifySignature(
@@ -137,30 +117,34 @@ async function tryVerifySignature(
     publicKey: string,
     expectedKeyId: string,
 ) {
-    // legacy
-    const apValid = await verifyActivityPubRequest({
-        method,
-        url,
-        headers,
-        publicKey,
-        expectedKeyId,
-    });
+    try {
+        // legacy
+        const apValid = await verifyActivityPubRequest({
+            method,
+            url,
+            headers,
+            publicKey,
+            expectedKeyId,
+        });
 
-    if (apValid) {
-        return true;
-    }
+        if (apValid) {
+            return true;
+        }
+    } catch(error: any) {}
 
-    // RFC 9421
-    const rfcValid = await verifyRfc9421({
-        method,
-        url,
-        headers,
-        publicKey,
-    })
+    try {
+        // RFC 9421
+        const rfcValid = await verifyRfc9421({
+            method,
+            url,
+            headers,
+            publicKey,
+        })
 
-    if (rfcValid) {
-        return true;
-    }
+        if (rfcValid) {
+            return true;
+        }
+    } catch (error: any) {}
 
     return false;
 }

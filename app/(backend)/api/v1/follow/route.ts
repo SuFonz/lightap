@@ -1,6 +1,6 @@
-import { APActor } from "@/src/activitypub/ap";
-import { getActor, postInbox } from "@/src/activitypub/network";
-import { buildActivity, buildObjecrUri } from "@/src/activitypub/tools";
+import { APActor, APWebfinger } from "@/src/activitypub/ap";
+import { getActor, getWebfinger, postInbox } from "@/src/activitypub/network";
+import { buildActivity, buildObjecrUri, convertActorUrlToMainKey, convertDomainToUrl, parseWebfinger } from "@/src/activitypub/tools";
 import { activities, follows, users } from "@/src/db/schema";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
@@ -99,25 +99,22 @@ export async function POST(request: Request) {
 
     } else {
         try {
-            // 否：获取远程 Actor
-            const atRes = await getActor(body.domain);
-            if (!atRes.ok) {
-                return Response.json({
-                    error: "Remote user not found.",
-                }, {
-                    status: 404,
-                });
-            }
-            const actor = await atRes.json<APActor>();
-
-            // 获取当前用户私钥
+            // 否：获取当前用户私钥
             const user = (await db.select().from(users).where(eq(users.username, payload.username)))[0]
+
+            // 获取远程 Webfinger 和 Actor
+            const wfRes = await getWebfinger(body.username, body.domain);
+            const webfinger = await wfRes.json<APWebfinger>();
+            const { actorUrl: rmActUrl } = parseWebfinger(webfinger);
+            const atRes = await getActor(rmActUrl, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
+            const actor = await atRes.json<APActor>();
 
             // 构建 Follow Activity
             const followAct = buildActivity(url, crypto.randomUUID(), "Follow", user.actorUrl, body.targetActorUrl);
 
             // 给远程用户发送 Follow Activity
-            const faRes = await postInbox(actor.inbox, user.privateKey, `${user.actorUrl}#main-key`, followAct);
+            const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
+            const faRes = await postInbox(actor.inbox, user.privateKey, userMkUrl, followAct);
             if (!faRes.ok) {
                 return Response.json({
                     error: "Follow failed."
@@ -126,11 +123,11 @@ export async function POST(request: Request) {
                 });
             }
 
-            // Follows 和 Activity 存入数据库
-            const follow = (await db.insert(follows).values({
-                follower: user.actorUrl,
-                following: body.targetActorUrl,
-            }).returning({ insertedId: follows.id }))[0];
+            // TODO: Follows Activity 存入数据库
+            // const follow = (await db.insert(follows).values({
+            //     follower: user.actorUrl,
+            //     following: body.targetActorUrl,
+            // }).returning({ insertedId: follows.id }))[0];
 
         } catch (error: any) {
             console.log(error.message);
