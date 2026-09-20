@@ -1,12 +1,12 @@
 import { APActor, APWebfinger } from "@/src/activitypub/ap";
 import { getActor, getWebfinger } from "@/src/activitypub/network";
-import { convertActorUrlToMainKey, parseWebfinger } from "@/src/activitypub/tools";
-import { users } from "@/src/db/schema";
+import { convertActorUrlToMainKey, parseSearch, parseWebfinger } from "@/src/activitypub/tools";
+import { follows, users } from "@/src/db/schema";
 import { decodeJwt, JwtPayload, signJwt, verifyJwt } from "@/src/utils/jwt";
 import { exportPrivateKey, exportPublicKey, generateRSAKeyPair } from "@/src/utils/keypair";
 import { hashPassword } from "@/src/utils/password";
 import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from 'drizzle-orm/d1';
 
 export const dynamic = "force-dynamic";
@@ -25,30 +25,8 @@ interface SearchResult {
         avatarUrl: string,
         actorUrl: string,
         originalUrl: string,
+        isFollowing: boolean,
     }[]
-}
-
-function parseSearch(
-    content: string
-): [string, string?] {
-    const value = content.trim();
-
-    if (!value.startsWith("@")) {
-        return ["", undefined];
-    }
-
-    const account = value.slice(1);
-
-    const index = account.indexOf("@");
-
-    if (index === -1) {
-        return [account];
-    }
-
-    return [
-        account.slice(0, index),
-        account.slice(index + 1),
-    ];
 }
 
 export async function GET(request: Request) {
@@ -60,6 +38,11 @@ export async function GET(request: Request) {
     const [username, domain] = parseSearch(q ?? "");
 
     //  TODO: 如果未认证旧只能搜索本地实例的用户
+
+    // TODO: 有域名才请求远程用户
+    if (!domain) {
+        return;
+    }
 
     // 查询登录用户
     const db = drizzle(env.DB);
@@ -122,6 +105,18 @@ export async function GET(request: Request) {
 
     // TODO: 进行本地实例用户名查询
 
+    // 检查是否关注过
+    let isFollowing = false;
+    if (actor) {
+        const followed = (await db.select().from(follows).where(
+            and(
+                eq(follows.follower, user.actorUrl),
+                eq(follows.following, actor.id),
+            ),
+        ))[0];
+        isFollowing = !!followed;
+    }
+
     // 返回搜索结果
     const data: SearchResult = { items: [] };
     if (actor && domain) {
@@ -132,6 +127,7 @@ export async function GET(request: Request) {
             actorUrl: actor.id,
             domain: domain,
             originalUrl: actor.url ?? "",
+            isFollowing: isFollowing,
         })
     }
 

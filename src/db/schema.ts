@@ -35,7 +35,7 @@ export const notes = sqliteTable("notes", {
     uri: text().notNull().unique(),
     actor: text().notNull(),
     content: text().notNull(),
-    inReplyTo: integer(),
+    inReplyTo: text(),
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
 })
 

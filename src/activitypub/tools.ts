@@ -22,6 +22,29 @@ export function parseResource(
     return [username, domain];
 }
 
+export function parseSearch(
+    content: string
+): [string, string?] {
+    const value = content.trim();
+
+    if (!value.startsWith("@")) {
+        return ["", undefined];
+    }
+
+    const account = value.slice(1);
+
+    const index = account.indexOf("@");
+
+    if (index === -1) {
+        return [account];
+    }
+
+    return [
+        account.slice(0, index),
+        account.slice(index + 1),
+    ];
+}
+
 export function parseWebfinger(webfinger: APWebfinger) {
     const link = webfinger.links.find(l => l.rel === "self" && l.type === "application/activity+json")?.href ?? "";
     return {

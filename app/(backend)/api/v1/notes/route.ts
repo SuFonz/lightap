@@ -1,10 +1,10 @@
 import { AP_CONTEXT, APActor, APNote } from "@/src/activitypub/ap";
 import { getActor, postInbox } from "@/src/activitypub/network";
-import { buildActivity, buildNote, convertActorUrlToMainKey } from "@/src/activitypub/tools";
+import { buildActivity, buildNote, convertActorUrlToMainKey, parseSearch } from "@/src/activitypub/tools";
 import { activities, follows, notes, users } from "@/src/db/schema";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 export const dynamic = "force-dynamic";
@@ -95,12 +95,13 @@ export async function POST(request: Request) {
         }
 
         await Promise.all([...inboxes].map(async (actorUrl) => {
-            const atRes = await getActor(actorUrl);
+            const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
+            const atRes = await getActor(actorUrl, user.privateKey, userMkUrl);
             if (!atRes.ok) {
                 return;
             }
             const actor = await atRes.json<APActor>();
-            const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
+            
             await postInbox(actor.inbox, user.privateKey, userMkUrl, create);
         }));
     } catch (error: any) {

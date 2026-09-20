@@ -1,7 +1,7 @@
-import { APActivity, APActor, APObject, APOrderedCollection } from "@/src/activitypub/ap";
+import { APActivity, APActor, APNote, APObject, APOrderedCollection } from "@/src/activitypub/ap";
 import { getActor, getWebfinger, postInbox } from "@/src/activitypub/network";
 import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
-import { activities, follows, users } from "@/src/db/schema";
+import { activities, follows, notes, users } from "@/src/db/schema";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
@@ -10,10 +10,8 @@ import { rm } from "fs";
 
 export const dynamic = "force-dynamic";
 
-type DBUser = typeof users.$inferSelect;
-
 interface Params {
-    username: string
+    username: string,
 }
 
 export async function GET(request: Request) {
@@ -38,15 +36,16 @@ export async function POST(request: Request, { params }: { params: Params }) {
     const body = await request.json<APActivity>();
 
     // 处理活动
-    await handleActivity(request, body);
+    await handleActivity(request, params, body);
 
     return Response.json({}, {
         status: 200,
     });
 }
 
-async function handleActivity(request: Request, activity: APActivity) {
+async function handleActivity(request: Request, params: Params, activity: APActivity) {
     const db = drizzle(env.DB);
+    const username = params.username;
     const type = activity.type;
     try {
         switch (type) {
@@ -55,7 +54,7 @@ async function handleActivity(request: Request, activity: APActivity) {
                 const obj = await extractObject(activity) as APActivity;
 
                 // 获取 User (getActor 签名用)
-                const user = (await db.select().from(users).where(eq(users.actorUrl, obj.actor)))[0];
+                const user = (await db.select().from(users).where(eq(users.username, username)))[0];
                 
                 // 获取远程 Actor 公钥 (如果已经存数据库了可以从数据库里提取)
                 const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
@@ -63,8 +62,6 @@ async function handleActivity(request: Request, activity: APActivity) {
                     throw new Error("Remote user not found.");
                 }
                 const rmActor = await rmRes.json<APActor>();
-
-                console.log(activity);
 
                 // 用公钥验证
                 const success = await tryVerifySignature(
@@ -79,8 +76,6 @@ async function handleActivity(request: Request, activity: APActivity) {
                 }
 
                 // 存入数据库
-                console.log(user);
-                console.log(rmActor);
                 const followsIns = (await db.insert(follows).values({
                     follower: user.actorUrl,
                     following: rmActor.id,
@@ -93,6 +88,42 @@ async function handleActivity(request: Request, activity: APActivity) {
                     objectId: followsIns.insertedId,
                 }).returning({ insertedId: activities.id }));
 
+
+                break;
+            }
+            case "Create": {
+                // 提取对象
+                const obj = await extractObject(activity) as APNote;
+
+                // 获取 User (getActor 签名用)
+                const user = (await db.select().from(users).where(eq(users.username, username)))[0];
+
+                // 获取远程 Actor 公钥 (如果已经存数据库了可以从数据库里提取)
+                const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
+                if (!rmRes.ok) {
+                    throw new Error("Remote user not found.");
+                }
+                const rmActor = await rmRes.json<APActor>();
+
+                // 用公钥验证
+                const success = await tryVerifySignature(
+                    request.method, 
+                    request.url, 
+                    request.headers, 
+                    rmActor.publicKey.publicKeyPem,
+                    rmActor.publicKey.id,
+                );
+                if (!success) {
+                    throw new Error("Sinature is invalid.");
+                }
+
+                // 存入数据库
+                const noteIns = (await db.insert(notes).values({
+                    uri: obj.id,
+                    actor: activity.actor,
+                    content: obj.content,
+                    
+                }))
 
                 break;
             }
