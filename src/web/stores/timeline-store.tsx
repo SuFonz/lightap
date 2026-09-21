@@ -9,6 +9,18 @@ import type { FeedTab, NoteItem, Post, PostListItem } from "@/web/types";
 
 const FEED_LIMIT = 30;
 
+interface Pagination {
+    hasMore: boolean;
+    loadingMore: boolean;
+}
+
+type RememberUser = (input: {
+    username: string;
+    domain?: string | null;
+    displayName?: string;
+    avatarUrl?: string;
+}) => void;
+
 function makePost(id: string, authorUsername: string, content: string, createdAt: string, inReplyTo?: string): Post {
     return {
         id,
@@ -39,6 +51,7 @@ function fromListItem(item: PostListItem): Post {
             new Date(item.createdAt * 1000).toISOString(),
             item.inReplyTo ?? undefined,
         ),
+        cursorId: item.id,
         repliesCount: item.repliesCount,
     };
 }
@@ -54,6 +67,31 @@ function fromNoteItem(item: NoteItem): Post {
         ),
         repliesCount: item.repliesCount,
     };
+}
+
+/** 把作者信息记进 directory store，顺便支持增量分页 */
+function rememberAuthors(items: PostListItem[], rememberUser: RememberUser) {
+    for (const item of items) {
+        rememberUser({
+            username: item.username,
+            domain: item.domain,
+            displayName: item.displayName,
+            avatarUrl: item.avatarUrl,
+        });
+    }
+}
+
+/** 追加去重，按 id 过滤掉已存在的帖子 */
+function appendUnique(posts: Post[], next: Post[]): Post[] {
+    if (next.length === 0) return posts;
+    const seen = new Set(posts.map((post) => post.id));
+    const merged = [...posts];
+    for (const post of next) {
+        if (seen.has(post.id)) continue;
+        seen.add(post.id);
+        merged.push(post);
+    }
+    return merged;
 }
 
 function findPost(posts: Post[], id: string): Post | undefined {
@@ -76,15 +114,21 @@ function mapPost(posts: Post[], id: string, updater: (post: Post) => Post): Post
 interface TimelineValue {
     posts: Post[];
     loading: boolean;
-    /** 拉取某个时间线：all 全部 / local 本地 / following 关注 */
+    hasMore: boolean;
+    loadingMore: boolean;
+    /** 拉取某个时间线（重置到第一页）：all 全部 / local 本地 / following 关注 */
     loadFeed: (tab: FeedTab) => Promise<void>;
+    /** 滚动到底时加载下一页 */
+    loadMore: () => Promise<void>;
     /** 发布新帖（发布后刷新当前时间线） */
     compose: (content: string) => Promise<void>;
     /** 回复某个帖子 */
     reply: (postId: string, content: string) => Promise<void>;
     /** 某个用户的帖子（个人主页用），未加载过为 undefined */
     userPosts: Record<string, Post[]>;
+    userPostsMeta: Record<string, Pagination>;
     loadUserPosts: (username: string) => Promise<void>;
+    loadMoreUserPosts: (username: string) => Promise<void>;
     getPost: (id: string) => Post | undefined;
     /** 返回 [顶层, ..., 当前帖]，未加载过则为 undefined */
     getThread: (id: string) => Post[] | undefined;
@@ -102,28 +146,16 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     const [posts, setPosts] = useState<Post[]>([]);
     const [threads, setThreads] = useState<Record<string, Post[]>>({});
     const [userPosts, setUserPosts] = useState<Record<string, Post[]>>({});
+    const [userPostsMeta, setUserPostsMeta] = useState<Record<string, Pagination>>({});
     const [loading, setLoading] = useState(false);
+    const [feedMeta, setFeedMeta] = useState<Pagination>({ hasMore: false, loadingMore: false });
     const [tab, setTab] = useState<FeedTab>("all");
 
-    const fetchFeed = useCallback(
-        async (target: FeedTab) => {
-            setLoading(true);
-            try {
-                const { items } = await postsApi.fetchFeed(target, { limit: FEED_LIMIT }, session?.token);
-                for (const item of items) {
-                    rememberUser({
-                        username: item.username,
-                        domain: item.domain,
-                        displayName: item.displayName,
-                        avatarUrl: item.avatarUrl,
-                    });
-                }
-                setPosts(items.map(fromListItem));
-            } catch {
-                setPosts([]);
-            } finally {
-                setLoading(false);
-            }
+    const fetchPage = useCallback(
+        async (target: FeedTab, maxId?: number) => {
+            const { items } = await postsApi.fetchFeed(target, { limit: FEED_LIMIT, maxId }, session?.token);
+            rememberAuthors(items, rememberUser);
+            return items.map(fromListItem);
         },
         [session, rememberUser],
     );
@@ -131,18 +163,44 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     const loadFeed = useCallback(
         async (target: FeedTab) => {
             setTab(target);
-            await fetchFeed(target);
+            setLoading(true);
+            setFeedMeta({ hasMore: false, loadingMore: false });
+            try {
+                const page = await fetchPage(target);
+                setPosts(page);
+                setFeedMeta({ hasMore: page.length === FEED_LIMIT, loadingMore: false });
+            } catch {
+                setPosts([]);
+                setFeedMeta({ hasMore: false, loadingMore: false });
+            } finally {
+                setLoading(false);
+            }
         },
-        [fetchFeed],
+        [fetchPage],
     );
+
+    const loadMore = useCallback(async () => {
+        if (loading || feedMeta.loadingMore || !feedMeta.hasMore) return;
+        const last = posts[posts.length - 1];
+        if (!last?.cursorId) return;
+
+        setFeedMeta((prev) => ({ ...prev, loadingMore: true }));
+        try {
+            const page = await fetchPage(tab, last.cursorId);
+            setPosts((prev) => appendUnique(prev, page));
+            setFeedMeta({ hasMore: page.length === FEED_LIMIT, loadingMore: false });
+        } catch {
+            setFeedMeta((prev) => ({ ...prev, loadingMore: false }));
+        }
+    }, [loading, feedMeta, posts, tab, fetchPage]);
 
     const compose = useCallback(
         async (content: string) => {
             if (!session) throw new Error("请先登录");
             await postsApi.createNote(session.token, { content });
-            await fetchFeed(tab);
+            await loadFeed(tab);
         },
-        [session, fetchFeed, tab],
+        [session, loadFeed, tab],
     );
 
     const reply = useCallback(
@@ -173,20 +231,42 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             if (!username) return;
             try {
                 const { items } = await postsApi.fetchUserPosts(username, { limit: FEED_LIMIT }, session?.token);
-                for (const item of items) {
-                    rememberUser({
-                        username: item.username,
-                        domain: item.domain,
-                        displayName: item.displayName,
-                        avatarUrl: item.avatarUrl,
-                    });
-                }
-                setUserPosts((prev) => ({ ...prev, [username]: items.map(fromListItem) }));
+                rememberAuthors(items, rememberUser);
+                const page = items.map(fromListItem);
+                setUserPosts((prev) => ({ ...prev, [username]: page }));
+                setUserPostsMeta((prev) => ({ ...prev, [username]: { hasMore: page.length === FEED_LIMIT, loadingMore: false } }));
             } catch {
                 setUserPosts((prev) => ({ ...prev, [username]: [] }));
+                setUserPostsMeta((prev) => ({ ...prev, [username]: { hasMore: false, loadingMore: false } }));
             }
         },
         [session, rememberUser],
+    );
+
+    const loadMoreUserPosts = useCallback(
+        async (username: string) => {
+            const list = userPosts[username];
+            const meta = userPostsMeta[username];
+            if (!list || !meta?.hasMore || meta.loadingMore) return;
+            const last = list[list.length - 1];
+            if (!last?.cursorId) return;
+
+            setUserPostsMeta((prev) => ({ ...prev, [username]: { ...prev[username], loadingMore: true } }));
+            try {
+                const { items } = await postsApi.fetchUserPosts(
+                    username,
+                    { limit: FEED_LIMIT, maxId: last.cursorId },
+                    session?.token,
+                );
+                rememberAuthors(items, rememberUser);
+                const page = items.map(fromListItem);
+                setUserPosts((prev) => ({ ...prev, [username]: appendUnique(prev[username] ?? [], page) }));
+                setUserPostsMeta((prev) => ({ ...prev, [username]: { hasMore: page.length === FEED_LIMIT, loadingMore: false } }));
+            } catch {
+                setUserPostsMeta((prev) => ({ ...prev, [username]: { ...prev[username], loadingMore: false } }));
+            }
+        },
+        [userPosts, userPostsMeta, session, rememberUser],
     );
 
     const getPost = useCallback(
@@ -260,18 +340,40 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         () => ({
             posts,
             loading,
+            hasMore: feedMeta.hasMore,
+            loadingMore: feedMeta.loadingMore,
             loadFeed,
+            loadMore,
             compose,
             reply,
             userPosts,
+            userPostsMeta,
             loadUserPosts,
+            loadMoreUserPosts,
             getPost,
             getThread,
             loadThread,
             toggleLike,
             toggleBoost,
         }),
-        [posts, loading, loadFeed, compose, reply, userPosts, loadUserPosts, getPost, getThread, loadThread, toggleLike, toggleBoost],
+        [
+            posts,
+            loading,
+            feedMeta,
+            loadFeed,
+            loadMore,
+            compose,
+            reply,
+            userPosts,
+            userPostsMeta,
+            loadUserPosts,
+            loadMoreUserPosts,
+            getPost,
+            getThread,
+            loadThread,
+            toggleLike,
+            toggleBoost,
+        ],
     );
 
     return <TimelineContext.Provider value={value}>{children}</TimelineContext.Provider>;

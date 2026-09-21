@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { PostCard } from "@/web/components/post/post-card";
 import { Avatar } from "@/web/components/ui/avatar";
 import { BellIcon, CheckIcon, EditIcon, GlobeIcon, HomeIcon, SparklesIcon, UserIcon } from "@/web/components/ui/icons";
 import { FollowButton } from "@/web/components/user/follow-button";
 import { formatCount } from "@/web/lib/format";
+import { useInfiniteScroll } from "@/web/hooks/use-infinite-scroll";
 import { useDirectory } from "@/web/stores/directory-store";
 import { useTimeline } from "@/web/stores/timeline-store";
 import { useUi } from "@/web/stores/ui-store";
@@ -16,18 +17,22 @@ export default function ProfilePage() {
     const params = useParams<{ username: string }>();
     const username = typeof params?.username === "string" ? params.username : "";
     const { getUser, currentUser, loadProfile, isProfileMissing } = useDirectory();
-    const { userPosts, loadUserPosts } = useTimeline();
+    const { userPosts, userPostsMeta, loadUserPosts, loadMoreUserPosts } = useTimeline();
     const { openEditProfile } = useUi();
 
     const user = getUser(username);
     const missing = isProfileMissing(username);
     // 未加载过为 undefined，加载完成后是数组
     const list = userPosts[username];
+    const meta = userPostsMeta[username];
 
     useEffect(() => {
         void loadProfile(username);
         void loadUserPosts(username);
     }, [username, loadProfile, loadUserPosts]);
+
+    const loadMorePosts = useCallback(() => loadMoreUserPosts(username), [loadMoreUserPosts, username]);
+    const sentinelRef = useInfiniteScroll(loadMorePosts, Boolean(meta?.hasMore) && !meta?.loadingMore);
 
     if (!user) {
         if (!missing) return <ProfileSkeleton />;
@@ -152,6 +157,15 @@ export default function ProfilePage() {
                         <PostCard key={post.id} post={post} bare />
                     ))}
                 </section>
+            )}
+
+            {/* 无限滚动哨兵 */}
+            <div ref={sentinelRef} aria-hidden="true" />
+            {meta?.loadingMore && (
+                <div className="glass-card flex items-center justify-center gap-2 px-6 py-6 text-slate-400">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+                    <span className="text-sm font-semibold">加载中…</span>
+                </div>
             )}
         </div>
     );

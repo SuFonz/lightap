@@ -6,6 +6,7 @@ import { ComposerField } from "@/web/components/composer/composer-field";
 import { PostCard } from "@/web/components/post/post-card";
 import { ImageIcon, SparklesIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
+import { useInfiniteScroll } from "@/web/hooks/use-infinite-scroll";
 import { useDirectory } from "@/web/stores/directory-store";
 import { useSession } from "@/web/stores/session-store";
 import { useTimeline } from "@/web/stores/timeline-store";
@@ -14,7 +15,7 @@ import type { FeedTab } from "@/web/types";
 export default function HomePage() {
     const { isAuthenticated } = useSession();
     const { currentUser } = useDirectory();
-    const { posts, loading, loadFeed, compose } = useTimeline();
+    const { posts, loading, hasMore, loadingMore, loadFeed, loadMore, compose } = useTimeline();
     const [tab, setTab] = useState<FeedTab>("all");
     const [greeting, setGreeting] = useState("欢迎回来");
 
@@ -35,6 +36,8 @@ export default function HomePage() {
     useEffect(() => {
         void loadFeed(feedTab);
     }, [feedTab, loadFeed]);
+
+    const sentinelRef = useInfiniteScroll(loadMore, hasMore && !loadingMore);
 
     const handlePost = useCallback(
         async (content: string) => {
@@ -101,6 +104,15 @@ export default function HomePage() {
                     <p className="text-sm text-slate-400">
                         {isAuthenticated ? "发第一条动态，让大家认识你吧！" : "登录后即可发布动态，加入讨论～"}
                     </p>
+                </div>
+            )}
+
+            {/* 无限滚动哨兵 */}
+            <div ref={sentinelRef} aria-hidden="true" />
+            {loadingMore && (
+                <div className="glass-card flex items-center justify-center gap-2 px-6 py-6 text-slate-400">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+                    <span className="text-sm font-semibold">加载中…</span>
                 </div>
             )}
         </div>
