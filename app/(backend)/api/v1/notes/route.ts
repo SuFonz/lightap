@@ -82,9 +82,10 @@ export async function POST(request: Request) {
             type: "Create",
             actor: user.actorUrl,
             objectId: dbNote.id,
+            objectType: "Note",
         });
 
-        // 递送：关注者 + 被回复者
+        // 递送：关注者 + 被回复者（本地实例的用户直接跳过，他们走本地数据库）
         const inboxes = new Set(
             (await db.select().from(follows).where(eq(follows.following, user.actorUrl))).map(f => f.follower)
         );
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
             }
         }
 
-        await Promise.all([...inboxes].map(async (actorUrl) => {
+        await Promise.all([...inboxes].filter(actorUrl => !actorUrl.startsWith(`${url.origin}/users/`)).map(async (actorUrl) => {
             const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
             const atRes = await getActor(actorUrl, user.privateKey, userMkUrl);
             if (!atRes.ok) {

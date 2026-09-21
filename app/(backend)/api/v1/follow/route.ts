@@ -73,20 +73,29 @@ export async function POST(request: Request) {
             // 查询另一位用户
             const target = (await db.select().from(users).where(eq(users.username, body.username)))[0];
 
-            // Follows 和 Activity 存入数据库
-            const follow = (await db.insert(follows).values({
+            // 当前用户的 Follow Activity 存到数据库
+            const followUri = buildObjecrUri(url, crypto.randomUUID(), "Follow");
+            const followAct = (await db.insert(activities).values({
+                uri: followUri,
+                type: "Follow",
+                actor: user.actorUrl,
+                objectUri: target.actorUrl,
+            }));
+            
+
+            // 目标的 Accept Activity 存到数据库，然后 Follows 存到数据库
+            const followsIns = (await db.insert(follows).values({
                 follower: user.actorUrl,
                 following: target.actorUrl,
             }).returning({ insertedId: users.id }))[0];
 
-            // Activity
-            const uri = buildObjecrUri(url, crypto.randomUUID(), "Follow");
-            const activity = (await db.insert(activities).values({
-                uri: uri,
-                type: "Follow",
-                actor: user.actorUrl,
-                objectId: follow.insertedId,
-            }).returning())[0];
+            const acceptUri = buildObjecrUri(url, crypto.randomUUID(), "Accept");
+            const acceptAct = (await db.insert(activities).values({
+                uri: acceptUri,
+                type: "Accept",
+                actor: target.actorUrl,
+                objectId: followsIns.insertedId,
+            }));
 
         } catch (error: any) {
             console.log(error.message);
