@@ -76,17 +76,21 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                 console.log(activity);
 
                 // 存入数据库
-                const followsIns = (await db.insert(follows).values({
+                await db.insert(follows).values({
                     follower: user.actorUrl,
                     following: rmActor.id,
-                }).returning({ insertedId: follows.id }))[0];
+                });
 
-                const activityIns = (await db.insert(activities).values({
+                // Accept 的 object 是之前发出去的 Follow 活动
+                const followAct = (await db.select().from(activities).where(eq(activities.uri, obj.id)))[0];
+
+                await db.insert(activities).values({
                     uri: activity.id,
                     type: activity.type,
                     actor: activity.actor,
-                    objectId: followsIns.insertedId,
-                }).returning({ insertedId: activities.id }));
+                    objectId: followAct.id,
+                    objectType: "Follow",
+                });
 
 
                 break;

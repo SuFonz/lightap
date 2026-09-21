@@ -61,6 +61,7 @@ export async function POST(request: Request) {
     type InsertUser = typeof users.$inferInsert;
     const result = await db.insert(users).values({
         username: username,
+        domain: url.host,
         displayName: username,
         passwordHash: passwordHash,
         actorUrl: actorUrl,

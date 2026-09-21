@@ -105,4 +105,5 @@ export interface FollowRequest {
 export interface UnfollowRequest {
     username: string;
     domain: string;
+    targetActorUrl: string;
 }

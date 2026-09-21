@@ -5,6 +5,7 @@ import { APActivityType, APObjectType } from "@/src/activitypub/ap"
 export const users = sqliteTable("users", {
     id: integer().primaryKey({ autoIncrement: true }),
     username: text().notNull(),
+    domain: text().notNull(),
     displayName: text("display_name").notNull(),
     // 总结
     summary: text(),

@@ -226,6 +226,7 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
                     await usersApi.unfollow(session.token, {
                         username: user.username,
                         domain: user.domain ?? session.instance,
+                        targetActorUrl: user.actorUrl,
                     });
                 } else {
                     await usersApi.follow(session.token, {

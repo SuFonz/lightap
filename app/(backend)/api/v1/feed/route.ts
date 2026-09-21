@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     if (type === "local") {
         // 只取本站用户，数据库以后会插入远程用户，不能直接全表取
         actors = (await db.select().from(users).where(
-            like(users.actorUrl, `${url.origin}/users/%`),
+            eq(users.domain, url.host),
         )).map(user => user.actorUrl);
     } else if (type === "following") {
         // 关注流需要登录
@@ -107,13 +107,14 @@ export async function GET(request: Request) {
     const countByUri = new Map(repliesCountRows.map(row => [row.inReplyTo, row.value]));
     const data: Item[] = rows.map(row => {
         const author = userByActor.get(row.actor);
+        const host = new URL(row.actor).host;
         return {
             id: row.id,
             uri: row.uri,
             username: author?.username ?? "",
             displayName: author?.displayName ?? "",
             avatarUrl: author?.avatarUrl ?? "",
-            domain: url.host,
+            domain: host,
             content: row.content,
             inReplyTo: row.inReplyTo,
             repliesCount: countByUri.get(row.uri) ?? 0,

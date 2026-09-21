@@ -1,11 +1,10 @@
-import { APActor } from "@/src/activitypub/ap";
-import { getActor, postInbox } from "@/src/activitypub/network";
-import { buildActivity, buildActivityWithUri, convertActorUrlToMainKey } from "@/src/activitypub/tools";
+import { buildActivity, buildObjecrUri } from "@/src/activitypub/tools";
+import { getDBClient } from "@/src/db";
 import { activities, follows, users } from "@/src/db/schema";
+import { produce } from "@/src/queue";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
-import { and, eq } from "drizzle-orm";
-import { getDBClient } from "@/src/db";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +15,7 @@ type UserPayload = JwtPayload & {
 interface Body {
     username: string,
     domain: string,
+    targetActorUrl: string,
 }
 
 export async function POST(request: Request) {
@@ -66,20 +66,56 @@ export async function POST(request: Request) {
     const body = await request.json<Body>();
     if (body.domain == url.host) {
         try {
-            
-            // 是：获取当前用户
-            const user = (await db.select().from(users).where(eq(users.username, payload.username)))[0];
-    
-            // 查询另一位用户
-            const target = (await db.select().from(users).where(eq(users.username, body.username)))[0];
-    
-            // Follows 从数据库中删除
-            await db.delete(follows).where(
+            // 是：一次查询取出当前用户和另一位用户
+            const found = await db.select().from(users).where(
+                inArray(users.username, [payload.username, body.username]),
+            );
+            const user = found.find(item => item.username === payload.username);
+            const target = found.find(item => item.username === body.username);
+            if (!user || !target) {
+                return Response.json({
+                    error: "User not found.",
+                }, {
+                    status: 404,
+                });
+            }
+
+            // Follows 从数据库中删除（没关注过则直接返回，保证重复取关幂等）
+            const deleted = await db.delete(follows).where(
                 and(
                     eq(follows.follower, user.actorUrl),
                     eq(follows.following, target.actorUrl),
                 ),
             ).returning();
+            if (deleted.length === 0) {
+                return Response.json({}, {
+                    status: 200,
+                });
+            }
+
+            // 获取最新的 Follow Activity
+            const dbActivity = (await db.select().from(activities).where(
+                and(
+                    eq(activities.type, "Follow"),
+                    eq(activities.actor, user.actorUrl),
+                    eq(activities.objectUri, target.actorUrl),
+                )
+            ).orderBy(desc(activities.id)))[0];
+            if (!dbActivity) {
+                return Response.json({}, {
+                    status: 200,
+                });
+            }
+
+            // Undo Follow Activity 存到数据库
+            const undoUri = buildObjecrUri(url, crypto.randomUUID(), "Undo");
+            await db.insert(activities).values({
+                uri: undoUri,
+                type: "Undo",
+                actor: user.actorUrl,
+                objectId: dbActivity.id,
+                objectType: "Follow",
+            });
 
         } catch (error: any) {
             console.log(error.message);
@@ -92,54 +128,49 @@ export async function POST(request: Request) {
 
     } else {
         try {
-            // 否：获取远程 Actor
-            const atRes = await getActor(body.domain);
-            if (!atRes.ok) {
-                return Response.json({
-                    error: "Remote user not found.",
-                }, {
-                    status: 404,
-                });
-            }
-            const actor = await atRes.json<APActor>();
-
-            // 获取当前用户私钥
+            // 否：获取当前用户
             const user = (await db.select().from(users).where(eq(users.username, payload.username)))[0]
 
-            // 获取 Follow Activity
-            const dbFollow = (await db.select().from(follows).where(
+            // Follows 从数据库中删除（没关注过则直接返回，保证重复取关幂等）
+            const deleted = await db.delete(follows).where(
                 and(
                     eq(follows.follower, user.actorUrl),
-                    eq(follows.following, actor.id),
+                    eq(follows.following, body.targetActorUrl),
                 )
-            ))[0];
-            const dbActivity = (await db.select().from(activities).where(
-                and(
-                    eq(activities.objectId, dbFollow.id),
-                    eq(activities.type, "Follow"),
-                )
-            ))[0];
-
-            // 给远程用户发送 Unfollow Activity
-            const follow = buildActivityWithUri(dbActivity.uri, "Follow", dbFollow.follower, dbFollow.following);
-            const undo = buildActivity(url, crypto.randomUUID(), "Undo", user.actorUrl, follow);
-            const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
-            const faRes = await postInbox(actor.inbox, user.privateKey, userMkUrl, undo);
-            if (!faRes.ok) {
-                return Response.json({
-                    error: "Follow failed."
-                }, {
-                    status: 401,
+            ).returning();
+            if (deleted.length === 0) {
+                return Response.json({}, {
+                    status: 200,
                 });
             }
 
-            // Follows 从数据库中删除
-            await db.delete(follows).where(
+            // 获取最新的 Follow Activity（object 是目标 Actor 的链接）
+            const dbActivity = (await db.select().from(activities).where(
                 and(
-                    eq(follows.follower, dbFollow.follower),
-                    eq(follows.following, dbFollow.following),
+                    eq(activities.type, "Follow"),
+                    eq(activities.actor, user.actorUrl),
+                    eq(activities.objectUri, body.targetActorUrl),
                 )
-            ).returning({ deletedId: follows.id });
+            ).orderBy(desc(activities.id)))[0];
+            if (!dbActivity) {
+                return Response.json({}, {
+                    status: 200,
+                });
+            }
+
+            // 构建 Undo Follow Activity 并存入数据库
+            const undo = buildActivity(url, crypto.randomUUID(), "Undo", user.actorUrl, dbActivity.uri);
+            const dbAct = (await db.insert(activities).values({
+                uri: undo.id,
+                type: "Undo",
+                actor: user.actorUrl,
+                objectUri: dbActivity.uri,
+                objectId: dbActivity.id,
+                objectType: "Follow",
+            }).returning({ insertedId: activities.id }))[0];
+
+            // 丢进队列异步投递
+            await produce({ targetActor: body.targetActorUrl, activityId: dbAct.insertedId });
 
         } catch (error: any) {
             console.log(error.message);

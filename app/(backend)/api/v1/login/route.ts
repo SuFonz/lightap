@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const result = await db.select().from(users).where(
         and(
             eq(users.username, username),
-            like(users.actorUrl, `${url.origin}/%`),
+            eq(users.domain, url.host),
         ),
     );
     if (result.length == 0) {

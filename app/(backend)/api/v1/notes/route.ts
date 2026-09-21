@@ -4,7 +4,7 @@ import { activities, follows, notes, users } from "@/src/db/schema";
 import { produce } from "@/src/queue";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +63,12 @@ export async function POST(request: Request) {
     try {
         // 存入数据库
         const db = getDBClient();
-        const user = (await db.select().from(users).where(eq(users.username, username)))[0];
+        const user = (await db.select().from(users).where(
+            and(
+                eq(users.username, username),
+                eq(users.domain, url.host)
+            )
+        ))[0];
 
         // Note 与 Create Activity
         const note = buildNote(url, crypto.randomUUID(), body.content, body.inReplyTo);
