@@ -33,7 +33,7 @@ export function PostCard({
 
     if (!author) return null;
 
-    const replyCount = post.replies.length;
+    const replyCount = post.repliesCount;
 
     return (
         <article
@@ -109,7 +109,7 @@ export function PostCard({
                             <span className="bubble rounded-full p-1.5 transition-colors">
                                 <ReplyIcon size={17} />
                             </span>
-                            {replyCount > 0 && formatCount(replyCount)}
+                            {formatCount(replyCount)}
                         </button>
                     </div>
                 </div>

@@ -17,6 +17,7 @@ function makePost(id: string, authorUsername: string, content: string, createdAt
         inReplyTo,
         createdAt,
         replies: [],
+        repliesCount: 0,
         likes: 0,
         boosts: 0,
         likedByMe: false,
@@ -30,23 +31,29 @@ function idFromUri(uri: string): string {
 }
 
 function fromListItem(item: PostListItem): Post {
-    return makePost(
-        idFromUri(item.uri),
-        item.username,
-        item.content,
-        new Date(item.createdAt * 1000).toISOString(),
-        item.inReplyTo ?? undefined,
-    );
+    return {
+        ...makePost(
+            idFromUri(item.uri),
+            item.username,
+            item.content,
+            new Date(item.createdAt * 1000).toISOString(),
+            item.inReplyTo ?? undefined,
+        ),
+        repliesCount: item.repliesCount,
+    };
 }
 
 function fromNoteItem(item: NoteItem): Post {
-    return makePost(
-        idFromUri(item.uri),
-        item.username,
-        item.content,
-        new Date(item.createdAt * 1000).toISOString(),
-        item.inReplyTo ?? undefined,
-    );
+    return {
+        ...makePost(
+            idFromUri(item.uri),
+            item.username,
+            item.content,
+            new Date(item.createdAt * 1000).toISOString(),
+            item.inReplyTo ?? undefined,
+        ),
+        repliesCount: item.repliesCount,
+    };
 }
 
 function findPost(posts: Post[], id: string): Post | undefined {
@@ -149,7 +156,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             setThreads((prev) => {
                 const chain = prev[postId];
                 if (!chain) return prev;
-                return { ...prev, [postId]: mapPost(chain, postId, (item) => ({ ...item, replies: [...item.replies, post] })) };
+                return { ...prev, [postId]: mapPost(chain, postId, (item) => ({ ...item, replies: [...item.replies, post], repliesCount: item.repliesCount + 1 })) };
             });
         },
         [session, currentUser],
@@ -206,6 +213,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                     rememberUser({ username: item.username, domain: item.domain });
                     return fromNoteItem(item);
                 });
+                current.repliesCount = current.replies.length;
             }
 
             setThreads((prev) => ({ ...prev, [id]: mapped }));

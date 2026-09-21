@@ -1,7 +1,7 @@
 import { follows, notes, users } from "@/src/db/schema";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
-import { and, desc, eq, inArray, isNull, like, lt } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, like, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +28,7 @@ interface Item {
     domain: string,
     content: string,
     inReplyTo: string | null,
+    repliesCount: number,
     createdAt: number,
 }
 
@@ -97,6 +98,13 @@ export async function GET(request: Request) {
         ? await db.select().from(users).where(inArray(users.actorUrl, rows.map(row => row.actor)))
         : [];
     const userByActor = new Map(authors.map(user => [user.actorUrl, user]));
+    const repliesCountRows = rows.length > 0
+        ? await db.select({ inReplyTo: notes.inReplyTo, value: count() })
+            .from(notes)
+            .where(inArray(notes.inReplyTo, rows.map(row => row.uri)))
+            .groupBy(notes.inReplyTo)
+        : [];
+    const countByUri = new Map(repliesCountRows.map(row => [row.inReplyTo, row.value]));
     const data: Item[] = rows.map(row => {
         const author = userByActor.get(row.actor);
         return {
@@ -108,6 +116,7 @@ export async function GET(request: Request) {
             domain: url.host,
             content: row.content,
             inReplyTo: row.inReplyTo,
+            repliesCount: countByUri.get(row.uri) ?? 0,
             createdAt: row.createdAt,
         };
     });

@@ -1,6 +1,6 @@
 import { notes, users } from "@/src/db/schema";
 import { env } from "cloudflare:workers";
-import { eq, inArray } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 const MAX_LIMIT = 50;
@@ -11,6 +11,7 @@ interface Item {
     domain: string,
     content: string,
     inReplyTo: string | null,
+    repliesCount: number,
     createdAt: number,
 }
 
@@ -59,12 +60,18 @@ export async function GET(
     const items = [...chain, ...replies];
     const authors = await db.select().from(users).where(inArray(users.actorUrl, items.map(item => item.actor)));
     const nameByActor = new Map(authors.map(user => [user.actorUrl, user.username]));
+    const repliesCountRows = await db.select({ inReplyTo: notes.inReplyTo, value: count() })
+        .from(notes)
+        .where(inArray(notes.inReplyTo, items.map(item => item.uri)))
+        .groupBy(notes.inReplyTo);
+    const countByUri = new Map(repliesCountRows.map(row => [row.inReplyTo, row.value]));
     const data: Item[] = items.map(item => ({
         uri: item.uri,
         username: nameByActor.get(item.actor) ?? "",
         domain: url.host,
         content: item.content,
         inReplyTo: item.inReplyTo ?? null,
+        repliesCount: countByUri.get(item.uri) ?? 0,
         createdAt: item.createdAt,
     }));
 

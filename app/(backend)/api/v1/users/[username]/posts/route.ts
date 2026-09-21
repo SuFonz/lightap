@@ -1,6 +1,6 @@
 import { notes, users } from "@/src/db/schema";
 import { env } from "cloudflare:workers";
-import { and, desc, eq, isNull, lt } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,7 @@ interface Item {
     domain: string,
     content: string,
     inReplyTo: string | null,
+    repliesCount: number,
     createdAt: number,
 }
 
@@ -53,6 +54,13 @@ export async function GET(
     ).orderBy(desc(notes.id)).limit(limit);
 
     // 组装返回
+    const repliesCountRows = rows.length > 0
+        ? await db.select({ inReplyTo: notes.inReplyTo, value: count() })
+            .from(notes)
+            .where(inArray(notes.inReplyTo, rows.map(row => row.uri)))
+            .groupBy(notes.inReplyTo)
+        : [];
+    const countByUri = new Map(repliesCountRows.map(row => [row.inReplyTo, row.value]));
     const data: Item[] = rows.map(row => ({
         id: row.id,
         uri: row.uri,
@@ -62,6 +70,7 @@ export async function GET(
         domain: url.host,
         content: row.content,
         inReplyTo: row.inReplyTo,
+        repliesCount: countByUri.get(row.uri) ?? 0,
         createdAt: row.createdAt,
     }));
 

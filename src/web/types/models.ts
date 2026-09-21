@@ -32,6 +32,7 @@ export interface Post {
     /** 被回复帖子的 id，非回复时省略 */
     inReplyTo?: string;
     replies: Post[];
+    repliesCount: number;
     likes: number;
     boosts: number;
     likedByMe: boolean;

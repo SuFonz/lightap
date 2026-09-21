@@ -61,6 +61,7 @@ export interface PostListItem {
     domain: string;
     content: string;
     inReplyTo: string | null;
+    repliesCount: number;
     createdAt: number;
 }
 
@@ -82,6 +83,7 @@ export interface NoteItem {
     domain: string;
     content: string;
     inReplyTo: string | null;
+    repliesCount: number;
     createdAt: number;
 }
 
