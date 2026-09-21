@@ -38,6 +38,6 @@ export interface Post {
     boostedByMe: boolean;
 }
 
-export type FeedTab = "all" | "following";
+export type FeedTab = "all" | "local" | "following";
 
 export type PostVariant = "default" | "context";

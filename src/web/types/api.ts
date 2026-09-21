@@ -51,6 +51,23 @@ export interface UserProfileResponse {
     createdAt: number;
 }
 
+// 时间线：GET /api/v1/feed?type=all|local|following
+export interface FeedItem {
+    id: number;
+    uri: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string;
+    domain: string;
+    content: string;
+    inReplyTo: string | null;
+    createdAt: number;
+}
+
+export interface FeedResponse {
+    items: FeedItem[];
+}
+
 // 发帖：POST /api/v1/notes
 export interface CreateNoteRequest {
     content: string;
@@ -58,8 +75,9 @@ export interface CreateNoteRequest {
     inReplyTo?: string;
 }
 
-// 帖子线程：GET /api/v1/notes/[uuid]
+// 帖子线程：GET /api/v1/notes/[id]
 export interface NoteItem {
+    uri: string;
     username: string;
     domain: string;
     content: string;

@@ -1,30 +1,21 @@
 "use client";
 
-import {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useState,
-    type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { postsApi } from "@/web/lib/api";
 import { createId } from "@/web/lib/id";
-import { readStorage, writeStorage } from "@/web/lib/storage";
 import { useDirectory } from "@/web/stores/directory-store";
 import { useSession } from "@/web/stores/session-store";
-import type { FeedTab, NoteItem, Post } from "@/web/types";
+import type { FeedItem, FeedTab, NoteItem, Post } from "@/web/types";
 
-const FEED_KEY = "timeline";
+const FEED_LIMIT = 30;
 
-function makePost(id: string, authorUsername: string, content: string, inReplyTo?: string): Post {
+function makePost(id: string, authorUsername: string, content: string, createdAt: string, inReplyTo?: string): Post {
     return {
         id,
         authorUsername,
         content,
         inReplyTo,
-        createdAt: new Date().toISOString(),
+        createdAt,
         replies: [],
         likes: 0,
         boosts: 0,
@@ -33,8 +24,29 @@ function makePost(id: string, authorUsername: string, content: string, inReplyTo
     };
 }
 
+/** note uri 形如 https://host/notes/<uuid>，取最后一段作为本地 id（详情按 uuid 查） */
+function idFromUri(uri: string): string {
+    return uri.split("/").pop() ?? uri;
+}
+
+function fromFeedItem(item: FeedItem): Post {
+    return makePost(
+        idFromUri(item.uri),
+        item.username,
+        item.content,
+        new Date(item.createdAt * 1000).toISOString(),
+        item.inReplyTo ?? undefined,
+    );
+}
+
 function fromNoteItem(item: NoteItem): Post {
-    return makePost(`${item.username}@${item.domain}#${createId("note")}`, item.username, item.content, item.inReplyTo ?? undefined);
+    return makePost(
+        idFromUri(item.uri),
+        item.username,
+        item.content,
+        new Date().toISOString(),
+        item.inReplyTo ?? undefined,
+    );
 }
 
 function findPost(posts: Post[], id: string): Post | undefined {
@@ -57,15 +69,16 @@ function mapPost(posts: Post[], id: string, updater: (post: Post) => Post): Post
 interface TimelineValue {
     posts: Post[];
     loading: boolean;
+    /** 拉取某个时间线：all 全部 / local 本地 / following 关注 */
     loadFeed: (tab: FeedTab) => Promise<void>;
-    /** 发布新帖 */
+    /** 发布新帖（发布后刷新当前时间线） */
     compose: (content: string) => Promise<void>;
     /** 回复某个帖子 */
     reply: (postId: string, content: string) => Promise<void>;
     getPost: (id: string) => Post | undefined;
-    /** 返回 [顶层, ..., 当前帖] */
+    /** 返回 [顶层, ..., 当前帖]，未加载过则为 undefined */
     getThread: (id: string) => Post[] | undefined;
-    /** 本地没有时从后端拉取整条线程并缓存 */
+    /** 从后端拉取整条线程并缓存 */
     loadThread: (id: string) => Promise<void>;
     toggleLike: (id: string) => void;
     toggleBoost: (id: string) => void;
@@ -79,78 +92,85 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     const [posts, setPosts] = useState<Post[]>([]);
     const [threads, setThreads] = useState<Record<string, Post[]>>({});
     const [loading, setLoading] = useState(false);
-    const [hydrated, setHydrated] = useState(false);
+    const [tab, setTab] = useState<FeedTab>("all");
 
-    // 时间线在后端接口就绪前先持久化在本地
-    useEffect(() => {
-        setPosts(readStorage<Post[]>(FEED_KEY, []));
-        setHydrated(true);
-    }, []);
+    const fetchFeed = useCallback(
+        async (target: FeedTab) => {
+            setLoading(true);
+            try {
+                const { items } = await postsApi.fetchFeed(target, { limit: FEED_LIMIT }, session?.token);
+                for (const item of items) {
+                    rememberUser({
+                        username: item.username,
+                        domain: item.domain,
+                        displayName: item.displayName,
+                        avatarUrl: item.avatarUrl,
+                    });
+                }
+                setPosts(items.map(fromFeedItem));
+            } catch {
+                setPosts([]);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [session, rememberUser],
+    );
 
-    useEffect(() => {
-        if (hydrated) writeStorage(FEED_KEY, posts);
-    }, [hydrated, posts]);
-
-    const loadFeed = useCallback(async (_tab: FeedTab) => {
-        setLoading(true);
-        setLoading(false);
-    }, []);
+    const loadFeed = useCallback(
+        async (target: FeedTab) => {
+            setTab(target);
+            await fetchFeed(target);
+        },
+        [fetchFeed],
+    );
 
     const compose = useCallback(
         async (content: string) => {
             if (!session) throw new Error("请先登录");
             await postsApi.createNote(session.token, { content });
-            setPosts((prev) => [makePost(createId(), currentUser.username, content), ...prev]);
+            await fetchFeed(tab);
         },
-        [session, currentUser],
+        [session, fetchFeed, tab],
     );
 
     const reply = useCallback(
         async (postId: string, content: string) => {
             if (!session) throw new Error("请先登录");
-            const target = findPost(posts, postId);
-            // 本地帖子没有后端 uri，只有真实 uuid 才能构造 inReplyTo
-            const inReplyTo =
-                target && !target.id.startsWith("local-") && typeof window !== "undefined"
-                    ? `${window.location.origin}/notes/${target.id}`
-                    : undefined;
+            const inReplyTo = typeof window === "undefined" ? undefined : `${window.location.origin}/notes/${postId}`;
             await postsApi.createNote(session.token, { content, inReplyTo });
-            const post = makePost(createId(), currentUser.username, content, postId);
-            setPosts((prev) => mapPost(prev, postId, (item) => ({ ...item, replies: [...item.replies, post] })));
+
+            // 立即把回复挂到已加载的线程上
+            const post = makePost(createId(), currentUser.username, content, new Date().toISOString(), postId);
+            setThreads((prev) => {
+                const chain = prev[postId];
+                if (!chain) return prev;
+                return { ...prev, [postId]: mapPost(chain, postId, (item) => ({ ...item, replies: [...item.replies, post] })) };
+            });
         },
-        [session, currentUser, posts],
+        [session, currentUser],
     );
 
-    const getPost = useCallback((id: string) => findPost(posts, id), [posts]);
-
-    const getThread = useCallback(
+    const getPost = useCallback(
         (id: string) => {
-            const cached = threads[id];
-            if (cached) return cached;
-
-            const post = findPost(posts, id);
-            if (!post) return undefined;
-
-            const chain = [post];
-            let cursor = post;
-            while (cursor.inReplyTo) {
-                const parent = findPost(posts, cursor.inReplyTo);
-                if (!parent) break;
-                chain.unshift(parent);
-                cursor = parent;
+            const inFeed = findPost(posts, id);
+            if (inFeed) return inFeed;
+            for (const chain of Object.values(threads)) {
+                const found = findPost(chain, id);
+                if (found) return found;
             }
-            return chain;
+            return undefined;
         },
         [posts, threads],
     );
 
+    const getThread = useCallback((id: string) => threads[id], [threads]);
+
     const loadThread = useCallback(
         async (id: string) => {
-            if (threads[id] || findPost(posts, id)) return;
-
             const { chain, replies } = await postsApi.fetchThread(id, session?.token);
             const mapped = chain.map((item) => {
-                rememberUser(item.username, item.domain);
+                rememberUser({ username: item.username, domain: item.domain });
                 return fromNoteItem(item);
             });
 
@@ -158,14 +178,14 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             if (current) {
                 current.id = id;
                 current.replies = replies.map((item) => {
-                    rememberUser(item.username, item.domain);
+                    rememberUser({ username: item.username, domain: item.domain });
                     return fromNoteItem(item);
                 });
             }
 
             setThreads((prev) => ({ ...prev, [id]: mapped }));
         },
-        [posts, threads, session, rememberUser],
+        [session, rememberUser],
     );
 
     const mutate = useCallback((id: string, updater: (post: Post) => Post) => {

@@ -59,7 +59,13 @@ function makeRemoteUser(item: SearchUserItem): User {
 interface DirectoryValue {
     currentUser: User;
     getUser: (username: string) => User | undefined;
-    rememberUser: (username: string, domain?: string | null) => void;
+    /** 记住一个轻量用户，displayName/avatarUrl 为可选补充信息 */
+    rememberUser: (input: {
+        username: string;
+        domain?: string | null;
+        displayName?: string;
+        avatarUrl?: string;
+    }) => void;
     search: (query: string) => Promise<User[]>;
     loadProfile: (username: string) => Promise<void>;
     isProfileMissing: (username: string) => boolean;
@@ -109,13 +115,33 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
     );
 
     const rememberUser = useCallback(
-        (username: string, domain?: string | null) => {
+        (input: { username: string; domain?: string | null; displayName?: string; avatarUrl?: string }) => {
+            const { username, domain, displayName, avatarUrl } = input;
             if (!username) return;
             setUsers((prev) => {
-                if (prev[username]) return prev;
+                const existing = prev[username];
+                if (existing) {
+                    // 只补齐展示信息，不覆盖已有资料
+                    return {
+                        ...prev,
+                        [username]: {
+                            ...existing,
+                            displayName: displayName || existing.displayName,
+                            avatarUrl: avatarUrl || existing.avatarUrl,
+                        },
+                    };
+                }
                 const user = domain
-                    ? makeRemoteUser({ username, domain, displayName: username, avatarUrl: "", actorUrl: "", originalUrl: "", isFollowing: false })
-                    : makeLocalUser(username, instance);
+                    ? makeRemoteUser({
+                          username,
+                          domain,
+                          displayName: displayName || username,
+                          avatarUrl: avatarUrl ?? "",
+                          actorUrl: "",
+                          originalUrl: "",
+                          isFollowing: false,
+                      })
+                    : makeLocalUser(username, instance, { displayName: displayName || username, avatarUrl });
                 return { ...prev, [username]: user };
             });
         },
