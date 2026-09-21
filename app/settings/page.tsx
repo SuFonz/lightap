@@ -47,7 +47,6 @@ export default function SettingsPage() {
                                 name={currentUser.displayName}
                                 src={currentUser.avatarUrl}
                                 size={54}
-                                status={currentUser.online}
                             />
                             <div className="min-w-0 flex-1">
                                 <p className="truncate font-display text-[15px] font-extrabold text-slate-800">

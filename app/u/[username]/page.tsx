@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import { PostCard } from "@/web/components/post/post-card";
 import { Avatar } from "@/web/components/ui/avatar";
 import { BellIcon, CheckIcon, EditIcon, GlobeIcon, HomeIcon, SparklesIcon, UserIcon } from "@/web/components/ui/icons";
-import { pillTones, TagPill } from "@/web/components/ui/tag-pill";
 import { FollowButton } from "@/web/components/user/follow-button";
 import { formatCount } from "@/web/lib/format";
 import { useDirectory } from "@/web/stores/directory-store";
@@ -75,7 +74,7 @@ export default function ProfilePage() {
 
                 <div className="px-5 pb-5">
                     <div className="-mt-11 mb-3 flex items-end justify-between sm:-mt-13">
-                        <Avatar name={user.displayName} src={user.avatarUrl} size={92} ring status={user.online} />
+                        <Avatar name={user.displayName} src={user.avatarUrl} size={92} ring />
                         <div className="mb-1 flex items-center gap-2">
                             {isMe ? (
                                 <button
@@ -113,14 +112,6 @@ export default function ProfilePage() {
                         @{user.username}@{user.instance}
                     </p>
 
-                    {user.badges && user.badges.length > 0 && (
-                        <div className="mt-2.5 flex flex-wrap gap-1.5">
-                            {user.badges.map((badge, i) => (
-                                <TagPill key={badge} label={badge} tone={pillTones[(i + 1) % pillTones.length]} />
-                            ))}
-                        </div>
-                    )}
-
                     {user.bio && (
                         <p className="mt-3 whitespace-pre-wrap text-[14px] leading-relaxed text-slate-600">{user.bio}</p>
                     )}
@@ -129,8 +120,8 @@ export default function ProfilePage() {
                         {(
                             [
                                 ["帖子", userPosts.length],
-                                ["关注", user.following],
-                                ["粉丝", user.followers],
+                                ["关注", user.followingCount],
+                                ["粉丝", user.followersCount],
                             ] as const
                         ).map(([label, count]) => (
                             <div key={label} className="flex items-baseline gap-1.5">

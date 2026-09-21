@@ -14,7 +14,7 @@ export function UserResultList({ users }: { users: User[] }) {
                     className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/45 sm:px-5"
                 >
                     <Link href={`/u/${user.username}`} aria-label={user.displayName}>
-                        <Avatar name={user.displayName} src={user.avatarUrl} size={44} status={user.online} />
+                        <Avatar name={user.displayName} src={user.avatarUrl} size={44} />
                     </Link>
                     <div className="min-w-0 flex-1">
                         <Link

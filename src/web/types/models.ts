@@ -18,12 +18,10 @@ export interface User {
     /** 展示用的实例名 */
     instance: string;
     actorUrl: string;
-    online: boolean;
     bio: string;
-    badges?: string[];
     postsCount: number;
-    following: number;
-    followers: number;
+    followingCount: number;
+    followersCount: number;
 }
 
 export interface Post {

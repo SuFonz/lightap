@@ -59,7 +59,6 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                                     name={currentUser.displayName}
                                     src={currentUser.avatarUrl}
                                     size={46}
-                                    status={currentUser.online}
                                 />
                             </Link>
                             <Link href={`/u/${currentUser.username}`} onClick={onNavigate} className="min-w-0 flex-1">

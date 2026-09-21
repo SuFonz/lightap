@@ -52,7 +52,6 @@ export function MobileTopBar() {
                             name={currentUser.displayName}
                             src={currentUser.avatarUrl}
                             size={34}
-                            status={currentUser.online}
                         />
                     </Link>
                 )}

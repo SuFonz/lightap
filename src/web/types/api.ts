@@ -35,6 +35,22 @@ export interface SearchResponse {
     items: SearchUserItem[];
 }
 
+// 用户资料：GET /api/v1/users/[username]
+export interface UserProfileResponse {
+    username: string;
+    displayName: string;
+    avatarUrl: string;
+    bio: string;
+    actorUrl: string;
+    domain: string | null;
+    instance: string;
+    postsCount: number;
+    followingCount: number;
+    followersCount: number;
+    isFollowing: boolean;
+    createdAt: number;
+}
+
 // 发帖：POST /api/v1/notes
 export interface CreateNoteRequest {
     content: string;

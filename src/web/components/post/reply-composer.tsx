@@ -56,7 +56,6 @@ export function ReplyComposer({ postId }: { postId: string }) {
                     name={currentUser.displayName}
                     src={currentUser.avatarUrl}
                     size={42}
-                    status={currentUser.online}
                 />
                 <textarea
                     value={content}

@@ -65,7 +65,7 @@ export function PostCard({
                     aria-label={`${author.displayName} 的主页`}
                     onClick={stop}
                 >
-                    <Avatar name={author.displayName} src={author.avatarUrl} size={46} status={author.online} />
+                    <Avatar name={author.displayName} src={author.avatarUrl} size={46} />
                 </Link>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-x-2 gap-y-0 flex-wrap">

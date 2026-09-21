@@ -1,8 +1,12 @@
-import type { FollowRequest, SearchResponse, UnfollowRequest } from "@/web/types";
+import type { FollowRequest, SearchResponse, UnfollowRequest, UserProfileResponse } from "@/web/types";
 import { request } from "./client";
 
 export function search(query: string, token?: string) {
     return request<SearchResponse>(`/api/v1/search?q=${encodeURIComponent(query)}`, { token });
+}
+
+export function fetchProfile(username: string, token?: string) {
+    return request<UserProfileResponse>(`/api/v1/users/${encodeURIComponent(username)}`, { token });
 }
 
 export function follow(token: string, body: FollowRequest) {

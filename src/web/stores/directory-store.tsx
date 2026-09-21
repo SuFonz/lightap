@@ -20,11 +20,10 @@ const GUEST: User = {
     domain: null,
     instance: "",
     actorUrl: "",
-    online: false,
     bio: "",
     postsCount: 0,
-    following: 0,
-    followers: 0,
+    followingCount: 0,
+    followersCount: 0,
 };
 
 function makeLocalUser(username: string, instance: string, patch?: Partial<User>): User {
@@ -34,11 +33,10 @@ function makeLocalUser(username: string, instance: string, patch?: Partial<User>
         domain: null,
         instance,
         actorUrl: instance ? `https://${instance}/users/${username}` : "",
-        online: true,
         bio: "",
         postsCount: 0,
-        following: 0,
-        followers: 0,
+        followingCount: 0,
+        followersCount: 0,
         ...patch,
     };
 }
@@ -51,11 +49,10 @@ function makeRemoteUser(item: SearchUserItem): User {
         domain: item.domain,
         instance: item.domain ?? "",
         actorUrl: item.actorUrl,
-        online: false,
         bio: "",
         postsCount: 0,
-        following: 0,
-        followers: 0,
+        followingCount: 0,
+        followersCount: 0,
     };
 }
 
@@ -150,20 +147,35 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
 
     const loadProfile = useCallback(
         async (username: string) => {
-            if (!username || username === session?.username) return;
-            if (users[username] || requested.current.has(username)) return;
+            if (!username || requested.current.has(username)) return;
             requested.current.add(username);
             try {
-                // 后端目前只支持按完整 handle 搜索远端账号
-                const { items } = await usersApi.search(`@${username}`, session?.token);
-                const match = items.find((item) => item.username === username);
-                if (match) upsert([makeRemoteUser(match)]);
-                else setMissing((prev) => new Set(prev).add(username));
+                // 只查后端本地数据库里的用户资料
+                const profile = await usersApi.fetchProfile(username, session?.token);
+                upsert([{
+                    username: profile.username,
+                    displayName: profile.displayName,
+                    avatarUrl: profile.avatarUrl || undefined,
+                    domain: profile.domain,
+                    instance: profile.instance,
+                    actorUrl: profile.actorUrl,
+                    bio: profile.bio,
+                    postsCount: profile.postsCount,
+                    followingCount: profile.followingCount,
+                    followersCount: profile.followersCount,
+                }]);
+                // 用后端返回的 isFollowing 校准关注状态
+                setFollowing((prev) => {
+                    const next = new Set(prev);
+                    if (profile.isFollowing) next.add(profile.username);
+                    else next.delete(profile.username);
+                    return next;
+                });
             } catch {
                 setMissing((prev) => new Set(prev).add(username));
             }
         },
-        [users, session, upsert],
+        [session, upsert],
     );
 
     const isProfileMissing = useCallback((username: string) => missing.has(username), [missing]);

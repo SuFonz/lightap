@@ -53,7 +53,6 @@ export function ComposerField({
                         name={currentUser.displayName}
                         src={currentUser.avatarUrl}
                         size={42}
-                        status={currentUser.online}
                     />
                     <p className="min-w-0 flex-1 text-[15px] text-slate-400">{label}</p>
                 </div>

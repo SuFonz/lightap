@@ -101,7 +101,6 @@ export function ComposerModal({
                         name={currentUser.displayName}
                         src={currentUser.avatarUrl}
                         size={44}
-                        status={currentUser.online}
                     />
                     <textarea
                         ref={textareaRef}

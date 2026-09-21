@@ -25,16 +25,13 @@ interface AvatarProps {
     src?: string;
     size?: number;
     ring?: boolean;
-    /** 在线状态小绿点 */
-    status?: boolean;
     className?: string;
 }
 
-export function Avatar({ name, src, size = 44, ring = false, status = false, className }: AvatarProps) {
+export function Avatar({ name, src, size = 44, ring = false, className }: AvatarProps) {
     const [failed, setFailed] = useState(false);
     const showImage = src && !failed;
     const initial = name.slice(0, 1).toUpperCase();
-    const dot = Math.max(9, Math.round(size * 0.27));
 
     return (
         <span
@@ -65,12 +62,6 @@ export function Avatar({ name, src, size = 44, ring = false, status = false, cla
                     initial
                 )}
             </span>
-            {status && (
-                <span
-                    className="absolute bottom-0 right-0 rounded-full bg-emerald-400 shadow-sm ring-2 ring-white"
-                    style={{ width: dot, height: dot }}
-                />
-            )}
         </span>
     );
 }
