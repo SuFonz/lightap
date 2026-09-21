@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
-import { APActivityType } from "@/src/activitypub/ap"
+import { APActivityType, APObjectType } from "@/src/activitypub/ap"
 
 export const users = sqliteTable("users", {
     id: integer().primaryKey({ autoIncrement: true }),
@@ -26,7 +26,9 @@ export const activities = sqliteTable("activities", {
     uri: text().notNull().unique(),
     type: text().$type<APActivityType>().notNull(),
     actor: text().notNull(),
-    objectId: integer("object_id"),
+    objectUri: text("object_uri"), // object 可能是一个链接
+    objectId: integer("object_id"), // 也可能是一个对象，与其他表相关
+    objectType: text("object_type").$type<APObjectType>(), // 与其他表相关
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
 });
 

@@ -186,3 +186,15 @@ export async function postInbox(inboxUrl: string, privateKey: string, keyId: str
         body: JSON.stringify(activity),
     });
 }
+
+export async function delivery(targetActor: string, activity: APActivity, privateKey: string, keyId: string) {
+    // 获取远程 Actor
+    const rmRes = await getActor(targetActor, privateKey, keyId);
+    if (!rmRes.ok) {
+        return rmRes;
+    }
+    const actor = await rmRes.json<APActor>();
+
+    // 投递到 Actor 的 inbox
+    return await postInbox(actor.inbox, privateKey, keyId, activity);
+}

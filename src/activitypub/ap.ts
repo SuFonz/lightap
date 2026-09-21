@@ -12,7 +12,8 @@ export type APActivityType = "Activity" |
                              "Follow" | 
                              "Undo";
 
-export type APObjectType = "Note";
+export type APObjectType = "Note" |
+                            APActivityType
 
 // Core Types
 
@@ -96,4 +97,8 @@ export interface APNote extends APObject {
 export interface APPerson extends APObject {
     type: "Person",
     name: string,
+}
+
+export interface APDelivery extends APObject {
+    
 }

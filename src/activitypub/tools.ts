@@ -115,7 +115,7 @@ export function buildActor(
     return actor;
 }
 
-export function buildObjecrUri(url: URL, uuid: string, type: APActivityType | APObjectType) {
+export function buildObjecrUri(url: URL, uuid: string, type: APObjectType) {
     return `${url.origin}/${type.toLocaleLowerCase()}/${uuid}`;
 }
 
@@ -158,6 +158,19 @@ export function buildNote(url: URL, uuid: string, content: string, inReplyTo?: s
     const note: APNote = {
         "@context": AP_CONTEXT,
         id: `${url.origin}/notes/${uuid}`,
+        type: "Note",
+        name: "Light AP Note",
+        content: content,
+        inReplyTo: inReplyTo,
+    };
+
+    return note;
+}
+
+export function buildNoteWithUri(uri: string, content: string, inReplyTo?: string) {
+    const note: APNote = {
+        "@context": AP_CONTEXT,
+        id: uri,
         type: "Note",
         name: "Light AP Note",
         content: content,
