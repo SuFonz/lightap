@@ -5,7 +5,7 @@ import { activities, follows, users } from "@/src/db/schema";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     }
 
     // 是否本地用户
-    const db = drizzle(env.DB);
+    const db = getDBClient();
     const body = await request.json<Body>();
     if (body.domain == url.host) {
         try {

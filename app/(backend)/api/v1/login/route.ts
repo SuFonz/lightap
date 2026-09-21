@@ -2,8 +2,8 @@ import { users } from "@/src/db/schema";
 import { signJwt } from "@/src/utils/jwt";
 import { verifyPassword } from "@/src/utils/password";
 import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { and, eq, like } from "drizzle-orm";
+import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +18,15 @@ export async function POST(request: Request) {
     const username = body.username;
     const password = body.password;
 
-    // 数据库获取用户
-    const db = drizzle(env.DB);
-    const result = await db.select().from(users).where(eq(users.username, username));
+    // 数据库获取用户（只允许本站用户：username 相同 且 actorUrl 属于本实例）
+    const url = new URL(request.url);
+    const db = getDBClient();
+    const result = await db.select().from(users).where(
+        and(
+            eq(users.username, username),
+            like(users.actorUrl, `${url.origin}/%`),
+        ),
+    );
     if (result.length == 0) {
         return Response.json({
             error: "User not found."

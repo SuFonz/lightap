@@ -1,11 +1,10 @@
-import { APActor, APWebfinger } from "@/src/activitypub/ap";
-import { getActor, getWebfinger, postInbox } from "@/src/activitypub/network";
-import { buildActivity, buildObjecrUri, convertActorUrlToMainKey, convertDomainToUrl, parseWebfinger } from "@/src/activitypub/tools";
+import { buildActivity, buildObjecrUri } from "@/src/activitypub/tools";
+import { getDBClient } from "@/src/db";
 import { activities, follows, users } from "@/src/db/schema";
+import { produce } from "@/src/queue";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { and, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +62,7 @@ export async function POST(request: Request) {
     }
 
     // 是否本地用户
-    const db = drizzle(env.DB);
+    const db = getDBClient();
     const body = await request.json<Body>();
     if (body.domain == url.host) {
         // 是：获取当前用户
@@ -73,6 +72,19 @@ export async function POST(request: Request) {
             // 查询另一位用户
             const target = (await db.select().from(users).where(eq(users.username, body.username)))[0];
 
+            // 已经关注过则直接返回
+            const existing = (await db.select().from(follows).where(
+                and(
+                    eq(follows.follower, user.actorUrl),
+                    eq(follows.following, target.actorUrl),
+                ),
+            ))[0];
+            if (existing) {
+                return Response.json({}, {
+                    status: 200,
+                });
+            }
+
             // 当前用户的 Follow Activity 存到数据库
             const followUri = buildObjecrUri(url, crypto.randomUUID(), "Follow");
             const followAct = (await db.insert(activities).values({
@@ -80,21 +92,22 @@ export async function POST(request: Request) {
                 type: "Follow",
                 actor: user.actorUrl,
                 objectUri: target.actorUrl,
-            }));
-            
+            }).returning({ insertedId: activities.id }))[0];
 
-            // 目标的 Accept Activity 存到数据库，然后 Follows 存到数据库
-            const followsIns = (await db.insert(follows).values({
+            // Follows 存到数据库
+            await db.insert(follows).values({
                 follower: user.actorUrl,
                 following: target.actorUrl,
-            }).returning({ insertedId: users.id }))[0];
+            });
 
+            // 目标的 Accept Activity：object 是上面那条 Follow 活动
             const acceptUri = buildObjecrUri(url, crypto.randomUUID(), "Accept");
             const acceptAct = (await db.insert(activities).values({
                 uri: acceptUri,
                 type: "Accept",
                 actor: target.actorUrl,
-                objectId: followsIns.insertedId,
+                objectId: followAct.insertedId,
+                objectType: "Follow",
             }));
 
         } catch (error: any) {
@@ -108,35 +121,20 @@ export async function POST(request: Request) {
 
     } else {
         try {
-            // 否：获取当前用户私钥
+            // 否：获取当前用户
             const user = (await db.select().from(users).where(eq(users.username, payload.username)))[0]
 
-            // 获取远程 Webfinger 和 Actor
-            const wfRes = await getWebfinger(body.username, body.domain);
-            const webfinger = await wfRes.json<APWebfinger>();
-            const { actorUrl: rmActUrl } = parseWebfinger(webfinger);
-            const atRes = await getActor(rmActUrl, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
-            const actor = await atRes.json<APActor>();
+            // 构建 Follow Activity 并存入数据库
+            const follow = buildActivity(url, crypto.randomUUID(), "Follow", user.actorUrl, body.targetActorUrl);
+            const dbAct = (await db.insert(activities).values({
+                uri: follow.id,
+                type: "Follow",
+                actor: user.actorUrl,
+                objectUri: body.targetActorUrl,
+            }).returning({ insertedId: activities.id }))[0];
 
-            // 构建 Follow Activity
-            const followAct = buildActivity(url, crypto.randomUUID(), "Follow", user.actorUrl, body.targetActorUrl);
-
-            // 给远程用户发送 Follow Activity
-            const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
-            const faRes = await postInbox(actor.inbox, user.privateKey, userMkUrl, followAct);
-            if (!faRes.ok) {
-                return Response.json({
-                    error: "Follow failed."
-                }, {
-                    status: 401,
-                });
-            }
-
-            // TODO: Follows Activity 存入数据库
-            // const follow = (await db.insert(follows).values({
-            //     follower: user.actorUrl,
-            //     following: body.targetActorUrl,
-            // }).returning({ insertedId: follows.id }))[0];
+            // 丢进队列异步投递
+            await produce({ targetActor: body.targetActorUrl, activityId: dbAct.insertedId });
 
         } catch (error: any) {
             console.log(error.message);

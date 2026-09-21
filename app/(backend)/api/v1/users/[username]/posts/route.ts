@@ -1,7 +1,6 @@
 import { notes, users } from "@/src/db/schema";
-import { env } from "cloudflare:workers";
 import { and, count, desc, eq, inArray, isNull, lt } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +33,7 @@ export async function GET(
     const maxId = Number(url.searchParams.get("maxId")) || undefined;
 
     // 只查本地数据库里的用户
-    const db = drizzle(env.DB);
+    const db = getDBClient();
     const user = (await db.select().from(users).where(eq(users.username, params.username)))[0];
     if (!user) {
         return Response.json({

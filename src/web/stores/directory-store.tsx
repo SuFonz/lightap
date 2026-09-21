@@ -41,13 +41,13 @@ function makeLocalUser(username: string, instance: string, patch?: Partial<User>
     };
 }
 
-function makeRemoteUser(item: SearchUserItem): User {
+function makeRemoteUser(item: SearchUserItem, localInstance: string): User {
     return {
         username: item.username,
         displayName: item.displayName || item.username,
         avatarUrl: item.avatarUrl || undefined,
         domain: item.domain,
-        instance: item.domain ?? "",
+        instance: item.domain ?? localInstance,
         actorUrl: item.actorUrl,
         bio: "",
         postsCount: 0,
@@ -140,7 +140,7 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
                           actorUrl: "",
                           originalUrl: "",
                           isFollowing: false,
-                      })
+                      }, instance)
                     : makeLocalUser(username, instance, { displayName: displayName || username, avatarUrl });
                 return { ...prev, [username]: user };
             });
@@ -155,7 +155,7 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
             // 后端要求 acct 形式，这里自动补全前导 @
             const term = q.startsWith("@") ? q : `@${q}`;
             const { items } = await usersApi.search(term, session?.token);
-            const found = items.map(makeRemoteUser);
+            const found = items.map((item) => makeRemoteUser(item, instance));
             upsert(found);
             // 用后端返回的 isFollowing 校准关注状态，让关注按钮显示正确
             setFollowing((prev) => {

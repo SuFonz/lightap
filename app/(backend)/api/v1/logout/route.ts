@@ -3,7 +3,6 @@ import { signJwt } from "@/src/utils/jwt";
 import { verifyPassword } from "@/src/utils/password";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 export const dynamic = "force-dynamic";
 

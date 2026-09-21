@@ -3,8 +3,8 @@ import { signJwt } from "@/src/utils/jwt";
 import { exportPrivateKey, exportPublicKey, generateRSAKeyPair } from "@/src/utils/keypair";
 import { hashPassword } from "@/src/utils/password";
 import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
-import { drizzle } from 'drizzle-orm/d1';
+import { and, eq } from "drizzle-orm";
+import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +27,18 @@ export async function POST(request: Request) {
         });
     }
 
-    // 检查用户名是否重复
-    const db = drizzle(env.DB);
-    const existing = (await db.select().from(users).where(eq(users.username, username)))[0];
+    // Actor Url
+    const url = new URL(request.url);
+    const actorUrl = `${url.origin}/users/${username}`;
+
+    // 检查用户名是否重复（只算本站：username 相同 且 actorUrl 属于本实例）
+    const db = getDBClient();
+    const existing = (await db.select().from(users).where(
+        and(
+            eq(users.username, username),
+            eq(users.actorUrl, actorUrl),
+        ),
+    ))[0];
     if (existing) {
         return Response.json({
             error: "Username is already taken."
@@ -47,10 +56,6 @@ export async function POST(request: Request) {
         exportPublicKey(keyPair.publicKey),
         exportPrivateKey(keyPair.privateKey),
     ]);
-
-    // Actor Url
-    const url = new URL(request.url);
-    const actorUrl = `${url.origin}/users/${username}`;
 
     // 存入数据库
     type InsertUser = typeof users.$inferInsert;

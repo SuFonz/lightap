@@ -1,11 +1,10 @@
-import { AP_CONTEXT, APActor, APNote } from "@/src/activitypub/ap";
-import { getActor, postInbox } from "@/src/activitypub/network";
-import { buildActivity, buildNote, convertActorUrlToMainKey, parseSearch } from "@/src/activitypub/tools";
+import { buildActivity, buildNote } from "@/src/activitypub/tools";
+import { getDBClient } from "@/src/db";
 import { activities, follows, notes, users } from "@/src/db/schema";
+import { produce } from "@/src/queue";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
-import { eq, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +62,7 @@ export async function POST(request: Request) {
 
     try {
         // 存入数据库
-        const db = drizzle(env.DB);
+        const db = getDBClient();
         const user = (await db.select().from(users).where(eq(users.username, username)))[0];
 
         // Note 与 Create Activity
@@ -77,13 +76,13 @@ export async function POST(request: Request) {
 
         const create = buildActivity(url, crypto.randomUUID(), "Create", user.actorUrl, note);
 
-        await db.insert(activities).values({
+        const dbAct = (await db.insert(activities).values({
             uri: create.id,
             type: "Create",
             actor: user.actorUrl,
             objectId: dbNote.id,
             objectType: "Note",
-        });
+        }).returning({ insertedId: activities.id }))[0];
 
         // 递送：关注者 + 被回复者（本地实例的用户直接跳过，他们走本地数据库）
         const inboxes = new Set(
@@ -96,16 +95,12 @@ export async function POST(request: Request) {
             }
         }
 
-        await Promise.all([...inboxes].filter(actorUrl => !actorUrl.startsWith(`${url.origin}/users/`)).map(async (actorUrl) => {
-            const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
-            const atRes = await getActor(actorUrl, user.privateKey, userMkUrl);
-            if (!atRes.ok) {
-                return;
-            }
-            const actor = await atRes.json<APActor>();
-            
-            await postInbox(actor.inbox, user.privateKey, userMkUrl, create);
-        }));
+        // 远端收件人丢进队列异步投递
+        await Promise.all(
+            [...inboxes]
+                .filter(actorUrl => !actorUrl.startsWith(`${url.origin}/users/`))
+                .map(targetActor => produce({ targetActor, activityId: dbAct.insertedId }))
+        );
     } catch (error: any) {
         console.log(error.message);
         return Response.json({

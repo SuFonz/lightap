@@ -2,7 +2,7 @@ import { follows, notes, users } from "@/src/db/schema";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
 import { and, count, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +40,7 @@ export async function GET(
     const username = params.username;
 
     // 只查本地数据库
-    const db = drizzle(env.DB);
+    const db = getDBClient();
     const user = (await db.select().from(users).where(eq(users.username, username)))[0];
     if (!user) {
         return Response.json({

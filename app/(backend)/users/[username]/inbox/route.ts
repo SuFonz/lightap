@@ -3,10 +3,8 @@ import { getActor, getWebfinger, postInbox } from "@/src/activitypub/network";
 import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
 import { activities, follows, notes, users } from "@/src/db/schema";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
-import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
-import { rm } from "fs";
+import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +42,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
 }
 
 async function handleActivity(request: Request, params: Params, activity: APActivity) {
-    const db = drizzle(env.DB);
+    const db = getDBClient();
     const username = params.username;
     const type = activity.type;
     try {
@@ -74,6 +72,8 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                 if (!success) {
                     throw new Error("Sinature is invalid.");
                 }
+
+                console.log(activity);
 
                 // 存入数据库
                 const followsIns = (await db.insert(follows).values({

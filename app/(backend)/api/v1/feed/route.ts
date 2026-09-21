@@ -2,7 +2,7 @@ import { follows, notes, users } from "@/src/db/schema";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
 import { and, count, desc, eq, inArray, isNull, like, lt } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
         maxId: Number(url.searchParams.get("maxId")) || undefined,
     };
 
-    const db = drizzle(env.DB);
+    const db = getDBClient();
 
     // 根据类型确定作者范围：all = 数据库全部，local = 本站用户，following = 当前用户关注的人
     let actors: string[] | null = null;

@@ -1,8 +1,7 @@
 import { APPerson } from "@/src/activitypub/ap";
 import { users } from "@/src/db/schema";
-import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +18,7 @@ export async function GET(
     const username = params.username;
 
     // 检查用户是否存在
-    const db = drizzle(env.DB);
+    const db = getDBClient();
     const result = await db.select().from(users).where(eq(users.username, username));
     if (result.length == 0) {
         return Response.json({ 

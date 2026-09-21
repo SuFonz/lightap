@@ -1,7 +1,6 @@
 import { notes, users } from "@/src/db/schema";
-import { env } from "cloudflare:workers";
 import { count, eq, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { getDBClient } from "@/src/db";
 
 const MAX_LIMIT = 50;
 
@@ -31,7 +30,7 @@ export async function GET(
 ) {
     // 根据当前 id 查询数据库
     const url = new URL(request.url);
-    const db = drizzle(env.DB);
+    const db = getDBClient();
     const note = (await db.select().from(notes).where(eq(notes.uri, `${url.origin}/notes/${params.id}`)))[0];
     if (!note) {
         return Response.json({

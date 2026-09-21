@@ -1,15 +1,15 @@
 import { APActor, APWebfinger } from "@/src/activitypub/ap";
 import { getActor, getWebfinger } from "@/src/activitypub/network";
 import { convertActorUrlToMainKey, parseSearch, parseWebfinger } from "@/src/activitypub/tools";
+import { getDBClient } from "@/src/db";
 import { follows, users } from "@/src/db/schema";
-import { decodeJwt, JwtPayload, signJwt, verifyJwt } from "@/src/utils/jwt";
-import { exportPrivateKey, exportPublicKey, generateRSAKeyPair } from "@/src/utils/keypair";
-import { hashPassword } from "@/src/utils/password";
+import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
-import { and, eq } from "drizzle-orm";
-import { drizzle } from 'drizzle-orm/d1';
+import { and, eq, like, or } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
+
+const MAX_ITEMS = 20;
 
 type DBUser = typeof users.$inferSelect;
 
@@ -32,49 +32,68 @@ interface SearchResult {
 export async function GET(request: Request) {
     // 获取参数
     const url = new URL(request.url);
-    const q = url.searchParams.get("q");
-    
-    // 解析用户名和域名
-    const [username, domain] = parseSearch(q ?? "");
+    const q = (url.searchParams.get("q") ?? "").trim();
 
-    //  TODO: 如果未认证旧只能搜索本地实例的用户
+    // 解析用户名和域名（统一补上前导 @）
+    const [username, domain] = parseSearch(q.startsWith("@") ? q : `@${q}`);
 
-    // TODO: 有域名才请求远程用户
-    if (!domain) {
-        return;
+    const db = getDBClient();
+
+    // 查询登录用户（可选，远端搜索需要用它签名）
+    let user: DBUser | null = null;
+    const auth = request.headers.get("Authorization");
+    if (auth) {
+        const [type, token] = auth.split(" ");
+        if (type === "Bearer" && token && await verifyJwt(token, env.JWT_SECRET)) {
+            const payload = decodeJwt<UserPayload>(token);
+            if (payload?.username) {
+                user = (await db.select().from(users).where(eq(users.username, payload.username)))[0];
+            }
+        }
     }
 
-    // 查询登录用户
-    const db = drizzle(env.DB);
-    let user: DBUser | null = null;
+    const data: SearchResult = { items: [] };
 
-    try {
+    // 本地实例用户名查询：没有域名，或域名就是本实例
+    if (!domain || domain.toLowerCase() === url.host.toLowerCase()) {
+        if (username) {
+            const locals = await db.select().from(users).where(
+                or(
+                    like(users.username, `%${username}%`),
+                    like(users.displayName, `%${username}%`),
+                ),
+            ).limit(MAX_ITEMS);
 
-        const auth = request.headers.get("Authorization");
-        if (!auth) {
-            throw new Error("Unauthorized.");
+            for (const local of locals) {
+                let isFollowing = false;
+                if (user) {
+                    const followed = (await db.select().from(follows).where(
+                        and(
+                            eq(follows.follower, user.actorUrl),
+                            eq(follows.following, local.actorUrl),
+                        ),
+                    ))[0];
+                    isFollowing = !!followed;
+                }
+
+                data.items.push({
+                    username: local.username,
+                    displayName: local.displayName,
+                    avatarUrl: local.avatarUrl ?? "",
+                    actorUrl: local.actorUrl,
+                    domain: null,
+                    originalUrl: local.actorUrl,
+                    isFollowing: isFollowing,
+                });
+            }
         }
 
-        const [type, token] = auth.split(" ");
-        if (type !== "Bearer" || !token) {
-            throw new Error("Unauthorized.");
-        }
+        return Response.json(data, {
+            status: 200,
+        });
+    }
 
-        const valid = await verifyJwt(token, env.JWT_SECRET);
-        if (!valid) {
-            throw new Error("Unauthorized.");
-        }
-
-        // 获取用户（签名需要）
-        const payload = await decodeJwt<UserPayload>(token);
-        if (!payload?.username) {
-            throw new Error("Unauthorized.");
-        }
-
-        user = (await db.select().from(users).where(eq(users.username, payload.username)))[0];
-
-    } catch (error: any) {}
-
+    // 请求远程用户需要登录（签名用私钥）
     if (!user) {
         return Response.json({
             error: "Unauthorized.",
@@ -83,27 +102,22 @@ export async function GET(request: Request) {
         });
     }
 
-    // 登录认证之后才能请求别的服务器
-    // 请求 Webfinger, Actor, followers, following, inbox, outbox
+    // 请求 Webfinger, Actor
     let actor: APActor | null = null;
-    if (domain) {
-        const wfRes = await getWebfinger(username, domain);
-        if (wfRes.ok) {
-            const wf = await wfRes.json<APWebfinger>();
-            const pwf = parseWebfinger(wf);
-            const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
-            const atRes = await getActor(pwf.actorUrl, user.privateKey, userMkUrl);
-            if (atRes?.ok) {
-                actor = await atRes.json<APActor>();
-            }
-        } else {
-            console.log(await wfRes.json());
+    const wfRes = await getWebfinger(username, domain);
+    if (wfRes.ok) {
+        const wf = await wfRes.json<APWebfinger>();
+        const pwf = parseWebfinger(wf);
+        const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
+        const atRes = await getActor(pwf.actorUrl, user.privateKey, userMkUrl);
+        if (atRes?.ok) {
+            actor = await atRes.json<APActor>();
         }
+    } else {
+        console.log(await wfRes.json());
     }
 
     // TODO: 如果找到了用户就存进数据库
-
-    // TODO: 进行本地实例用户名查询
 
     // 检查是否关注过
     let isFollowing = false;
@@ -117,9 +131,8 @@ export async function GET(request: Request) {
         isFollowing = !!followed;
     }
 
-    // 返回搜索结果
-    const data: SearchResult = { items: [] };
-    if (actor && domain) {
+    // 返回远程搜索结果
+    if (actor) {
         data.items.push({
             username: actor.preferredUsername,
             displayName: actor.name,

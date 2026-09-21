@@ -1,9 +1,8 @@
 import { APOrderedCollection } from "@/src/activitypub/ap";
 import { buildActor } from "@/src/activitypub/tools";
 import { users } from "@/src/db/schema";
-import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +19,7 @@ export async function GET(
     const username = params.username;
 
     // 获取用户
-    const db = drizzle(env.DB);
+    const db = getDBClient();
     const user = (await db.select().from(users).where(eq(users.username, username)))[0];
     if (!user) {
         return Response.json({ 
