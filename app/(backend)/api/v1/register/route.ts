@@ -3,6 +3,7 @@ import { signJwt } from "@/src/utils/jwt";
 import { exportPrivateKey, exportPublicKey, generateRSAKeyPair } from "@/src/utils/keypair";
 import { hashPassword } from "@/src/utils/password";
 import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { drizzle } from 'drizzle-orm/d1';
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,17 @@ export async function POST(request: Request) {
         });
     }
 
+    // 检查用户名是否重复
+    const db = drizzle(env.DB);
+    const existing = (await db.select().from(users).where(eq(users.username, username)))[0];
+    if (existing) {
+        return Response.json({
+            error: "Username is already taken."
+        }, {
+            status: 409
+        });
+    }
+
     // 密码哈希
     const passwordHash = await hashPassword(password);
 
@@ -42,7 +54,6 @@ export async function POST(request: Request) {
 
     // 存入数据库
     type InsertUser = typeof users.$inferInsert;
-    const db = drizzle(env.DB);
     const result = await db.insert(users).values({
         username: username,
         displayName: username,

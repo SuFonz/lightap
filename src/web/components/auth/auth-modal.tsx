@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { CloseIcon, FeatherIcon, LockIcon, UserIcon } from "@/web/components/ui/icons";
+import { ApiError } from "@/web/lib/api";
 import { cn } from "@/web/lib/cn";
 import { useSession } from "@/web/stores/session-store";
 import type { AuthMode } from "@/web/types";
@@ -66,13 +67,17 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
             else await register(username.trim(), password);
             onClose();
         } catch (e) {
-            setError(
-                e instanceof Error && e.message
-                    ? e.message
-                    : isLogin
-                      ? "登录失败，请稍后重试"
-                      : "注册失败，请稍后重试",
-            );
+            if (!isLogin && e instanceof ApiError && e.status === 409) {
+                setError("该用户名已被占用，换一个试试吧～");
+            } else {
+                setError(
+                    e instanceof Error && e.message
+                        ? e.message
+                        : isLogin
+                          ? "登录失败，请稍后重试"
+                          : "注册失败，请稍后重试",
+                );
+            }
         } finally {
             setSubmitting(false);
         }
