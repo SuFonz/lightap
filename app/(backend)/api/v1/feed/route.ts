@@ -23,6 +23,8 @@ interface Item {
     id: number,
     uri: string,
     username: string,
+    displayName: string,
+    avatarUrl: string,
     domain: string,
     content: string,
     inReplyTo: string | null,
@@ -67,7 +69,9 @@ export async function GET(request: Request) {
                 status: 403,
             });
         }
+        // 关注流包含自己发的帖
         actors = (await db.select().from(follows).where(eq(follows.follower, user.actorUrl))).map(f => f.following);
+        actors.push(user.actorUrl);
     }
 
     // 没有可查询的作者直接返回空
@@ -92,16 +96,21 @@ export async function GET(request: Request) {
     const authors = rows.length > 0
         ? await db.select().from(users).where(inArray(users.actorUrl, rows.map(row => row.actor)))
         : [];
-    const nameByActor = new Map(authors.map(user => [user.actorUrl, user.username]));
-    const data: Item[] = rows.map(row => ({
-        id: row.id,
-        uri: row.uri,
-        username: nameByActor.get(row.actor) ?? "",
-        domain: url.host,
-        content: row.content,
-        inReplyTo: row.inReplyTo,
-        createdAt: row.createdAt,
-    }));
+    const userByActor = new Map(authors.map(user => [user.actorUrl, user]));
+    const data: Item[] = rows.map(row => {
+        const author = userByActor.get(row.actor);
+        return {
+            id: row.id,
+            uri: row.uri,
+            username: author?.username ?? "",
+            displayName: author?.displayName ?? "",
+            avatarUrl: author?.avatarUrl ?? "",
+            domain: url.host,
+            content: row.content,
+            inReplyTo: row.inReplyTo,
+            createdAt: row.createdAt,
+        };
+    });
 
     return Response.json({
         items: data,
