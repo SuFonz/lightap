@@ -20,7 +20,7 @@ function gradientFor(seed: string) {
     return gradients[Math.abs(hash) % gradients.length];
 }
 
-interface AvatarProps {
+export interface AvatarProps {
     name: string;
     src?: string;
     size?: number;

@@ -3,19 +3,22 @@
 import { CloseIcon, HistoryIcon } from "@/web/components/ui/icons";
 
 interface SearchHistoryListProps {
-    open: boolean;
     history: string[];
     onPick: (term: string) => void;
     onRemove: (term: string) => void;
     onClear: () => void;
 }
 
-export function SearchHistoryList({ open, history, onPick, onRemove, onClear }: SearchHistoryListProps) {
-    if (!open || history.length === 0) return null;
+/**
+ * 搜索历史下拉内容。定位与层级由外层 `Popover` 负责（portal 到 body），
+ * 这里只渲染内容，避免被祖先的 overflow / 层叠上下文裁剪。
+ */
+export function SearchHistoryList({ history, onPick, onRemove, onClear }: SearchHistoryListProps) {
+    if (history.length === 0) return null;
 
     return (
         <div
-            className="glass-card absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl p-2 shadow-xl shadow-brand/20"
+            className="glass-card w-full overflow-hidden rounded-2xl p-2 shadow-xl shadow-brand/20"
             role="listbox"
             aria-label="搜索历史"
         >

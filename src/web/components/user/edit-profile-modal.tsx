@@ -3,7 +3,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Avatar } from "@/web/components/ui/avatar";
 import { CheckIcon, CloseIcon } from "@/web/components/ui/icons";
-import { useDirectory } from "@/web/stores/directory-store";
+import { Modal } from "@/web/components/ui/modal";
+import { useDirectory } from "@/web/stores/directory";
 
 interface EditProfileModalProps {
     open: boolean;
@@ -24,14 +25,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
         setBio(currentUser.bio);
         setAvatarUrl(currentUser.avatarUrl ?? "");
         setSaved(false);
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose();
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [open, currentUser, onClose]);
-
-    if (!open) return null;
+    }, [open, currentUser]);
 
     async function handleSubmit(e: FormEvent) {
         e.preventDefault();
@@ -51,19 +45,15 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     }
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-brand-ink/20 backdrop-blur-sm sm:items-center sm:p-4"
-            onClick={onClose}
-            role="dialog"
-            aria-modal="true"
-            aria-label="编辑资料"
+        <Modal
+            open={open}
+            onClose={onClose}
+            label="编辑资料"
+            alignClassName="items-end justify-center sm:items-center sm:p-4"
+            panelClassName="glass-strong w-full max-w-md rounded-t-3xl p-6 sm:rounded-3xl"
+            animation="pop-in .28s cubic-bezier(.34,1.4,.64,1)"
         >
-            <form
-                className="glass-strong w-full max-w-md rounded-t-3xl p-6 sm:rounded-3xl"
-                style={{ animation: "pop-in .28s cubic-bezier(.34,1.4,.64,1)" }}
-                onClick={(e) => e.stopPropagation()}
-                onSubmit={handleSubmit}
-            >
+            <form onSubmit={handleSubmit}>
                 <div className="mb-4 flex items-center justify-between">
                     <h2 className="font-display text-lg font-extrabold text-slate-800">编辑资料</h2>
                     <button
@@ -130,6 +120,6 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                     )}
                 </button>
             </form>
-        </div>
+        </Modal>
     );
 }

@@ -7,7 +7,7 @@ import { WelcomePanel } from "@/web/components/auth/welcome-panel";
 import { Avatar } from "@/web/components/ui/avatar";
 import { EditIcon, FeatherIcon, GearIcon, GlobeIcon, HomeIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
-import { useDirectory } from "@/web/stores/directory-store";
+import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import { useUi } from "@/web/stores/ui-store";
 
@@ -55,11 +55,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                                 aria-label="我的资料"
                                 className="shrink-0 transition-transform duration-150 hover:scale-105 active:scale-95"
                             >
-                                <Avatar
-                                    name={currentUser.displayName}
-                                    src={currentUser.avatarUrl}
-                                    size={46}
-                                />
+                                <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={46} />
                             </Link>
                             <Link href={`/u/${currentUser.username}`} onClick={onNavigate} className="min-w-0 flex-1">
                                 <p className="truncate font-display text-[15px] font-extrabold text-slate-800">
@@ -148,7 +144,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function Sidebar() {
     return (
         <aside
-            className="sticky top-6 hidden max-h-[calc(100dvh-3rem)] w-[240px] shrink-0 self-start overflow-y-auto scrollbar-none lg:block"
+            className="sticky top-6 z-20 hidden max-h-[calc(100dvh-3rem)] w-[240px] shrink-0 self-start overflow-y-auto scrollbar-none lg:block"
             aria-label="侧边栏"
         >
             <SidebarContent />

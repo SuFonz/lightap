@@ -10,7 +10,7 @@ export function RightRail() {
 
     return (
         <aside
-            className="sticky top-6 hidden max-h-[calc(100dvh-3rem)] w-[280px] shrink-0 flex-col gap-4 self-start overflow-y-auto scrollbar-none xl:flex"
+            className="sticky top-6 z-20 hidden max-h-[calc(100dvh-3rem)] w-[280px] shrink-0 flex-col gap-4 self-start overflow-y-auto scrollbar-none xl:flex"
             aria-label="标签栏"
         >
             <SearchBox />

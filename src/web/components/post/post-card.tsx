@@ -9,7 +9,7 @@ import { MoreIcon, ReplyIcon } from "@/web/components/ui/icons";
 import { RelativeTime } from "@/web/components/ui/relative-time";
 import { cn } from "@/web/lib/cn";
 import { formatCount } from "@/web/lib/format";
-import { useDirectory } from "@/web/stores/directory-store";
+import { useDirectory } from "@/web/stores/directory";
 import type { Post, PostVariant } from "@/web/types";
 
 export function PostCard({

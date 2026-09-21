@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/web/lib/cn";
-import { useDirectory } from "@/web/stores/directory-store";
+import { useDirectory } from "@/web/stores/directory";
 import type { User } from "@/web/types";
 
 interface FollowButtonProps {

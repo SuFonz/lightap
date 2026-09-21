@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import { SidebarContent } from "@/web/components/layout/sidebar";
 import { Avatar } from "@/web/components/ui/avatar";
-import { FeatherIcon, GearIcon, HomeIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
+import { FeatherIcon, GearIcon, HomeIcon, MenuIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
-import { useDirectory } from "@/web/stores/directory-store";
+import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import { useUi } from "@/web/stores/ui-store";
 
@@ -24,11 +24,7 @@ export function MobileTopBar() {
                 onClick={() => setDrawerOpen(true)}
                 className="-ml-1 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-slate-600 transition active:scale-90"
             >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <line x1="4" x2="20" y1="6" y2="6" />
-                    <line x1="4" x2="20" y1="12" y2="12" />
-                    <line x1="4" x2="14" y1="18" y2="18" />
-                </svg>
+                <MenuIcon size={22} />
             </button>
 
             <Link href="/" className="flex items-center gap-1.5" aria-label="LightAP 首页">
@@ -48,11 +44,7 @@ export function MobileTopBar() {
                 </Link>
                 {isAuthenticated && (
                     <Link href={`/u/${currentUser.username}`} aria-label="我的资料" className="ml-1">
-                        <Avatar
-                            name={currentUser.displayName}
-                            src={currentUser.avatarUrl}
-                            size={34}
-                        />
+                        <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={34} />
                     </Link>
                 )}
             </div>

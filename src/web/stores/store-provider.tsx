@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { DirectoryProvider } from "@/web/stores/directory-store";
+import { DirectoryProvider } from "@/web/stores/directory";
 import { SessionProvider } from "@/web/stores/session-store";
-import { TimelineProvider } from "@/web/stores/timeline-store";
+import { TimelineProvider } from "@/web/stores/timeline";
 import { UiProvider } from "@/web/stores/ui-store";
 import type { Session } from "@/web/types";
 

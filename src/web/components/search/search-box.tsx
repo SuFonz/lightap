@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { SearchHistoryList } from "@/web/components/search/search-history-list";
 import { CloseIcon, SearchIcon } from "@/web/components/ui/icons";
+import { Popover } from "@/web/components/ui/popover";
 import { cn } from "@/web/lib/cn";
 import { useSearchHistory } from "@/web/hooks/use-search-history";
 
@@ -18,6 +19,7 @@ export function SearchBox({ className, autoFocus = false, placeholder = "搜索�
     const { history, add, remove, clear } = useSearchHistory();
     const [query, setQuery] = useState("");
     const [open, setOpen] = useState(false);
+    const anchorRef = useRef<HTMLDivElement>(null);
 
     function runSearch(term: string) {
         const value = term.trim();
@@ -34,7 +36,7 @@ export function SearchBox({ className, autoFocus = false, placeholder = "搜索�
     }
 
     return (
-        <div className={cn("relative", className)}>
+        <div ref={anchorRef} className={cn("relative", className)}>
             <form onSubmit={handleSubmit} role="search" onFocus={() => setOpen(true)}>
                 <label className="glass-card flex items-center gap-2.5 rounded-full px-4 py-2.5 transition-shadow focus-within:shadow-glow">
                     <SearchIcon size={17} className="shrink-0 text-brand" />
@@ -62,7 +64,9 @@ export function SearchBox({ className, autoFocus = false, placeholder = "搜索�
                 </label>
             </form>
 
-            <SearchHistoryList open={open} history={history} onPick={runSearch} onRemove={remove} onClear={clear} />
+            <Popover open={open} anchorRef={anchorRef}>
+                <SearchHistoryList history={history} onPick={runSearch} onRemove={remove} onClear={clear} />
+            </Popover>
         </div>
     );
 }

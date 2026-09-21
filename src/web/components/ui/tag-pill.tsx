@@ -20,7 +20,7 @@ export function toneFor(seed: string): PillTone {
     return pillTones[Math.abs(hash) % pillTones.length];
 }
 
-interface TagPillProps {
+export interface TagPillProps {
     label: string;
     href?: string;
     tone?: PillTone;

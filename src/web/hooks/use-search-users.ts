@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDirectory } from "@/web/stores/directory-store";
+import { useDirectory } from "@/web/stores/directory";
 import type { User } from "@/web/types";
 
 /** 按关键词搜索用户，结果同时会记入 directory store。 */

@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PostCard } from "@/web/components/post/post-card";
 import { ReplyComposer } from "@/web/components/post/reply-composer";
 import { HomeIcon, ReplyIcon } from "@/web/components/ui/icons";
-import { useTimeline } from "@/web/stores/timeline-store";
+import { useTimeline } from "@/web/stores/timeline";
 
 export default function PostDetailPage() {
     const params = useParams<{ id: string }>();

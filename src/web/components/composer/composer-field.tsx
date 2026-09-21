@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ComposerModal } from "@/web/components/composer/composer-modal";
 import { Avatar } from "@/web/components/ui/avatar";
 import { cn } from "@/web/lib/cn";
-import { useDirectory } from "@/web/stores/directory-store";
+import { useDirectory } from "@/web/stores/directory";
 
 interface ComposerFieldProps {
     label?: string;
@@ -49,11 +49,7 @@ export function ComposerField({
                 }}
             >
                 <div className="flex items-center gap-3">
-                    <Avatar
-                        name={currentUser.displayName}
-                        src={currentUser.avatarUrl}
-                        size={42}
-                    />
+                    <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={42} />
                     <p className="min-w-0 flex-1 text-[15px] text-slate-400">{label}</p>
                 </div>
 

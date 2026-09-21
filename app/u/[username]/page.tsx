@@ -9,8 +9,8 @@ import { BellIcon, CheckIcon, EditIcon, GlobeIcon, HomeIcon, SparklesIcon, UserI
 import { FollowButton } from "@/web/components/user/follow-button";
 import { formatCount } from "@/web/lib/format";
 import { useInfiniteScroll } from "@/web/hooks/use-infinite-scroll";
-import { useDirectory } from "@/web/stores/directory-store";
-import { useTimeline } from "@/web/stores/timeline-store";
+import { useDirectory } from "@/web/stores/directory";
+import { useTimeline } from "@/web/stores/timeline";
 import { useUi } from "@/web/stores/ui-store";
 
 export default function ProfilePage() {

@@ -1,80 +1,12 @@
 "use client";
 
-import {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usersApi } from "@/web/lib/api";
 import { useSession } from "@/web/stores/session-store";
-import type { SearchUserItem, User } from "@/web/types";
-
-const GUEST: User = {
-    username: "",
-    displayName: "游客",
-    domain: null,
-    instance: "",
-    actorUrl: "",
-    bio: "",
-    postsCount: 0,
-    followingCount: 0,
-    followersCount: 0,
-};
-
-function makeLocalUser(username: string, instance: string, patch?: Partial<User>): User {
-    return {
-        username,
-        displayName: username,
-        domain: null,
-        instance,
-        actorUrl: instance ? `https://${instance}/users/${username}` : "",
-        bio: "",
-        postsCount: 0,
-        followingCount: 0,
-        followersCount: 0,
-        ...patch,
-    };
-}
-
-function makeRemoteUser(item: SearchUserItem, localInstance: string): User {
-    return {
-        username: item.username,
-        displayName: item.displayName || item.username,
-        avatarUrl: item.avatarUrl || undefined,
-        domain: item.domain,
-        instance: item.domain ?? localInstance,
-        actorUrl: item.actorUrl,
-        bio: "",
-        postsCount: 0,
-        followingCount: 0,
-        followersCount: 0,
-    };
-}
-
-interface DirectoryValue {
-    currentUser: User;
-    getUser: (username: string) => User | undefined;
-    /** 记住一个轻量用户，displayName/avatarUrl 为可选补充信息 */
-    rememberUser: (input: {
-        username: string;
-        domain?: string | null;
-        displayName?: string;
-        avatarUrl?: string;
-    }) => void;
-    search: (query: string) => Promise<User[]>;
-    loadProfile: (username: string) => Promise<void>;
-    isProfileMissing: (username: string) => boolean;
-    isFollowing: (username: string) => boolean;
-    toggleFollow: (user: User) => Promise<void>;
-    updateProfile: (patch: Partial<Pick<User, "displayName" | "bio" | "avatarUrl">>) => Promise<void>;
-}
-
-const DirectoryContext = createContext<DirectoryValue | null>(null);
+import type { User } from "@/web/types";
+import { DirectoryContext } from "./context";
+import { GUEST, makeLocalUser, makeRemoteUser } from "./helpers";
+import type { DirectoryValue, RememberUserInput } from "./types";
 
 export function DirectoryProvider({ children }: { children: ReactNode }) {
     const { session } = useSession();
@@ -115,7 +47,7 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
     );
 
     const rememberUser = useCallback(
-        (input: { username: string; domain?: string | null; displayName?: string; avatarUrl?: string }) => {
+        (input: RememberUserInput) => {
             const { username, domain, displayName, avatarUrl } = input;
             if (!username) return;
             setUsers((prev) => {
@@ -132,15 +64,18 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
                     };
                 }
                 const user = domain
-                    ? makeRemoteUser({
-                          username,
-                          domain,
-                          displayName: displayName || username,
-                          avatarUrl: avatarUrl ?? "",
-                          actorUrl: "",
-                          originalUrl: "",
-                          isFollowing: false,
-                      }, instance)
+                    ? makeRemoteUser(
+                          {
+                              username,
+                              domain,
+                              displayName: displayName || username,
+                              avatarUrl: avatarUrl ?? "",
+                              actorUrl: "",
+                              originalUrl: "",
+                              isFollowing: false,
+                          },
+                          instance,
+                      )
                     : makeLocalUser(username, instance, { displayName: displayName || username, avatarUrl });
                 return { ...prev, [username]: user };
             });
@@ -178,18 +113,20 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
             try {
                 // 只查后端本地数据库里的用户资料
                 const profile = await usersApi.fetchProfile(username, session?.token);
-                upsert([{
-                    username: profile.username,
-                    displayName: profile.displayName,
-                    avatarUrl: profile.avatarUrl || undefined,
-                    domain: profile.domain,
-                    instance: profile.instance,
-                    actorUrl: profile.actorUrl,
-                    bio: profile.bio,
-                    postsCount: profile.postsCount,
-                    followingCount: profile.followingCount,
-                    followersCount: profile.followersCount,
-                }]);
+                upsert([
+                    {
+                        username: profile.username,
+                        displayName: profile.displayName,
+                        avatarUrl: profile.avatarUrl || undefined,
+                        domain: profile.domain,
+                        instance: profile.instance,
+                        actorUrl: profile.actorUrl,
+                        bio: profile.bio,
+                        postsCount: profile.postsCount,
+                        followingCount: profile.followingCount,
+                        followersCount: profile.followersCount,
+                    },
+                ]);
                 // 用后端返回的 isFollowing 校准关注状态
                 setFollowing((prev) => {
                     const next = new Set(prev);
@@ -279,10 +216,4 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
     );
 
     return <DirectoryContext.Provider value={value}>{children}</DirectoryContext.Provider>;
-}
-
-export function useDirectory(): DirectoryValue {
-    const ctx = useContext(DirectoryContext);
-    if (!ctx) throw new Error("useDirectory must be used within DirectoryProvider");
-    return ctx;
 }

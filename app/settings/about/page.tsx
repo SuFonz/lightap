@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FeatherIcon, GlobeIcon } from "@/web/components/ui/icons";
-import { useDirectory } from "@/web/stores/directory-store";
+import { useDirectory } from "@/web/stores/directory";
 
 export default function AboutPage() {
     const router = useRouter();

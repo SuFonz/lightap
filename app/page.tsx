@@ -7,9 +7,9 @@ import { PostCard } from "@/web/components/post/post-card";
 import { ImageIcon, SparklesIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
 import { useInfiniteScroll } from "@/web/hooks/use-infinite-scroll";
-import { useDirectory } from "@/web/stores/directory-store";
+import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
-import { useTimeline } from "@/web/stores/timeline-store";
+import { useTimeline } from "@/web/stores/timeline";
 import type { FeedTab } from "@/web/types";
 
 export default function HomePage() {
