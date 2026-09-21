@@ -5,7 +5,7 @@ import { postsApi } from "@/web/lib/api";
 import { createId } from "@/web/lib/id";
 import { useDirectory } from "@/web/stores/directory-store";
 import { useSession } from "@/web/stores/session-store";
-import type { FeedItem, FeedTab, NoteItem, Post } from "@/web/types";
+import type { FeedTab, NoteItem, Post, PostListItem } from "@/web/types";
 
 const FEED_LIMIT = 30;
 
@@ -29,7 +29,7 @@ function idFromUri(uri: string): string {
     return uri.split("/").pop() ?? uri;
 }
 
-function fromFeedItem(item: FeedItem): Post {
+function fromListItem(item: PostListItem): Post {
     return makePost(
         idFromUri(item.uri),
         item.username,
@@ -44,7 +44,7 @@ function fromNoteItem(item: NoteItem): Post {
         idFromUri(item.uri),
         item.username,
         item.content,
-        new Date().toISOString(),
+        new Date(item.createdAt * 1000).toISOString(),
         item.inReplyTo ?? undefined,
     );
 }
@@ -75,6 +75,9 @@ interface TimelineValue {
     compose: (content: string) => Promise<void>;
     /** 回复某个帖子 */
     reply: (postId: string, content: string) => Promise<void>;
+    /** 某个用户的帖子（个人主页用），未加载过为 undefined */
+    userPosts: Record<string, Post[]>;
+    loadUserPosts: (username: string) => Promise<void>;
     getPost: (id: string) => Post | undefined;
     /** 返回 [顶层, ..., 当前帖]，未加载过则为 undefined */
     getThread: (id: string) => Post[] | undefined;
@@ -91,6 +94,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     const { currentUser, rememberUser } = useDirectory();
     const [posts, setPosts] = useState<Post[]>([]);
     const [threads, setThreads] = useState<Record<string, Post[]>>({});
+    const [userPosts, setUserPosts] = useState<Record<string, Post[]>>({});
     const [loading, setLoading] = useState(false);
     const [tab, setTab] = useState<FeedTab>("all");
 
@@ -107,7 +111,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                         avatarUrl: item.avatarUrl,
                     });
                 }
-                setPosts(items.map(fromFeedItem));
+                setPosts(items.map(fromListItem));
             } catch {
                 setPosts([]);
             } finally {
@@ -141,7 +145,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             await postsApi.createNote(session.token, { content, inReplyTo });
 
             // 立即把回复挂到已加载的线程上
-            const post = makePost(createId(), currentUser.username, content, new Date().toISOString(), postId);
+            const post = makePost(createId(), currentUser.username, content, new Date().toISOString(), inReplyTo);
             setThreads((prev) => {
                 const chain = prev[postId];
                 if (!chain) return prev;
@@ -149,6 +153,27 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             });
         },
         [session, currentUser],
+    );
+
+    const loadUserPosts = useCallback(
+        async (username: string) => {
+            if (!username) return;
+            try {
+                const { items } = await postsApi.fetchUserPosts(username, { limit: FEED_LIMIT }, session?.token);
+                for (const item of items) {
+                    rememberUser({
+                        username: item.username,
+                        domain: item.domain,
+                        displayName: item.displayName,
+                        avatarUrl: item.avatarUrl,
+                    });
+                }
+                setUserPosts((prev) => ({ ...prev, [username]: items.map(fromListItem) }));
+            } catch {
+                setUserPosts((prev) => ({ ...prev, [username]: [] }));
+            }
+        },
+        [session, rememberUser],
     );
 
     const getPost = useCallback(
@@ -218,8 +243,21 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     );
 
     const value = useMemo<TimelineValue>(
-        () => ({ posts, loading, loadFeed, compose, reply, getPost, getThread, loadThread, toggleLike, toggleBoost }),
-        [posts, loading, loadFeed, compose, reply, getPost, getThread, loadThread, toggleLike, toggleBoost],
+        () => ({
+            posts,
+            loading,
+            loadFeed,
+            compose,
+            reply,
+            userPosts,
+            loadUserPosts,
+            getPost,
+            getThread,
+            loadThread,
+            toggleLike,
+            toggleBoost,
+        }),
+        [posts, loading, loadFeed, compose, reply, userPosts, loadUserPosts, getPost, getThread, loadThread, toggleLike, toggleBoost],
     );
 
     return <TimelineContext.Provider value={value}>{children}</TimelineContext.Provider>;

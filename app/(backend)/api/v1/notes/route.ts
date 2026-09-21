@@ -72,6 +72,7 @@ export async function POST(request: Request) {
             uri: note.id,
             actor: user.actorUrl,
             content: body.content,
+            inReplyTo: body.inReplyTo ?? null,
         }).returning())[0];
 
         const create = buildActivity(url, crypto.randomUUID(), "Create", user.actorUrl, note);

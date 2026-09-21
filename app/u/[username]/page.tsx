@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { PostCard } from "@/web/components/post/post-card";
 import { Avatar } from "@/web/components/ui/avatar";
@@ -16,24 +16,18 @@ export default function ProfilePage() {
     const params = useParams<{ username: string }>();
     const username = typeof params?.username === "string" ? params.username : "";
     const { getUser, currentUser, loadProfile, isProfileMissing } = useDirectory();
-    const { posts } = useTimeline();
+    const { userPosts, loadUserPosts } = useTimeline();
     const { openEditProfile } = useUi();
 
     const user = getUser(username);
     const missing = isProfileMissing(username);
+    // 未加载过为 undefined，加载完成后是数组
+    const list = userPosts[username];
 
     useEffect(() => {
         void loadProfile(username);
-    }, [username, loadProfile]);
-
-    // 后端暂未提供用户帖子接口，这里展示本次会话内该用户发布的帖子
-    const userPosts = useMemo(
-        () =>
-            posts
-                .filter((post) => post.authorUsername === username)
-                .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-        [posts, username],
-    );
+        void loadUserPosts(username);
+    }, [username, loadProfile, loadUserPosts]);
 
     if (!user) {
         if (!missing) return <ProfileSkeleton />;
@@ -119,7 +113,7 @@ export default function ProfilePage() {
                     <dl className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         {(
                             [
-                                ["帖子", userPosts.length],
+                                ["帖子", list?.length ?? 0],
                                 ["关注", user.followingCount],
                                 ["粉丝", user.followersCount],
                             ] as const
@@ -139,17 +133,22 @@ export default function ProfilePage() {
             </section>
 
             <h2 className="glass-card px-5 py-3 font-display text-sm font-extrabold text-slate-700">
-                {isMe ? "我的帖子" : `${user.displayName} 的帖子`} · {userPosts.length}
+                {isMe ? "我的帖子" : `${user.displayName} 的帖子`} · {list?.length ?? 0}
             </h2>
 
-            {userPosts.length === 0 ? (
+            {list === undefined ? (
+                <div className="glass-card flex items-center justify-center gap-2 px-6 py-14 text-slate-400">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+                    <span className="text-sm font-semibold">正在加载帖子…</span>
+                </div>
+            ) : list.length === 0 ? (
                 <div className="glass-card px-6 py-14 text-center">
                     <p className="font-display font-extrabold text-slate-700">还没有发过帖子</p>
                     <p className="mt-1 text-sm text-slate-400">第一帖就从「大家好」开始吧～</p>
                 </div>
             ) : (
                 <section className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="帖子列表">
-                    {userPosts.map((post) => (
+                    {list.map((post) => (
                         <PostCard key={post.id} post={post} bare />
                     ))}
                 </section>

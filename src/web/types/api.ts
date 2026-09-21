@@ -51,8 +51,8 @@ export interface UserProfileResponse {
     createdAt: number;
 }
 
-// 时间线：GET /api/v1/feed?type=all|local|following
-export interface FeedItem {
+// 帖子列表：GET /api/v1/feed?type=... 与 GET /api/v1/users/[username]/posts 共用
+export interface PostListItem {
     id: number;
     uri: string;
     username: string;
@@ -64,8 +64,8 @@ export interface FeedItem {
     createdAt: number;
 }
 
-export interface FeedResponse {
-    items: FeedItem[];
+export interface PostListResponse {
+    items: PostListItem[];
 }
 
 // 发帖：POST /api/v1/notes
@@ -82,6 +82,7 @@ export interface NoteItem {
     domain: string;
     content: string;
     inReplyTo: string | null;
+    createdAt: number;
 }
 
 export interface NoteThreadResponse {

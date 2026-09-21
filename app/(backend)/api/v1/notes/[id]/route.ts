@@ -11,6 +11,7 @@ interface Item {
     domain: string,
     content: string,
     inReplyTo: string | null,
+    createdAt: number,
 }
 
 interface Params {
@@ -64,6 +65,7 @@ export async function GET(
         domain: url.host,
         content: item.content,
         inReplyTo: item.inReplyTo ?? null,
+        createdAt: item.createdAt,
     }));
 
     // 返回
