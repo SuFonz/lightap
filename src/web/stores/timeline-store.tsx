@@ -151,13 +151,19 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             const inReplyTo = typeof window === "undefined" ? undefined : `${window.location.origin}/notes/${postId}`;
             await postsApi.createNote(session.token, { content, inReplyTo });
 
-            // 立即把回复挂到已加载的线程上
+            // 立即把回复挂上，并让回复数 +1（线程和时间线都更新）
             const post = makePost(createId(), currentUser.username, content, new Date().toISOString(), inReplyTo);
+            const append = (item: Post) => ({
+                ...item,
+                replies: [...item.replies, post],
+                repliesCount: item.repliesCount + 1,
+            });
             setThreads((prev) => {
                 const chain = prev[postId];
                 if (!chain) return prev;
-                return { ...prev, [postId]: mapPost(chain, postId, (item) => ({ ...item, replies: [...item.replies, post], repliesCount: item.repliesCount + 1 })) };
+                return { ...prev, [postId]: mapPost(chain, postId, append) };
             });
+            setPosts((prev) => mapPost(prev, postId, append));
         },
         [session, currentUser],
     );
