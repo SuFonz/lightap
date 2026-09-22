@@ -1,3 +1,4 @@
+import { normalizeNoteContent } from "@/web/lib/html";
 import type { NoteItem, Post, PostListItem } from "@/web/types";
 
 export interface RememberUserInput {
@@ -18,6 +19,7 @@ export function makePost(
 ): Post {
     return {
         id,
+        uri: "",
         authorUsername,
         content,
         inReplyTo,
@@ -31,36 +33,31 @@ export function makePost(
     };
 }
 
-/** note uri 形如 https://host/notes/<uuid>，取最后一段作为本地 id（详情按 uuid 查） */
-export function idFromUri(uri: string): string {
-    return uri.split("/").pop() ?? uri;
-}
-
 export function fromListItem(item: PostListItem): Post {
-    return {
-        ...makePost(
-            idFromUri(item.uri),
-            item.username,
-            item.content,
-            new Date(item.createdAt * 1000).toISOString(),
-            item.inReplyTo ?? undefined,
-        ),
-        cursorId: item.id,
-        repliesCount: item.repliesCount,
-    };
+    const post = makePost(
+        item.uuid,
+        item.username,
+        normalizeNoteContent(item.content),
+        new Date(item.createdAt * 1000).toISOString(),
+        item.inReplyTo ?? undefined,
+    );
+    post.cursorId = item.id;
+    post.repliesCount = item.repliesCount;
+    post.uri = item.uri;
+    return post;
 }
 
 export function fromNoteItem(item: NoteItem): Post {
-    return {
-        ...makePost(
-            idFromUri(item.uri),
-            item.username,
-            item.content,
-            new Date(item.createdAt * 1000).toISOString(),
-            item.inReplyTo ?? undefined,
-        ),
-        repliesCount: item.repliesCount,
-    };
+    const post = makePost(
+        item.uuid,
+        item.username,
+        normalizeNoteContent(item.content),
+        new Date(item.createdAt * 1000).toISOString(),
+        item.inReplyTo ?? undefined,
+    );
+    post.repliesCount = item.repliesCount;
+    post.uri = item.uri;
+    return post;
 }
 
 /** 把作者信息记进 directory store，顺便支持增量分页 */

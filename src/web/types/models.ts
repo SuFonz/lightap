@@ -26,6 +26,8 @@ export interface User {
 
 export interface Post {
     id: string;
+    /** ActivityPub 规范地址（回复时作为 inReplyTo 传回后端） */
+    uri: string;
     /** 后端数字 id，仅列表项有，用作分页游标 */
     cursorId?: number;
     authorUsername: string;

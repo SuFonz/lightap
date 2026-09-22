@@ -5,6 +5,7 @@ import { getDBClient } from "@/src/db";
 const MAX_LIMIT = 50;
 
 interface Item {
+    uuid: string,
     uri: string,
     username: string,
     domain: string,
@@ -15,7 +16,7 @@ interface Item {
 }
 
 interface Params {
-    id: string,
+    uuid: string,
 }
 
 /**
@@ -28,10 +29,10 @@ export async function GET(
     request: Request,
     { params }: { params: Params },
 ) {
-    // 根据当前 id 查询数据库
+    // 根据当前 uuid 查询数据库
     const url = new URL(request.url);
     const db = getDBClient();
-    const note = (await db.select().from(notes).where(eq(notes.uri, `${url.origin}/notes/${params.id}`)))[0];
+    const note = (await db.select().from(notes).where(eq(notes.uuid, params.uuid)))[0];
     if (!note) {
         return Response.json({
             error: "Note not found.",
@@ -65,6 +66,7 @@ export async function GET(
         .groupBy(notes.inReplyTo);
     const countByUri = new Map(repliesCountRows.map(row => [row.inReplyTo, row.value]));
     const data: Item[] = items.map(item => ({
+        uuid: item.uuid,
         uri: item.uri,
         username: nameByActor.get(item.actor) ?? "",
         domain: url.host,

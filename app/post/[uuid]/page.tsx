@@ -9,21 +9,21 @@ import { HomeIcon, ReplyIcon } from "@/web/components/ui/icons";
 import { useTimeline } from "@/web/stores/timeline";
 
 export default function PostDetailPage() {
-    const params = useParams<{ id: string }>();
-    const id = typeof params?.id === "string" ? params.id : "";
+    const params = useParams<{ uuid: string }>();
+    const uuid = typeof params?.uuid === "string" ? params.uuid : "";
     const router = useRouter();
     const { getThread, loadThread } = useTimeline();
-    const thread = useMemo(() => (id ? getThread(id) ?? [] : []), [id, getThread]);
+    const thread = useMemo(() => (uuid ? getThread(uuid) ?? [] : []), [uuid, getThread]);
     const [loading, setLoading] = useState(thread.length === 0);
 
     useEffect(() => {
-        if (!id || getThread(id)) {
+        if (!uuid || getThread(uuid)) {
             setLoading(false);
             return;
         }
         let cancelled = false;
         setLoading(true);
-        void loadThread(id)
+        void loadThread(uuid)
             .catch(() => {
                 // 拉取失败按“帖子不存在”处理
             })
@@ -33,7 +33,7 @@ export default function PostDetailPage() {
         return () => {
             cancelled = true;
         };
-    }, [id, getThread, loadThread]);
+    }, [uuid, getThread, loadThread]);
 
     if (loading) {
         return (
@@ -98,7 +98,7 @@ export default function PostDetailPage() {
                 ))}
             </section>
 
-            <ReplyComposer postId={post.id} />
+            <ReplyComposer post={post} />
 
             <h2 className="glass-card px-5 py-3 font-display text-sm font-extrabold text-slate-700">
                 回复 · {post.replies.length}

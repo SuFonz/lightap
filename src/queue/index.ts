@@ -16,10 +16,18 @@ export async function produce(data: QueueData) {
 }
 
 export async function consume(data: QueueData) {
+    console.log(data);
+
     // 查询 Activity
     const db = getDBClient();
     const dbAct = (await db.select().from(activities).where(eq(activities.id, data.activityId)))[0];
     if (!dbAct) {
+        return;
+    }
+
+    // 取发起者私钥（Activity 的 actor 就是本地用户）
+    const user = (await db.select().from(users).where(eq(users.actorUrl, dbAct.actor)))[0];
+    if (!user) {
         return;
     }
 
@@ -31,7 +39,7 @@ export async function consume(data: QueueData) {
             case "Note": {
                 const dbNote = (await db.select().from(notes).where(eq(notes.id, dbAct.objectId)))[0];
                 if (dbNote) {
-                    object = buildNoteWithUri(dbNote.uri, dbNote.content, dbNote.inReplyTo ?? undefined);
+                    object = buildNoteWithUri(dbNote.uri, dbNote.content, dbNote.inReplyTo ?? undefined, undefined, [`${user.actorUrl}/followers`]);
                 }
                 break;
             }
@@ -48,13 +56,9 @@ export async function consume(data: QueueData) {
     }
 
     // 用 Activity 包裹 Object
-    const activity = buildActivityWithUri(dbAct.uri, dbAct.type, dbAct.actor, object);
+    const activity = buildActivityWithUri(dbAct.uri, dbAct.type, dbAct.actor, object, undefined, [`${user.actorUrl}/followers`]);
 
-    // 取发起者私钥（Activity 的 actor 就是本地用户）
-    const user = (await db.select().from(users).where(eq(users.actorUrl, dbAct.actor)))[0];
-    if (!user) {
-        return;
-    }
+    console.log(activity);
 
     // 递送
     await delivery(data.targetActor, activity, user.privateKey, convertActorUrlToMainKey(user.actorUrl));

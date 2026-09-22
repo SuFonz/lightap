@@ -12,6 +12,7 @@ interface Params {
 
 interface Item {
     id: number,
+    uuid: string,
     uri: string,
     username: string,
     displayName: string,
@@ -62,6 +63,7 @@ export async function GET(
     const countByUri = new Map(repliesCountRows.map(row => [row.inReplyTo, row.value]));
     const data: Item[] = rows.map(row => ({
         id: row.id,
+        uuid: row.uuid,
         uri: row.uri,
         username: user.username,
         displayName: user.displayName,

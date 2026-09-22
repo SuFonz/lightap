@@ -124,7 +124,9 @@ export function buildActivity<TObject extends APObject = APObject>(
     uuid: string,
     type: APActivityType,
     actor: string,
-    object: TObject | string
+    object: TObject | string,
+    to?: string[],
+    cc?: string[],
 ) {
     const activity: APActivity = {
         "@context": AP_CONTEXT,
@@ -132,6 +134,8 @@ export function buildActivity<TObject extends APObject = APObject>(
         type,
         actor,
         object,
+        to: to ?? ["https://www.w3.org/ns/activitystreams#Public"],
+        cc: cc ?? []
     }
 
     return activity;
@@ -141,7 +145,9 @@ export function buildActivityWithUri<TObject extends APObject = APObject>(
     id: string,
     type: APActivityType,
     actor: string,
-    object: TObject | string
+    object: TObject | string,
+    to?: string[],
+    cc?: string[],
 ) {
     const activity: APActivity = {
         "@context": AP_CONTEXT,
@@ -149,12 +155,21 @@ export function buildActivityWithUri<TObject extends APObject = APObject>(
         type,
         actor,
         object,
+        to: to ?? ["https://www.w3.org/ns/activitystreams#Public"],
+        cc: cc ?? []
     }
 
     return activity;
 }
 
-export function buildNote(url: URL, uuid: string, content: string, inReplyTo?: string) {
+export function buildNote(
+    url: URL, 
+    uuid: string, 
+    content: string, 
+    inReplyTo?: string,
+    to?: string[],
+    cc?: string[],
+) {
     const note: APNote = {
         "@context": AP_CONTEXT,
         id: `${url.origin}/notes/${uuid}`,
@@ -162,12 +177,20 @@ export function buildNote(url: URL, uuid: string, content: string, inReplyTo?: s
         name: "Light AP Note",
         content: content,
         inReplyTo: inReplyTo,
+        to: to ?? ["https://www.w3.org/ns/activitystreams#Public"],
+        cc: cc ?? []
     };
 
     return note;
 }
 
-export function buildNoteWithUri(uri: string, content: string, inReplyTo?: string) {
+export function buildNoteWithUri(
+    uri: string, 
+    content: string, 
+    inReplyTo?: string,
+    to?: string[],
+    cc?: string[],
+) {
     const note: APNote = {
         "@context": AP_CONTEXT,
         id: uri,
@@ -175,6 +198,8 @@ export function buildNoteWithUri(uri: string, content: string, inReplyTo?: strin
         name: "Light AP Note",
         content: content,
         inReplyTo: inReplyTo,
+        to: to ?? ["https://www.w3.org/ns/activitystreams#Public"],
+        cc: cc ?? []
     };
 
     return note;

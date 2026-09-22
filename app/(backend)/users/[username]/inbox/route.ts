@@ -2,8 +2,9 @@ import { APActivity, APActor, APNote, APObject, APOrderedCollection } from "@/sr
 import { getActor, getWebfinger, postInbox } from "@/src/activitypub/network";
 import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
 import { activities, follows, notes, users } from "@/src/db/schema";
+import { upsertRemoteUser } from "@/src/db/users";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
@@ -33,8 +34,16 @@ export async function POST(request: Request, { params }: { params: Params }) {
     const url = new URL(request.url);
     const body = await request.json<APActivity>();
 
-    // 处理活动
-    await handleActivity(request, params, body);
+    // 处理活动；失败时返回 500，让发送方重投
+    try {
+        await handleActivity(request, params, body);
+    } catch {
+        return Response.json({
+            error: "Failed to handle activity.",
+        }, {
+            status: 500,
+        });
+    }
 
     return Response.json({}, {
         status: 200,
@@ -73,6 +82,9 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                     throw new Error("Sinature is invalid.");
                 }
 
+                // 远程 Actor 落库，feed 才能显示作者信息
+                await upsertRemoteUser(rmActor);
+
                 console.log(activity);
 
                 // 存入数据库
@@ -96,6 +108,8 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                 break;
             }
             case "Create": {
+                console.log(activity);
+
                 // 提取对象
                 const obj = await extractObject(activity) as APNote;
 
@@ -121,19 +135,116 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                     throw new Error("Sinature is invalid.");
                 }
 
+                // 远程 Actor 落库，feed 才能显示作者信息
+                await upsertRemoteUser(rmActor);
+
+                // 已经收过这条 Note 就跳过（ActivityPub 会重投同一条活动）
+                const existing = (await db.select().from(notes).where(eq(notes.uri, obj.id)))[0];
+                if (existing) {
+                    break;
+                }
+
+                // 保留远端原始发布时间；解析失败则用当前时间
+                const publishedMs = obj.published ? new Date(obj.published).getTime() : NaN;
+                const createdAt = Number.isFinite(publishedMs)
+                    ? Math.floor(publishedMs / 1000)
+                    : Math.floor(Date.now() / 1000);
+
                 // 存入数据库
-                const noteIns = (await db.insert(notes).values({
+                await db.insert(notes).values({
                     uri: obj.id,
+                    uuid: crypto.randomUUID(),
                     actor: activity.actor,
                     content: obj.content,
-                    
-                }))
+                    inReplyTo: obj.inReplyTo ?? null,
+                    createdAt,
+                });
+
+                break;
+            }
+            case "Follow": {
+                // 获取 User (getActor 签名用)
+                const user = (await db.select().from(users).where(eq(users.username, username)))[0];
+
+                // 获取远程 Actor 公钥
+                const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
+                if (!rmRes.ok) {
+                    throw new Error("Remote user not found.");
+                }
+                const rmActor = await rmRes.json<APActor>();
+
+                // 用公钥验证
+                const success = await tryVerifySignature(
+                    request.method,
+                    request.url,
+                    request.headers,
+                    rmActor.publicKey.publicKeyPem,
+                    rmActor.publicKey.id,
+                );
+                if (!success) {
+                    throw new Error("Sinature is invalid.");
+                }
+
+                // 远程 Actor 落库，feed 才能显示作者信息
+                await upsertRemoteUser(rmActor);
+
+                // 存入数据库：远程用户关注本站用户
+                await db.insert(follows).values({
+                    follower: rmActor.id,
+                    following: user.actorUrl,
+                }).onConflictDoNothing();
+
+                // 回一个 Accept 给远程用户
+                const url = new URL(request.url);
+                const accept = buildActivity(url, crypto.randomUUID(), "Accept", user.actorUrl, activity);
+                const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
+                await postInbox(rmActor.inbox, user.privateKey, userMkUrl, accept);
+
+                break;
+            }
+            case "Undo": {
+                // 获取 User (getActor 签名用)
+                const user = (await db.select().from(users).where(eq(users.username, username)))[0];
+
+                // 获取远程 Actor 公钥
+                const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
+                if (!rmRes.ok) {
+                    throw new Error("Remote user not found.");
+                }
+                const rmActor = await rmRes.json<APActor>();
+
+                // 用公钥验证
+                const success = await tryVerifySignature(
+                    request.method,
+                    request.url,
+                    request.headers,
+                    rmActor.publicKey.publicKeyPem,
+                    rmActor.publicKey.id,
+                );
+                if (!success) {
+                    throw new Error("Sinature is invalid.");
+                }
+
+                // Undo 的 object 是之前那条 Follow 活动，只处理取关
+                const obj = await extractObject(activity) as APActivity;
+                if (obj.type !== "Follow") {
+                    break;
+                }
+
+                // 从数据库中删除关注关系
+                await db.delete(follows).where(
+                    and(
+                        eq(follows.follower, rmActor.id),
+                        eq(follows.following, user.actorUrl),
+                    ),
+                );
 
                 break;
             }
         }
     } catch (error: any) {
         console.log(error.message);
+        throw error;
     }
 
 }

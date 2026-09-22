@@ -17,7 +17,7 @@ export interface TimelineValue {
     /** 发布新帖（发布后刷新当前时间线） */
     compose: (content: string) => Promise<void>;
     /** 回复某个帖子 */
-    reply: (postId: string, content: string) => Promise<void>;
+    reply: (post: Post, content: string) => Promise<void>;
     /** 某个用户的帖子（个人主页用），未加载过为 undefined */
     userPosts: Record<string, Post[]>;
     userPostsMeta: Record<string, Pagination>;

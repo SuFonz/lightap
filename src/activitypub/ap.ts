@@ -92,6 +92,8 @@ export interface APNote extends APObject {
     name: string,
     content: string,
     inReplyTo?: string,
+    /** 原始发布时间（ISO 8601），用于保留远端帖子的真实时间 */
+    published?: string,
 }
 
 export interface APPerson extends APObject {

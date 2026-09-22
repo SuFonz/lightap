@@ -3,6 +3,7 @@ import { getActor, getWebfinger } from "@/src/activitypub/network";
 import { convertActorUrlToMainKey, parseSearch, parseWebfinger } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
 import { follows, users } from "@/src/db/schema";
+import { upsertRemoteUser } from "@/src/db/users";
 import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
 import { and, eq, like, or } from "drizzle-orm";
@@ -117,7 +118,11 @@ export async function GET(request: Request) {
         console.log(await wfRes.json());
     }
 
-    // TODO: 如果找到了用户就存进数据库
+    // 找到的远程用户落库，方便 feed / directory 显示作者信息
+    if (actor) {
+        await upsertRemoteUser(actor);
+    }
+    console.log(actor);
 
     // 检查是否关注过
     let isFollowing = false;

@@ -35,6 +35,7 @@ export const activities = sqliteTable("activities", {
 
 export const notes = sqliteTable("notes", {
     id: integer().primaryKey({ autoIncrement: true }),
+    uuid: text().notNull().unique(),
     uri: text().notNull().unique(),
     actor: text().notNull(),
     content: text().notNull(),

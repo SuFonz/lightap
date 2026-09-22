@@ -4,12 +4,13 @@ import { ComposerField } from "@/web/components/composer/composer-field";
 import { useSession } from "@/web/stores/session-store";
 import { useTimeline } from "@/web/stores/timeline";
 import { useUi } from "@/web/stores/ui-store";
+import type { Post } from "@/web/types";
 
 /**
  * 帖子详情页的回复入口：不再是内联输入框，
  * 改为与「发帖」一致的可点击玻璃条 + 弹窗。
  */
-export function ReplyComposer({ postId }: { postId: string }) {
+export function ReplyComposer({ post }: { post: Post }) {
     const { isAuthenticated } = useSession();
     const { reply } = useTimeline();
     const { openAuth } = useUi();
@@ -35,7 +36,7 @@ export function ReplyComposer({ postId }: { postId: string }) {
             title="回复帖子"
             placeholder="写下你的回复…"
             submitLabel="回复"
-            onSubmit={(content) => reply(postId, content)}
+            onSubmit={(content) => reply(post, content)}
         />
     );
 }

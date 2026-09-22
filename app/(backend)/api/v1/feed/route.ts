@@ -21,6 +21,7 @@ interface Body {
 
 interface Item {
     id: number,
+    uuid: string,
     uri: string,
     username: string,
     displayName: string,
@@ -93,6 +94,8 @@ export async function GET(request: Request) {
         ),
     ).orderBy(desc(notes.id)).limit(body.limit ?? MAX_LIMIT);
 
+    console.log(rows);
+
     // 组装返回
     const authors = rows.length > 0
         ? await db.select().from(users).where(inArray(users.actorUrl, rows.map(row => row.actor)))
@@ -110,6 +113,7 @@ export async function GET(request: Request) {
         const host = new URL(row.actor).host;
         return {
             id: row.id,
+            uuid: row.uuid,
             uri: row.uri,
             username: author?.username ?? "",
             displayName: author?.displayName ?? "",
@@ -121,6 +125,8 @@ export async function GET(request: Request) {
             createdAt: row.createdAt,
         };
     });
+
+    console.log(data);
 
     return Response.json({
         items: data,

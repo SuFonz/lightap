@@ -76,25 +76,24 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     );
 
     const reply = useCallback(
-        async (postId: string, content: string) => {
+        async (target: Post, content: string) => {
             if (!session) throw new Error("请先登录");
-            const inReplyTo =
-                typeof window === "undefined" ? undefined : `${window.location.origin}/notes/${postId}`;
+            const inReplyTo = target.uri || undefined;
             await postsApi.createNote(session.token, { content, inReplyTo });
 
             // 立即把回复挂上，并让回复数 +1（线程和时间线都更新）
-            const post = makePost(createId(), currentUser.username, content, new Date().toISOString(), inReplyTo);
+            const newReply = makePost(createId(), currentUser.username, content, new Date().toISOString(), inReplyTo);
             const append = (item: Post) => ({
                 ...item,
-                replies: [...item.replies, post],
+                replies: [...item.replies, newReply],
                 repliesCount: item.repliesCount + 1,
             });
             setThreads((prev) => {
-                const chain = prev[postId];
+                const chain = prev[target.id];
                 if (!chain) return prev;
-                return { ...prev, [postId]: mapPost(chain, postId, append) };
+                return { ...prev, [target.id]: mapPost(chain, target.id, append) };
             });
-            setPosts((prev) => mapPost(prev, postId, append));
+            setPosts((prev) => mapPost(prev, target.id, append));
         },
         [session, currentUser],
     );

@@ -71,9 +71,11 @@ export async function POST(request: Request) {
         ))[0];
 
         // Note 与 Create Activity
-        const note = buildNote(url, crypto.randomUUID(), body.content, body.inReplyTo);
+        const uuid = crypto.randomUUID();
+        const note = buildNote(url, uuid, body.content, body.inReplyTo);
         const dbNote = (await db.insert(notes).values({
             uri: note.id,
+            uuid: uuid,
             actor: user.actorUrl,
             content: body.content,
             inReplyTo: body.inReplyTo ?? null,
