@@ -7,6 +7,13 @@ import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
+interface Item {
+    id: number,
+    uuid: string,
+    uri: string,
+    content: string,
+}
+
 interface Body {
     content: string,
     inReplyTo?: string,
@@ -16,6 +23,8 @@ export async function POST(request: Request) {
     // 解析参数
     const url = new URL(request.url);
     const body = await request.json<Body>();
+
+    let data: Item;
 
     try {
         const db = getDBClient();
@@ -59,6 +68,14 @@ export async function POST(request: Request) {
             objectType: "Note",
             targets,
         });
+
+        // 返回新建的 Note
+        data = {
+            id: dbNote.id,
+            uuid: dbNote.uuid,
+            uri: dbNote.uri,
+            content: dbNote.content,
+        };
     } catch (error: any) {
         console.log(error.message);
         return Response.json({
@@ -68,7 +85,7 @@ export async function POST(request: Request) {
         });
     }
 
-    return Response.json({}, {
+    return Response.json(data, {
         status: 200,
     })
 }

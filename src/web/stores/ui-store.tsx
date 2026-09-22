@@ -5,10 +5,14 @@ import {
     useCallback,
     useContext,
     useMemo,
+    useRef,
     useState,
     type ReactNode,
 } from "react";
 import type { AuthMode } from "@/web/types";
+
+/** 全局轻提示的显示时长 */
+const TOAST_DURATION = 3000;
 
 interface UiValue {
     // 发帖弹窗
@@ -31,6 +35,11 @@ interface UiValue {
     // 移动端抽屉
     drawerOpen: boolean;
     setDrawerOpen: (open: boolean) => void;
+
+    // 全局轻提示（如发送失败）
+    toast: string | null;
+    showToast: (message: string) => void;
+    dismissToast: () => void;
 }
 
 const UiContext = createContext<UiValue | null>(null);
@@ -41,6 +50,25 @@ export function UiProvider({ children }: { children: ReactNode }) {
     const [authMode, setAuthMode] = useState<AuthMode>("login");
     const [editProfileOpen, setEditProfileOpen] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [toast, setToast] = useState<string | null>(null);
+    const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const dismissToast = useCallback(() => {
+        if (toastTimer.current) {
+            clearTimeout(toastTimer.current);
+            toastTimer.current = null;
+        }
+        setToast(null);
+    }, []);
+
+    const showToast = useCallback((message: string) => {
+        if (toastTimer.current) clearTimeout(toastTimer.current);
+        setToast(message);
+        toastTimer.current = setTimeout(() => {
+            toastTimer.current = null;
+            setToast(null);
+        }, TOAST_DURATION);
+    }, []);
 
     const openComposer = useCallback(() => setComposerOpen(true), []);
     const closeComposer = useCallback(() => setComposerOpen(false), []);
@@ -67,8 +95,11 @@ export function UiProvider({ children }: { children: ReactNode }) {
             closeEditProfile,
             drawerOpen,
             setDrawerOpen,
+            toast,
+            showToast,
+            dismissToast,
         }),
-        [composerOpen, openComposer, closeComposer, authOpen, authMode, openAuth, closeAuth, editProfileOpen, openEditProfile, closeEditProfile, drawerOpen],
+        [composerOpen, openComposer, closeComposer, authOpen, authMode, openAuth, closeAuth, editProfileOpen, openEditProfile, closeEditProfile, drawerOpen, toast, showToast, dismissToast],
     );
 
     return <UiContext.Provider value={value}>{children}</UiContext.Provider>;

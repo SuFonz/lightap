@@ -7,6 +7,7 @@ import { Modal } from "@/web/components/ui/modal";
 import { cn } from "@/web/lib/cn";
 import { useDirectory } from "@/web/stores/directory";
 import { useTimeline } from "@/web/stores/timeline";
+import { useUi } from "@/web/stores/ui-store";
 
 interface ComposerModalProps {
     open: boolean;
@@ -31,6 +32,7 @@ export function ComposerModal({
 }: ComposerModalProps) {
     const { currentUser } = useDirectory();
     const { compose } = useTimeline();
+    const { showToast } = useUi();
     const [content, setContent] = useState("");
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,9 @@ export function ComposerModal({
             else await compose(content.trim());
             onClose();
         } catch (e) {
+            // 弹窗内保留详细错误，同时给一个全局提示
             setError(e instanceof Error && e.message ? e.message : "发送失败，请稍后重试");
+            showToast("发送失败，请稍后重试");
         } finally {
             setSending(false);
         }

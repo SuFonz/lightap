@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { postsApi } from "@/web/lib/api";
-import { createId } from "@/web/lib/id";
 import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import type { FeedTab, Post } from "@/web/types";
@@ -69,20 +68,39 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     const compose = useCallback(
         async (content: string) => {
             if (!session) throw new Error("请先登录");
-            await postsApi.createNote(session.token, { content });
-            await loadFeed(tab);
+
+            // 等后端返回后再显示：用返回的 id / uuid / uri / content 构造新帖
+            const created = await postsApi.createNote(session.token, { content });
+
+            const post = makePost(created.uuid, currentUser.username, created.content, new Date().toISOString());
+            post.uri = created.uri;
+            post.cursorId = created.id;
+
+            // 插到自己的帖子列表顶部（若该用户主页已加载）
+            setUserPosts((prev) => {
+                const list = prev[currentUser.username];
+                if (!list) return prev;
+                return { ...prev, [currentUser.username]: appendUnique([post], list) };
+            });
+            // 插到当前时间线顶部
+            setPosts((prev) => appendUnique([post], prev));
         },
-        [session, loadFeed, tab],
+        [session, currentUser],
     );
 
     const reply = useCallback(
         async (target: Post, content: string) => {
             if (!session) throw new Error("请先登录");
             const inReplyTo = target.uri || undefined;
-            await postsApi.createNote(session.token, { content, inReplyTo });
 
-            // 立即把回复挂上，并让回复数 +1（线程和时间线都更新）
-            const newReply = makePost(createId(), currentUser.username, content, new Date().toISOString(), inReplyTo);
+            // 等后端返回后再显示：用返回的数据构造回复
+            const created = await postsApi.createNote(session.token, { content, inReplyTo });
+
+            const newReply = makePost(created.uuid, currentUser.username, created.content, new Date().toISOString(), inReplyTo);
+            newReply.uri = created.uri;
+            newReply.cursorId = created.id;
+
+            // 把回复挂到目标帖下，并让回复数 +1（线程和时间线都更新）
             const append = (item: Post) => ({
                 ...item,
                 replies: [...item.replies, newReply],

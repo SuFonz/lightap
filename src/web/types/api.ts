@@ -79,6 +79,17 @@ export interface CreateNoteRequest {
     inReplyTo?: string;
 }
 
+/** 发帖成功后返回新建的帖子（前端据此直接插入时间线） */
+export interface CreateNoteResponse {
+    /** 数字主键，仅用于分页游标（maxId） */
+    id: number;
+    /** notes.uuid，帖子稳定标识 */
+    uuid: string;
+    /** ActivityPub 规范地址，回复时作为 inReplyTo */
+    uri: string;
+    content: string;
+}
+
 // 帖子线程：GET /api/v1/notes/[uuid]
 export interface NoteItem {
     /** notes.uuid，帖子稳定标识 */

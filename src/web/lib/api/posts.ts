@@ -1,4 +1,10 @@
-import type { CreateNoteRequest, FeedTab, NoteThreadResponse, PostListResponse } from "@/web/types";
+import type {
+    CreateNoteRequest,
+    CreateNoteResponse,
+    FeedTab,
+    NoteThreadResponse,
+    PostListResponse,
+} from "@/web/types";
 import { request } from "./client";
 
 /** 时间线：GET /api/v1/feed?type=all|local|following */
@@ -19,7 +25,7 @@ export function fetchUserPosts(username: string, params: { limit?: number; maxId
 }
 
 export function createNote(token: string, body: CreateNoteRequest) {
-    return request<Record<string, never>>("/api/v1/notes", { method: "POST", token, body });
+    return request<CreateNoteResponse>("/api/v1/notes", { method: "POST", token, body });
 }
 
 export function fetchThread(uuid: string, token?: string) {

@@ -19,7 +19,8 @@
         "vinext/types"
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/web/*": ["./src/web/*"]
     }
   },
   "include": ["app/**/.well-known/**/*.ts", "next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

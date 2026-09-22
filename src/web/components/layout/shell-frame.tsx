@@ -7,6 +7,7 @@ import { Background } from "@/web/components/layout/background";
 import { MobileBottomNav, MobileDrawer, MobileTopBar } from "@/web/components/layout/mobile-nav";
 import { RightRail } from "@/web/components/layout/right-rail";
 import { Sidebar } from "@/web/components/layout/sidebar";
+import { ToastViewport } from "@/web/components/ui/toast";
 import { EditProfileModal } from "@/web/components/user/edit-profile-modal";
 import { useUi } from "@/web/stores/ui-store";
 
@@ -46,6 +47,8 @@ export function ShellFrame({ children }: { children: ReactNode }) {
                 onClose={closeAuth}
                 onSwitchMode={switchAuthMode}
             />
+
+            <ToastViewport />
         </>
     );
 }
