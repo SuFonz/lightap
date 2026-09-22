@@ -32,17 +32,33 @@
 	// 		"remote": false
 	// 	}
 	// ],
+	"queues": {
+		"producers": [
+		{
+			"queue": "ap-delivery",
+			"binding": "AP_QUEUE"
+		}
+		],
+		"consumers": [
+		{
+			"queue": "ap-delivery",
+			"max_batch_size": 10,
+			"max_batch_timeout": 5
+		}
+		]
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "lightap-db",
 			"database_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 			"migrations_dir": "drizzle",
-			"remote": false
+			"migrations_pattern": "drizzle/*/migration.sql",
+			// "remote": false
 		}
 	],
 	"vars": {
-		"JWT_SECRET": "secret"
+		"JWT_SECRET": "<your secret>"
 	}
 
 	/**
