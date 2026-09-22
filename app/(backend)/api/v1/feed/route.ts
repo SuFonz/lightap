@@ -1,6 +1,8 @@
 import { follows, notes, users } from "@/src/db/schema";
-import { and, count, desc, eq, inArray, isNull, like, lt } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
+import { resolveRequestUser } from "@/src/lib/auth";
+import { toNoteListItems } from "@/src/lib/notes";
+import { and, desc, eq, inArray, isNull, lt } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -44,10 +46,8 @@ export async function GET(request: Request) {
             eq(users.domain, url.host),
         )).map(user => user.actorUrl);
     } else if (type === "following") {
-        // 关注流需要登录（身份由中间件校验，取 x-user-id）
-        const user = (await db.select().from(users).where(
-            eq(users.id, Number(request.headers.get("x-user-id"))),
-        ))[0];
+        // 关注流需要登录
+        const user = await resolveRequestUser(request);
         if (!user) {
             return Response.json({
                 error: "Unauthorized.",
@@ -78,44 +78,12 @@ export async function GET(request: Request) {
         ),
     ).orderBy(desc(notes.id)).limit(body.limit ?? MAX_LIMIT);
 
-    console.log(rows);
-
     // 组装返回
-    const authors = rows.length > 0
-        ? await db.select().from(users).where(inArray(users.actorUrl, rows.map(row => row.actor)))
-        : [];
-    const userByActor = new Map(authors.map(user => [user.actorUrl, user]));
-    const repliesCountRows = rows.length > 0
-        ? await db.select({ inReplyTo: notes.inReplyTo, value: count() })
-            .from(notes)
-            .where(inArray(notes.inReplyTo, rows.map(row => row.uri)))
-            .groupBy(notes.inReplyTo)
-        : [];
-    const countByUri = new Map(repliesCountRows.map(row => [row.inReplyTo, row.value]));
-    const data: Item[] = rows.map(row => {
-        const author = userByActor.get(row.actor);
-        const host = new URL(row.actor).host;
-        return {
-            id: row.id,
-            uuid: row.uuid,
-            uri: row.uri,
-            username: author?.username ?? "",
-            displayName: author?.displayName ?? "",
-            avatarUrl: author?.avatarUrl ?? "",
-            domain: host,
-            content: row.content,
-            inReplyTo: row.inReplyTo,
-            repliesCount: countByUri.get(row.uri) ?? 0,
-            createdAt: row.createdAt,
-        };
-    });
-
-    console.log(data);
+    const items: Item[] = await toNoteListItems(rows);
 
     return Response.json({
-        items: data,
+        items,
     }, {
         status: 200,
     });
-
 }

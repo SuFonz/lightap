@@ -1,7 +1,8 @@
-import { buildActivity, buildObjecrUri } from "@/src/activitypub/tools";
+import { buildObjecrUri } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
 import { activities, follows, users } from "@/src/db/schema";
-import { produce } from "@/src/queue";
+import { dispatchActivity } from "@/src/lib/activity";
+import { resolveRequestUser } from "@/src/lib/auth";
 import { and, desc, eq, or } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -15,14 +16,14 @@ interface Body {
 export async function POST(request: Request) {
     // 解析参数
     const url = new URL(request.url);
-
-    // 是否本地用户
     const db = getDBClient();
     const body = await request.json<Body>();
-    const userId = Number(request.headers.get("x-user-id"));
-    if (body.domain == url.host) {
-        try {
+
+    try {
+        // 是否本地用户
+        if (body.domain == url.host) {
             // 是：一次查询取出当前用户和另一位用户
+            const userId = Number(request.headers.get("x-user-id"));
             const found = await db.select().from(users).where(
                 or(
                     eq(users.id, userId),
@@ -75,20 +76,16 @@ export async function POST(request: Request) {
                 objectId: dbActivity.id,
                 objectType: "Follow",
             });
-
-        } catch (error: any) {
-            console.log(error.message);
-            return Response.json({
-                error: "Server internal error.",
-            }, {
-                status: 500,
-            });
-        }
-
-    } else {
-        try {
-            // 否：获取当前用户
-            const user = (await db.select().from(users).where(eq(users.id, userId)))[0]
+        } else {
+            // 否：删除关注关系，记录 Undo Follow Activity 并异步投递
+            const user = await resolveRequestUser(request);
+            if (!user) {
+                return Response.json({
+                    error: "Unauthorized.",
+                }, {
+                    status: 401,
+                });
+            }
 
             // Follows 从数据库中删除（没关注过则直接返回，保证重复取关幂等）
             const deleted = await db.delete(follows).where(
@@ -117,28 +114,22 @@ export async function POST(request: Request) {
                 });
             }
 
-            // 构建 Undo Follow Activity 并存入数据库
-            const undo = buildActivity(url, crypto.randomUUID(), "Undo", user.actorUrl, dbActivity.uri);
-            const dbAct = (await db.insert(activities).values({
-                uri: undo.id,
+            await dispatchActivity(url, {
                 type: "Undo",
                 actor: user.actorUrl,
                 objectUri: dbActivity.uri,
                 objectId: dbActivity.id,
                 objectType: "Follow",
-            }).returning({ insertedId: activities.id }))[0];
-
-            // 丢进队列异步投递
-            await produce({ targetActor: body.targetActorUrl, activityId: dbAct.insertedId });
-
-        } catch (error: any) {
-            console.log(error.message);
-            return Response.json({
-                error: "Server internal error.",
-            }, {
-                status: 500,
+                targets: [body.targetActorUrl],
             });
         }
+    } catch (error: any) {
+        console.log(error.message);
+        return Response.json({
+            error: "Server internal error.",
+        }, {
+            status: 500,
+        });
     }
 
     return Response.json({}, {

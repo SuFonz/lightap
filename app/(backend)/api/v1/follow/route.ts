@@ -1,7 +1,8 @@
-import { buildActivity, buildObjecrUri } from "@/src/activitypub/tools";
+import { buildObjecrUri } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
 import { activities, follows, users } from "@/src/db/schema";
-import { produce } from "@/src/queue";
+import { dispatchActivity } from "@/src/lib/activity";
+import { resolveRequestUser } from "@/src/lib/auth";
 import { and, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -15,17 +16,22 @@ interface Body {
 export async function POST(request: Request) {
     // 解析参数
     const url = new URL(request.url);
-    const userId = Number(request.headers.get("x-user-id"));
-
-    // 是否本地用户
     const db = getDBClient();
     const body = await request.json<Body>();
-    if (body.domain == url.host) {
-        // 是：获取当前用户
-        try {
-            const user = (await db.select().from(users).where(eq(users.id, userId)))[0];
 
-            // 查询另一位用户
+    try {
+        const user = await resolveRequestUser(request);
+        if (!user) {
+            return Response.json({
+                error: "Unauthorized.",
+            }, {
+                status: 401,
+            });
+        }
+
+        // 是否本地用户
+        if (body.domain == url.host) {
+            // 是：查询另一位用户
             const target = (await db.select().from(users).where(eq(users.username, body.username)))[0];
 
             // 已经关注过则直接返回
@@ -58,48 +64,29 @@ export async function POST(request: Request) {
 
             // 目标的 Accept Activity：object 是上面那条 Follow 活动
             const acceptUri = buildObjecrUri(url, crypto.randomUUID(), "Accept");
-            const acceptAct = (await db.insert(activities).values({
+            await db.insert(activities).values({
                 uri: acceptUri,
                 type: "Accept",
                 actor: target.actorUrl,
                 objectId: followAct.insertedId,
                 objectType: "Follow",
-            }));
-
-        } catch (error: any) {
-            console.log(error.message);
-            return Response.json({
-                error: "Server internal error.",
-            }, {
-                status: 500,
             });
-        }
-
-    } else {
-        try {
-            // 否：获取当前用户
-            const user = (await db.select().from(users).where(eq(users.id, userId)))[0]
-
-            // 构建 Follow Activity 并存入数据库
-            const follow = buildActivity(url, crypto.randomUUID(), "Follow", user.actorUrl, body.targetActorUrl);
-            const dbAct = (await db.insert(activities).values({
-                uri: follow.id,
+        } else {
+            // 否：记录 Follow Activity，丢进队列异步投递
+            await dispatchActivity(url, {
                 type: "Follow",
                 actor: user.actorUrl,
                 objectUri: body.targetActorUrl,
-            }).returning({ insertedId: activities.id }))[0];
-
-            // 丢进队列异步投递
-            await produce({ targetActor: body.targetActorUrl, activityId: dbAct.insertedId });
-
-        } catch (error: any) {
-            console.log(error.message);
-            return Response.json({
-                error: "Server internal error.",
-            }, {
-                status: 500,
+                targets: [body.targetActorUrl],
             });
         }
+    } catch (error: any) {
+        console.log(error.message);
+        return Response.json({
+            error: "Server internal error.",
+        }, {
+            status: 500,
+        });
     }
 
     return Response.json({}, {

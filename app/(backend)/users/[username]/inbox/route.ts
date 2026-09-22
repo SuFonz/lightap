@@ -1,8 +1,8 @@
-import { APActivity, APActor, APNote, APObject, APOrderedCollection } from "@/src/activitypub/ap";
-import { getActor, getWebfinger, postInbox } from "@/src/activitypub/network";
+import { APActivity, APActor, APNote, APOrderedCollection } from "@/src/activitypub/ap";
+import { getActor, postInbox } from "@/src/activitypub/network";
 import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
 import { activities, follows, notes, users } from "@/src/db/schema";
-import { upsertRemoteUser } from "@/src/db/users";
+import { storeRemoteActor } from "@/src/lib/actor";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
 import { and, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
@@ -57,40 +57,15 @@ async function handleActivity(request: Request, params: Params, activity: APActi
     try {
         switch (type) {
             case "Accept": {
-                // 提取对象
+                const { user, actor } = await resolveRemoteActor(request, activity, username);
+
+                // 提取对象：Accept 的 object 是之前发出去的 Follow 活动
                 const obj = await extractObject(activity) as APActivity;
 
-                // 获取 User (getActor 签名用)
-                const user = (await db.select().from(users).where(eq(users.username, username)))[0];
-                
-                // 获取远程 Actor 公钥 (如果已经存数据库了可以从数据库里提取)
-                const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
-                if (!rmRes.ok) {
-                    throw new Error("Remote user not found.");
-                }
-                const rmActor = await rmRes.json<APActor>();
-
-                // 用公钥验证
-                const success = await tryVerifySignature(
-                    request.method, 
-                    request.url, 
-                    request.headers, 
-                    rmActor.publicKey.publicKeyPem,
-                    rmActor.publicKey.id,
-                );
-                if (!success) {
-                    throw new Error("Sinature is invalid.");
-                }
-
-                // 远程 Actor 落库，feed 才能显示作者信息
-                await upsertRemoteUser(rmActor);
-
-                console.log(activity);
-
-                // 存入数据库
+                // 存入数据库：远程用户接受了关注，建立关注关系
                 await db.insert(follows).values({
                     follower: user.actorUrl,
-                    following: rmActor.id,
+                    following: actor.id,
                 });
 
                 // Accept 的 object 是之前发出去的 Follow 活动
@@ -104,39 +79,14 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                     objectType: "Follow",
                 });
 
-
                 break;
             }
             case "Create": {
-                console.log(activity);
+                // 先拉取远程 Actor、验证签名并落库（feed 才能显示作者信息）
+                await resolveRemoteActor(request, activity, username);
 
                 // 提取对象
                 const obj = await extractObject(activity) as APNote;
-
-                // 获取 User (getActor 签名用)
-                const user = (await db.select().from(users).where(eq(users.username, username)))[0];
-
-                // 获取远程 Actor 公钥 (如果已经存数据库了可以从数据库里提取)
-                const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
-                if (!rmRes.ok) {
-                    throw new Error("Remote user not found.");
-                }
-                const rmActor = await rmRes.json<APActor>();
-
-                // 用公钥验证
-                const success = await tryVerifySignature(
-                    request.method, 
-                    request.url, 
-                    request.headers, 
-                    rmActor.publicKey.publicKeyPem,
-                    rmActor.publicKey.id,
-                );
-                if (!success) {
-                    throw new Error("Sinature is invalid.");
-                }
-
-                // 远程 Actor 落库，feed 才能显示作者信息
-                await upsertRemoteUser(rmActor);
 
                 // 已经收过这条 Note 就跳过（ActivityPub 会重投同一条活动）
                 const existing = (await db.select().from(notes).where(eq(notes.uri, obj.id)))[0];
@@ -163,34 +113,11 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                 break;
             }
             case "Follow": {
-                // 获取 User (getActor 签名用)
-                const user = (await db.select().from(users).where(eq(users.username, username)))[0];
-
-                // 获取远程 Actor 公钥
-                const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
-                if (!rmRes.ok) {
-                    throw new Error("Remote user not found.");
-                }
-                const rmActor = await rmRes.json<APActor>();
-
-                // 用公钥验证
-                const success = await tryVerifySignature(
-                    request.method,
-                    request.url,
-                    request.headers,
-                    rmActor.publicKey.publicKeyPem,
-                    rmActor.publicKey.id,
-                );
-                if (!success) {
-                    throw new Error("Sinature is invalid.");
-                }
-
-                // 远程 Actor 落库，feed 才能显示作者信息
-                await upsertRemoteUser(rmActor);
+                const { user, actor } = await resolveRemoteActor(request, activity, username);
 
                 // 存入数据库：远程用户关注本站用户
                 await db.insert(follows).values({
-                    follower: rmActor.id,
+                    follower: actor.id,
                     following: user.actorUrl,
                 }).onConflictDoNothing();
 
@@ -198,32 +125,12 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                 const url = new URL(request.url);
                 const accept = buildActivity(url, crypto.randomUUID(), "Accept", user.actorUrl, activity);
                 const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
-                await postInbox(rmActor.inbox, user.privateKey, userMkUrl, accept);
+                await postInbox(actor.inbox, user.privateKey, userMkUrl, accept);
 
                 break;
             }
             case "Undo": {
-                // 获取 User (getActor 签名用)
-                const user = (await db.select().from(users).where(eq(users.username, username)))[0];
-
-                // 获取远程 Actor 公钥
-                const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
-                if (!rmRes.ok) {
-                    throw new Error("Remote user not found.");
-                }
-                const rmActor = await rmRes.json<APActor>();
-
-                // 用公钥验证
-                const success = await tryVerifySignature(
-                    request.method,
-                    request.url,
-                    request.headers,
-                    rmActor.publicKey.publicKeyPem,
-                    rmActor.publicKey.id,
-                );
-                if (!success) {
-                    throw new Error("Sinature is invalid.");
-                }
+                const { user, actor } = await resolveRemoteActor(request, activity, username);
 
                 // Undo 的 object 是之前那条 Follow 活动，只处理取关
                 const obj = await extractObject(activity) as APActivity;
@@ -234,7 +141,7 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                 // 从数据库中删除关注关系
                 await db.delete(follows).where(
                     and(
-                        eq(follows.follower, rmActor.id),
+                        eq(follows.follower, actor.id),
                         eq(follows.following, user.actorUrl),
                     ),
                 );
@@ -247,6 +154,45 @@ async function handleActivity(request: Request, params: Params, activity: APActi
         throw error;
     }
 
+}
+
+/**
+ * 拉取来件的远程 Actor、用其公钥验证签名，并落库。
+ *
+ * 收件箱的每个活动分支都需要这三步，统一收在这里：
+ * 1. 取本站用户（作为 getActor 的签名身份）
+ * 2. 请求远程 Actor 文档并解析
+ * 3. 验签 + 落库（本地远程用户信息，供 feed 展示作者）
+ */
+async function resolveRemoteActor(request: Request, activity: APActivity, username: string) {
+    const db = getDBClient();
+
+    // 获取 User (getActor 签名用)
+    const user = (await db.select().from(users).where(eq(users.username, username)))[0];
+
+    // 获取远程 Actor（如果已经存数据库了可以从数据库里提取）
+    const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
+    if (!rmRes.ok) {
+        throw new Error("Remote user not found.");
+    }
+    const actor = await rmRes.json<APActor>();
+
+    // 用公钥验证来件签名
+    const success = await tryVerifySignature(
+        request.method,
+        request.url,
+        request.headers,
+        actor.publicKey.publicKeyPem,
+        actor.publicKey.id,
+    );
+    if (!success) {
+        throw new Error("Sinature is invalid.");
+    }
+
+    // 远程 Actor 落库，feed 才能显示作者信息
+    await storeRemoteActor(actor);
+
+    return { user, actor };
 }
 
 async function extractObject(activity: APActivity) {
@@ -276,7 +222,7 @@ async function tryVerifySignature(
         if (apValid) {
             return true;
         }
-    } catch(error: any) {}
+    } catch (error: any) { }
 
     try {
         // RFC 9421
@@ -290,7 +236,7 @@ async function tryVerifySignature(
         if (rfcValid) {
             return true;
         }
-    } catch (error: any) {}
+    } catch (error: any) { }
 
     return false;
 }

@@ -1,10 +1,9 @@
 import { follows, notes, users } from "@/src/db/schema";
-import { and, count, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
+import { resolveRequestUser } from "@/src/lib/auth";
+import { and, count, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
-
-type DBUser = typeof users.$inferSelect;
 
 interface Params {
     username: string,
@@ -44,12 +43,8 @@ export async function GET(
         });
     }
 
-    // 当前登录用户（可选），用于判断是否已关注；身份由中间件校验，取 x-user-id
-    let viewer: DBUser | null = null;
-    const viewerId = Number(request.headers.get("x-user-id"));
-    if (viewerId) {
-        viewer = (await db.select().from(users).where(eq(users.id, viewerId)))[0];
-    }
+    // 当前登录用户（可选），用于判断是否已关注
+    const viewer = await resolveRequestUser(request);
 
     // 统计帖子数、关注数、粉丝数
     const postsCount = (await db.select({ value: count() }).from(notes).where(eq(notes.actor, user.actorUrl)))[0].value;

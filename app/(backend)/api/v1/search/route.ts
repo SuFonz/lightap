@@ -3,14 +3,13 @@ import { getActor, getWebfinger } from "@/src/activitypub/network";
 import { convertActorUrlToMainKey, parseSearch, parseWebfinger } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
 import { follows, users } from "@/src/db/schema";
-import { upsertRemoteUser } from "@/src/db/users";
+import { storeRemoteActor } from "@/src/lib/actor";
+import { resolveRequestUser } from "@/src/lib/auth";
 import { and, eq, inArray, like, or } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
 const MAX_ITEMS = 20;
-
-type DBUser = typeof users.$inferSelect;
 
 interface SearchResult {
     items: {
@@ -34,12 +33,8 @@ export async function GET(request: Request) {
 
     const db = getDBClient();
 
-    // 查询登录用户（可选，远端搜索需要用它签名）；身份由中间件校验，取 x-user-id
-    let user: DBUser | null = null;
-    const userId = Number(request.headers.get("x-user-id"));
-    if (userId) {
-        user = (await db.select().from(users).where(eq(users.id, userId)))[0];
-    }
+    // 查询登录用户（可选，远端搜索需要用它签名）
+    const user = await resolveRequestUser(request);
 
     const data: SearchResult = { items: [] };
 
@@ -100,9 +95,8 @@ export async function GET(request: Request) {
 
     // 找到的远程用户落库，方便 feed / directory 显示作者信息
     if (actor) {
-        await upsertRemoteUser(actor);
+        await storeRemoteActor(actor);
     }
-    console.log(actor);
 
     // 检查是否关注过
     let isFollowing = false;
