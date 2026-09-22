@@ -1,18 +1,10 @@
 import { follows, notes, users } from "@/src/db/schema";
-import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
-import { env } from "cloudflare:workers";
 import { and, count, desc, eq, inArray, isNull, like, lt } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
 const MAX_LIMIT = 50;
-
-type DBUser = typeof users.$inferSelect;
-
-type UserPayload = JwtPayload & {
-    username: string,
-}
 
 interface Body {
     limit?: number,
@@ -52,18 +44,10 @@ export async function GET(request: Request) {
             eq(users.domain, url.host),
         )).map(user => user.actorUrl);
     } else if (type === "following") {
-        // 关注流需要登录
-        let user: DBUser | null = null;
-        const auth = request.headers.get("Authorization");
-        if (auth) {
-            const [scheme, token] = auth.split(" ");
-            if (scheme === "Bearer" && token && await verifyJwt(token, env.JWT_SECRET)) {
-                const payload = decodeJwt<UserPayload>(token);
-                if (payload?.username) {
-                    user = (await db.select().from(users).where(eq(users.username, payload.username)))[0];
-                }
-            }
-        }
+        // 关注流需要登录（身份由中间件校验，取 x-user-id）
+        const user = (await db.select().from(users).where(
+            eq(users.id, Number(request.headers.get("x-user-id"))),
+        ))[0];
         if (!user) {
             return Response.json({
                 error: "Unauthorized.",

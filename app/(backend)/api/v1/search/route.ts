@@ -4,19 +4,13 @@ import { convertActorUrlToMainKey, parseSearch, parseWebfinger } from "@/src/act
 import { getDBClient } from "@/src/db";
 import { follows, users } from "@/src/db/schema";
 import { upsertRemoteUser } from "@/src/db/users";
-import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
-import { env } from "cloudflare:workers";
-import { and, eq, like, or } from "drizzle-orm";
+import { and, eq, inArray, like, or } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
 const MAX_ITEMS = 20;
 
 type DBUser = typeof users.$inferSelect;
-
-type UserPayload = JwtPayload & {
-    username: string,
-}
 
 interface SearchResult {
     items: {
@@ -40,23 +34,17 @@ export async function GET(request: Request) {
 
     const db = getDBClient();
 
-    // 查询登录用户（可选，远端搜索需要用它签名）
+    // 查询登录用户（可选，远端搜索需要用它签名）；身份由中间件校验，取 x-user-id
     let user: DBUser | null = null;
-    const auth = request.headers.get("Authorization");
-    if (auth) {
-        const [type, token] = auth.split(" ");
-        if (type === "Bearer" && token && await verifyJwt(token, env.JWT_SECRET)) {
-            const payload = decodeJwt<UserPayload>(token);
-            if (payload?.username) {
-                user = (await db.select().from(users).where(eq(users.username, payload.username)))[0];
-            }
-        }
+    const userId = Number(request.headers.get("x-user-id"));
+    if (userId) {
+        user = (await db.select().from(users).where(eq(users.id, userId)))[0];
     }
 
     const data: SearchResult = { items: [] };
 
-    // 本地实例用户名查询：没有域名，或域名就是本实例
-    if (!domain || domain.toLowerCase() === url.host.toLowerCase()) {
+    // 本地数据库查询：没有域名 / 域名就是本实例 / 未登录（未登录只能搜数据库里已有的用户）
+    if (!domain || domain.toLowerCase() === url.host.toLowerCase() || !user) {
         if (username) {
             const locals = await db.select().from(users).where(
                 or(
@@ -65,41 +53,33 @@ export async function GET(request: Request) {
                 ),
             ).limit(MAX_ITEMS);
 
-            for (const local of locals) {
-                let isFollowing = false;
-                if (user) {
-                    const followed = (await db.select().from(follows).where(
-                        and(
-                            eq(follows.follower, user.actorUrl),
-                            eq(follows.following, local.actorUrl),
-                        ),
-                    ))[0];
-                    isFollowing = !!followed;
-                }
+            // 一次查出当前用户关注了其中哪些人，避免在循环里逐个查（N+1）
+            let following = new Set<string>();
+            if (user && locals.length > 0) {
+                const followed = await db.select().from(follows).where(
+                    and(
+                        eq(follows.follower, user.actorUrl),
+                        inArray(follows.following, locals.map(local => local.actorUrl)),
+                    ),
+                );
+                following = new Set(followed.map(f => f.following));
+            }
 
+            for (const local of locals) {
                 data.items.push({
                     username: local.username,
                     displayName: local.displayName,
                     avatarUrl: local.avatarUrl ?? "",
                     actorUrl: local.actorUrl,
-                    domain: null,
+                    domain: local.domain === url.host ? null : local.domain,
                     originalUrl: local.actorUrl,
-                    isFollowing: isFollowing,
+                    isFollowing: following.has(local.actorUrl),
                 });
             }
         }
 
         return Response.json(data, {
             status: 200,
-        });
-    }
-
-    // 请求远程用户需要登录（签名用私钥）
-    if (!user) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
         });
     }
 

@@ -2,15 +2,9 @@ import { buildActivity, buildObjecrUri } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
 import { activities, follows, users } from "@/src/db/schema";
 import { produce } from "@/src/queue";
-import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
-import { env } from "cloudflare:workers";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
-
-type UserPayload = JwtPayload & {
-    username: string,
-}
 
 interface Body {
     username: string,
@@ -22,55 +16,20 @@ export async function POST(request: Request) {
     // 解析参数
     const url = new URL(request.url);
 
-    // 验证 JWT
-    const auth = request.headers.get("Authorization");
-    if (!auth) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
-    const [type, token] = auth.split(" ");
-    if (type !== "Bearer" || !token) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
-    const valid = await verifyJwt(token, env.JWT_SECRET);
-    if (!valid) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
-    // 获取 User
-    const payload = await decodeJwt<UserPayload>(token);
-    const username = payload?.username;
-    if (!username) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
     // 是否本地用户
     const db = getDBClient();
     const body = await request.json<Body>();
+    const userId = Number(request.headers.get("x-user-id"));
     if (body.domain == url.host) {
         try {
             // 是：一次查询取出当前用户和另一位用户
             const found = await db.select().from(users).where(
-                inArray(users.username, [payload.username, body.username]),
+                or(
+                    eq(users.id, userId),
+                    eq(users.username, body.username),
+                ),
             );
-            const user = found.find(item => item.username === payload.username);
+            const user = found.find(item => item.id === userId);
             const target = found.find(item => item.username === body.username);
             if (!user || !target) {
                 return Response.json({
@@ -129,7 +88,7 @@ export async function POST(request: Request) {
     } else {
         try {
             // 否：获取当前用户
-            const user = (await db.select().from(users).where(eq(users.username, payload.username)))[0]
+            const user = (await db.select().from(users).where(eq(users.id, userId)))[0]
 
             // Follows 从数据库中删除（没关注过则直接返回，保证重复取关幂等）
             const deleted = await db.delete(follows).where(

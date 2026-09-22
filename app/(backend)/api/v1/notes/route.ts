@@ -2,15 +2,9 @@ import { buildActivity, buildNote } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
 import { activities, follows, notes, users } from "@/src/db/schema";
 import { produce } from "@/src/queue";
-import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
-import { env } from "cloudflare:workers";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
-
-type UserPayload = JwtPayload & {
-    username: string,
-}
 
 interface Body {
     content: string,
@@ -22,52 +16,11 @@ export async function POST(request: Request) {
     const url = new URL(request.url);
     const body = await request.json<Body>();
 
-    // 验证 JWT
-    const auth = request.headers.get("Authorization");
-    if (!auth) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
-    const [type, token] = auth.split(" ");
-    if (type !== "Bearer" || !token) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
-    const valid = await verifyJwt(token, env.JWT_SECRET);
-    if (!valid) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
-    const payload = await decodeJwt<UserPayload>(token);
-    const username = payload?.username;
-    if (!username) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
     try {
-        // 存入数据库
+        // 存入数据库（身份由中间件校验，取 x-user-id）
         const db = getDBClient();
         const user = (await db.select().from(users).where(
-            and(
-                eq(users.username, username),
-                eq(users.domain, url.host)
-            )
+            eq(users.id, Number(request.headers.get("x-user-id")))
         ))[0];
 
         // Note 与 Create Activity

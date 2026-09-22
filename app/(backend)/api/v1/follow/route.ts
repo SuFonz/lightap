@@ -2,15 +2,9 @@ import { buildActivity, buildObjecrUri } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
 import { activities, follows, users } from "@/src/db/schema";
 import { produce } from "@/src/queue";
-import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
-import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
-
-type UserPayload = JwtPayload & {
-    username: string,
-}
 
 interface Body {
     username: string,
@@ -21,45 +15,7 @@ interface Body {
 export async function POST(request: Request) {
     // 解析参数
     const url = new URL(request.url);
-
-    // 验证 JWT
-    const auth = request.headers.get("Authorization");
-    if (!auth) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
-    const [type, token] = auth.split(" ");
-    if (type !== "Bearer" || !token) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
-    const valid = await verifyJwt(token, env.JWT_SECRET);
-    if (!valid) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
-
-    // 获取 User
-    const payload = await decodeJwt<UserPayload>(token);
-    const username = payload?.username;
-    if (!username) {
-        return Response.json({
-            error: "Unauthorized.",
-        }, {
-            status: 403,
-        });
-    }
+    const userId = Number(request.headers.get("x-user-id"));
 
     // 是否本地用户
     const db = getDBClient();
@@ -67,7 +23,7 @@ export async function POST(request: Request) {
     if (body.domain == url.host) {
         // 是：获取当前用户
         try {
-            const user = (await db.select().from(users).where(eq(users.username, payload.username)))[0];
+            const user = (await db.select().from(users).where(eq(users.id, userId)))[0];
 
             // 查询另一位用户
             const target = (await db.select().from(users).where(eq(users.username, body.username)))[0];
@@ -122,7 +78,7 @@ export async function POST(request: Request) {
     } else {
         try {
             // 否：获取当前用户
-            const user = (await db.select().from(users).where(eq(users.username, payload.username)))[0]
+            const user = (await db.select().from(users).where(eq(users.id, userId)))[0]
 
             // 构建 Follow Activity 并存入数据库
             const follow = buildActivity(url, crypto.randomUUID(), "Follow", user.actorUrl, body.targetActorUrl);

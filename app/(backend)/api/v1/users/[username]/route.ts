@@ -1,16 +1,10 @@
 import { follows, notes, users } from "@/src/db/schema";
-import { decodeJwt, JwtPayload, verifyJwt } from "@/src/utils/jwt";
-import { env } from "cloudflare:workers";
 import { and, count, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
 type DBUser = typeof users.$inferSelect;
-
-type UserPayload = JwtPayload & {
-    username: string,
-}
 
 interface Params {
     username: string,
@@ -50,17 +44,11 @@ export async function GET(
         });
     }
 
-    // 当前登录用户（可选），用于判断是否已关注
+    // 当前登录用户（可选），用于判断是否已关注；身份由中间件校验，取 x-user-id
     let viewer: DBUser | null = null;
-    const auth = request.headers.get("Authorization");
-    if (auth) {
-        const [scheme, token] = auth.split(" ");
-        if (scheme === "Bearer" && token && await verifyJwt(token, env.JWT_SECRET)) {
-            const payload = decodeJwt<UserPayload>(token);
-            if (payload?.username) {
-                viewer = (await db.select().from(users).where(eq(users.username, payload.username)))[0];
-            }
-        }
+    const viewerId = Number(request.headers.get("x-user-id"));
+    if (viewerId) {
+        viewer = (await db.select().from(users).where(eq(users.id, viewerId)))[0];
     }
 
     // 统计帖子数、关注数、粉丝数
