@@ -1,4 +1,4 @@
-import { AP_CONTEXT, APActivity, APActivityType, APActor, APNote, APObject, APObjectType, APWebfinger } from "./ap";
+import { AP_CONTEXT, APActivity, APActivityType, APActor, APLike, APNote, APObject, APObjectType, APWebfinger } from "./ap";
 
 export function parseResource(
     resource: string
@@ -203,4 +203,45 @@ export function buildNoteWithUri(
     };
 
     return note;
+}
+
+export function buildLike(
+    url: URL,
+    uuid: string,
+    actor: string,
+    object: string,
+    to?: string[],
+    cc?: string[],
+) {
+    const like: APLike = {
+        "@context": AP_CONTEXT,
+        id: buildObjecrUri(url, uuid, "Like"),
+        type: "Like",
+        actor,
+        object,
+        to: to ?? ["https://www.w3.org/ns/activitystreams#Public"],
+        cc: cc ?? []
+    };
+
+    return like;
+}
+
+export function buildLikeWithUri(
+    uri: string,
+    actor: string,
+    object: string,
+    to?: string[],
+    cc?: string[],
+) {
+    const like: APLike = {
+        "@context": AP_CONTEXT,
+        id: uri,
+        type: "Like",
+        actor,
+        object,
+        to: to ?? ["https://www.w3.org/ns/activitystreams#Public"],
+        cc: cc ?? []
+    };
+
+    return like;
 }

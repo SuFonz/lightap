@@ -10,6 +10,8 @@ export interface DispatchActivityInput {
     actor: string;
     /** 投递目标：远程 Actor 的链接 */
     targets: string[];
+    /** 可选：显式指定活动 uri（默认按 type + 随机 uuid 生成） */
+    uri?: string;
     /** object 是链接时使用 */
     objectUri?: string;
     /** object 是本地对象时使用（连同 objectType） */
@@ -25,7 +27,7 @@ export interface DispatchActivityInput {
  * 返回该活动的 uri，远端可用它引用这条活动。
  */
 export async function dispatchActivity(url: URL, input: DispatchActivityInput) {
-    const uri = buildObjecrUri(url, crypto.randomUUID(), input.type);
+    const uri = input.uri ?? buildObjecrUri(url, crypto.randomUUID(), input.type);
 
     const inserted = (await getDBClient().insert(activities).values({
         uri,

@@ -1,7 +1,7 @@
 import { APActivity, APActor, APNote, APOrderedCollection } from "@/src/activitypub/ap";
 import { getActor, postInbox } from "@/src/activitypub/network";
 import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
-import { activities, follows, notes, users } from "@/src/db/schema";
+import { activities, follows, likes, notes, users } from "@/src/db/schema";
 import { storeRemoteActor } from "@/src/lib/actor";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
 import { and, eq } from "drizzle-orm";
@@ -129,22 +129,56 @@ async function handleActivity(request: Request, params: Params, activity: APActi
 
                 break;
             }
-            case "Undo": {
-                const { user, actor } = await resolveRemoteActor(request, activity, username);
+            case "Like": {
+                // 先拉取远程 Actor、验证签名并落库
+                const { actor } = await resolveRemoteActor(request, activity, username);
 
-                // Undo 的 object 是之前那条 Follow 活动，只处理取关
-                const obj = await extractObject(activity) as APActivity;
-                if (obj.type !== "Follow") {
+                // Like 的 object 是被点赞的 Note（本站 Note 的 uri）
+                const objectUri = typeof activity.object === "string" ? activity.object : activity.object.id;
+                const note = (await db.select().from(notes).where(eq(notes.uri, objectUri)))[0];
+                if (!note) {
                     break;
                 }
 
-                // 从数据库中删除关注关系
-                await db.delete(follows).where(
-                    and(
-                        eq(follows.follower, actor.id),
-                        eq(follows.following, user.actorUrl),
-                    ),
-                );
+                // 点赞者：远程 Actor 已落库，按 actorUrl 取本地 users 行
+                const liker = (await db.select().from(users).where(eq(users.actorUrl, actor.id)))[0];
+                if (!liker) {
+                    break;
+                }
+
+                // 存入数据库（ActivityPub 会重投，uri 唯一，重复插入忽略）
+                await db.insert(likes).values({
+                    uri: activity.id,
+                    userId: liker.id,
+                    noteId: note.id,
+                }).onConflictDoNothing();
+
+                break;
+            }
+            case "Undo": {
+                const { user, actor } = await resolveRemoteActor(request, activity, username);
+
+                // object 可能是内嵌活动（带 type），也可能只是活动 uri
+                const obj = await extractObject(activity) as APActivity;
+
+                // 取关：Undo Follow
+                if (obj.type === "Follow") {
+                    await db.delete(follows).where(
+                        and(
+                            eq(follows.follower, actor.id),
+                            eq(follows.following, user.actorUrl),
+                        ),
+                    );
+                    break;
+                }
+
+                // 取消点赞：Undo Like（object 是内嵌 Like，或只是 Like 的 uri）
+                const likeUri = typeof activity.object === "string"
+                    ? activity.object
+                    : obj.type === "Like" ? obj.id : "";
+                if (likeUri) {
+                    await db.delete(likes).where(eq(likes.uri, likeUri));
+                }
 
                 break;
             }
@@ -170,7 +204,9 @@ async function resolveRemoteActor(request: Request, activity: APActivity, userna
     // 获取 User (getActor 签名用)
     const user = (await db.select().from(users).where(eq(users.username, username)))[0];
 
-    // 获取远程 Actor（如果已经存数据库了可以从数据库里提取）
+    // TODO: 远程 Actor 如果已经存数据库了可以从数据库里提取
+
+    // 获取远程 Actor
     const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
     if (!rmRes.ok) {
         throw new Error("Remote user not found.");

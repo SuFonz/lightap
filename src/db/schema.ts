@@ -51,3 +51,11 @@ export const follows = sqliteTable("follows", {
 }, (table) => [
     unique().on(table.follower, table.following),
 ]);
+
+export const likes = sqliteTable("likes", {
+    id: integer().primaryKey({ autoIncrement: true }),
+    uri: text().notNull().unique(),
+    userId: integer("user_id").notNull().references(() => users.id),
+    noteId: integer("note_id").notNull().references(() => notes.id),
+    createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
+})

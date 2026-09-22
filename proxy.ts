@@ -28,10 +28,11 @@ export async function proxy(req: NextRequest) {
             pathname.startsWith("/api/v1/users/")
         );
 
-    // 必须登录的接口：发帖、关注、取关
+    // 必须登录的接口：发帖、关注、取关、点赞
     const required =
         !publicGet && (
             (pathname === "/api/v1/notes" && req.method === "POST") ||
+            (pathname.startsWith("/api/v1/notes/") && pathname.endsWith("/like")) ||
             pathname === "/api/v1/follow" ||
             pathname === "/api/v1/unfollow"
         );

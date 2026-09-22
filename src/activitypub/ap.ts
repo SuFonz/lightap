@@ -85,6 +85,10 @@ export interface APAccept extends APActivity {
     type: "Accept",
 }
 
+export interface APLike extends APActivity {
+    type: "Like",
+}
+
 // Resources Types
 
 export interface APNote extends APObject {
@@ -99,8 +103,4 @@ export interface APNote extends APObject {
 export interface APPerson extends APObject {
     type: "Person",
     name: string,
-}
-
-export interface APDelivery extends APObject {
-    
 }
