@@ -123,7 +123,13 @@ async function handleActivity(request: Request, params: Params, activity: APActi
 
                 // 回一个 Accept 给远程用户
                 const url = new URL(request.url);
-                const accept = buildActivity(url, crypto.randomUUID(), "Accept", user.actorUrl, activity);
+                const accept = buildActivity({
+                    url,
+                    uuid: crypto.randomUUID(),
+                    type: "Accept",
+                    actor: user.actorUrl,
+                    object: activity,
+                });
                 const userMkUrl = convertActorUrlToMainKey(user.actorUrl);
                 await postInbox(actor.inbox, user.privateKey, userMkUrl, accept);
 

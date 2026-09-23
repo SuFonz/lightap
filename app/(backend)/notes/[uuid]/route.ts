@@ -28,7 +28,11 @@ export async function GET(
 
     // 用 note.uri 作为 id（本地帖即当前请求地址），补齐对象字段
     const data = {
-        ...buildNoteWithUri(note.uri, note.content, note.inReplyTo ?? undefined),
+        ...buildNoteWithUri({
+            uri: note.uri,
+            content: note.content,
+            inReplyTo: note.inReplyTo ?? undefined,
+        }),
         attributedTo: note.actor,
         published: new Date(note.createdAt * 1000).toISOString(),
         to: [AP_CONTEXT_PUBLIC],

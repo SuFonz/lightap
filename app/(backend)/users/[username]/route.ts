@@ -30,13 +30,13 @@ export async function GET(
     }
 
     // 构建 Actor
-    const actor = buildActor(
+    const actor = buildActor({
         url,
-        user.displayName ,
-        user.username,
-        user.summary,
-        user.publicKey,
-    );
+        name: user.displayName,
+        preferredUsername: user.username,
+        summary: user.summary,
+        publicKeyPem: user.publicKey,
+    });
 
     // 返回 Actor
     return Response.json(actor, {

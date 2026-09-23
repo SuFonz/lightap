@@ -39,7 +39,12 @@ export async function consume(data: QueueData) {
             case "Note": {
                 const dbNote = (await db.select().from(notes).where(eq(notes.id, dbAct.objectId)))[0];
                 if (dbNote) {
-                    object = buildNoteWithUri(dbNote.uri, dbNote.content, dbNote.inReplyTo ?? undefined, undefined, [`${user.actorUrl}/followers`]);
+                    object = buildNoteWithUri({
+                        uri: dbNote.uri,
+                        content: dbNote.content,
+                        inReplyTo: dbNote.inReplyTo ?? undefined,
+                        cc: [`${user.actorUrl}/followers`],
+                    });
                 }
                 break;
             }
@@ -56,7 +61,13 @@ export async function consume(data: QueueData) {
     }
 
     // 用 Activity 包裹 Object
-    const activity = buildActivityWithUri(dbAct.uri, dbAct.type, dbAct.actor, object, undefined, [`${user.actorUrl}/followers`]);
+    const activity = buildActivityWithUri({
+        uri: dbAct.uri,
+        type: dbAct.type,
+        actor: dbAct.actor,
+        object,
+        cc: [`${user.actorUrl}/followers`],
+    });
 
     console.log(activity);
 

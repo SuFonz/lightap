@@ -60,10 +60,12 @@ export function convertActorUrlToMainKey(actor: string) {
     return `${actor}#main-key`;
 }
 
-export function buildWebfinger(
+export function buildWebfinger(options: {
     url: URL,
     username: string,
-): APWebfinger {
+}): APWebfinger {
+    const { url, username } = options;
+
     const webfinger: APWebfinger = {
         subject: `acct:${username}@${url.host}`,
         aliases: [
@@ -87,13 +89,15 @@ export function buildWebfinger(
     return webfinger;
 }
 
-export function buildActor(
+export function buildActor(options: {
     url: URL,
     name: string,
     preferredUsername: string,
     summary: string | null,
     publicKeyPem: string | null,
-) {
+}) {
+    const { url, name, preferredUsername, summary, publicKeyPem } = options;
+
     const actor: APActor = {
         "@context": "https://www.w3.org/ns/activitystreams",
         type: "Person",
@@ -115,11 +119,16 @@ export function buildActor(
     return actor;
 }
 
-export function buildObjecrUri(url: URL, uuid: string, type: APObjectType) {
+export function buildObjecrUri(options: {
+    url: URL,
+    uuid: string,
+    type: APObjectType,
+}) {
+    const { url, uuid, type } = options;
     return `${url.origin}/${type.toLocaleLowerCase()}/${uuid}`;
 }
 
-export function buildActivity<TObject extends APObject = APObject>(
+export function buildActivity<TObject extends APObject = APObject>(options: {
     url: URL,
     uuid: string,
     type: APActivityType,
@@ -127,10 +136,12 @@ export function buildActivity<TObject extends APObject = APObject>(
     object: TObject | string,
     to?: string[],
     cc?: string[],
-) {
+}) {
+    const { url, uuid, type, actor, object, to, cc } = options;
+
     const activity: APActivity = {
         "@context": AP_CONTEXT,
-        id: buildObjecrUri(url, uuid, type),
+        id: buildObjecrUri({ url, uuid, type }),
         type,
         actor,
         object,
@@ -141,17 +152,19 @@ export function buildActivity<TObject extends APObject = APObject>(
     return activity;
 }
 
-export function buildActivityWithUri<TObject extends APObject = APObject>(
-    id: string,
+export function buildActivityWithUri<TObject extends APObject = APObject>(options: {
+    uri: string,
     type: APActivityType,
     actor: string,
     object: TObject | string,
     to?: string[],
     cc?: string[],
-) {
+}) {
+    const { uri, type, actor, object, to, cc } = options;
+
     const activity: APActivity = {
         "@context": AP_CONTEXT,
-        id: id,
+        id: uri,
         type,
         actor,
         object,
@@ -162,14 +175,16 @@ export function buildActivityWithUri<TObject extends APObject = APObject>(
     return activity;
 }
 
-export function buildNote(
-    url: URL, 
-    uuid: string, 
-    content: string, 
+export function buildNote(options: {
+    url: URL,
+    uuid: string,
+    content: string,
     inReplyTo?: string,
     to?: string[],
     cc?: string[],
-) {
+}) {
+    const { url, uuid, content, inReplyTo, to, cc } = options;
+
     const note: APNote = {
         "@context": AP_CONTEXT,
         id: `${url.origin}/notes/${uuid}`,
@@ -184,13 +199,15 @@ export function buildNote(
     return note;
 }
 
-export function buildNoteWithUri(
-    uri: string, 
-    content: string, 
+export function buildNoteWithUri(options: {
+    uri: string,
+    content: string,
     inReplyTo?: string,
     to?: string[],
     cc?: string[],
-) {
+}) {
+    const { uri, content, inReplyTo, to, cc } = options;
+
     const note: APNote = {
         "@context": AP_CONTEXT,
         id: uri,
@@ -205,17 +222,19 @@ export function buildNoteWithUri(
     return note;
 }
 
-export function buildLike(
+export function buildLike(options: {
     url: URL,
     uuid: string,
     actor: string,
     object: string,
     to?: string[],
     cc?: string[],
-) {
+}) {
+    const { url, uuid, actor, object, to, cc } = options;
+
     const like: APLike = {
         "@context": AP_CONTEXT,
-        id: buildObjecrUri(url, uuid, "Like"),
+        id: buildObjecrUri({ url, uuid, type: "Like" }),
         type: "Like",
         actor,
         object,
@@ -226,13 +245,15 @@ export function buildLike(
     return like;
 }
 
-export function buildLikeWithUri(
+export function buildLikeWithUri(options: {
     uri: string,
     actor: string,
     object: string,
     to?: string[],
     cc?: string[],
-) {
+}) {
+    const { uri, actor, object, to, cc } = options;
+
     const like: APLike = {
         "@context": AP_CONTEXT,
         id: uri,

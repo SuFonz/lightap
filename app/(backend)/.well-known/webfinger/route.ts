@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     }
 
     // 返回 webfinger
-    const webfinger = buildWebfinger(url, username);
+    const webfinger = buildWebfinger({ url, username });
     return Response.json(webfinger, {
         status: 200,
         headers: {

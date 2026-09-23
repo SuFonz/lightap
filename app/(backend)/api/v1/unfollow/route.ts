@@ -68,7 +68,7 @@ export async function POST(request: Request) {
             }
 
             // Undo Follow Activity 存到数据库
-            const undoUri = buildObjecrUri(url, crypto.randomUUID(), "Undo");
+            const undoUri = buildObjecrUri({ url, uuid: crypto.randomUUID(), type: "Undo" });
             await db.insert(activities).values({
                 uri: undoUri,
                 type: "Undo",

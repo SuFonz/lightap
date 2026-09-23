@@ -53,7 +53,12 @@ export async function POST(
         }
 
         // Like 活动与点赞记录共用一个 uri
-        const like = buildLike(url, crypto.randomUUID(), user.actorUrl, note.uri);
+        const like = buildLike({
+            url,
+            uuid: crypto.randomUUID(),
+            actor: user.actorUrl,
+            object: note.uri,
+        });
         await db.insert(likes).values({
             uri: like.id,
             userId: user.id,

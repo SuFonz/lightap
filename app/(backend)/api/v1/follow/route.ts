@@ -48,7 +48,7 @@ export async function POST(request: Request) {
             }
 
             // 当前用户的 Follow Activity 存到数据库
-            const followUri = buildObjecrUri(url, crypto.randomUUID(), "Follow");
+            const followUri = buildObjecrUri({ url, uuid: crypto.randomUUID(), type: "Follow" });
             const followAct = (await db.insert(activities).values({
                 uri: followUri,
                 type: "Follow",
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
             });
 
             // 目标的 Accept Activity：object 是上面那条 Follow 活动
-            const acceptUri = buildObjecrUri(url, crypto.randomUUID(), "Accept");
+            const acceptUri = buildObjecrUri({ url, uuid: crypto.randomUUID(), type: "Accept" });
             await db.insert(activities).values({
                 uri: acceptUri,
                 type: "Accept",

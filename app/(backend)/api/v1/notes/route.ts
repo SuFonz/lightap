@@ -41,7 +41,12 @@ export async function POST(request: Request) {
 
         // Note 存到数据库
         const uuid = crypto.randomUUID();
-        const note = buildNote(url, uuid, body.content, body.inReplyTo);
+        const note = buildNote({
+            url,
+            uuid,
+            content: body.content,
+            inReplyTo: body.inReplyTo,
+        });
         const dbNote = (await db.insert(notes).values({
             uri: note.id,
             uuid: uuid,
