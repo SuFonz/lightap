@@ -3,7 +3,7 @@ import { delivery } from "@/src/activitypub/network";
 import { getDBClient } from "../db";
 import { activities, notes, users } from "../db/schema";
 import { eq } from "drizzle-orm";
-import { buildActivityWithUri, buildNoteWithUri, convertActorUrlToMainKey } from "../activitypub/tools";
+import { buildActivityWithUri, buildNoteWithUri, buildTombstone, convertActorUrlToMainKey } from "../activitypub/tools";
 import { APObject } from "../activitypub/ap";
 
 export interface QueueData {
@@ -32,7 +32,7 @@ export async function consume(data: QueueData) {
     }
 
     // 根据 Object 类型构建不同的 Object：
-    // Note 是内嵌对象，从 notes 表取出后构建；其它类型（Follow / Accept / Undo ...）的 object 只是一个链接
+    // Note / Tombstone 是内嵌对象，从 notes 表取出后构建；其它类型（Follow / Accept / Undo ...）的 object 只是一个链接
     let object: APObject | string = dbAct.objectUri ?? "";
     if (dbAct.objectId && dbAct.objectType) {
         switch (dbAct.objectType) {
@@ -44,6 +44,21 @@ export async function consume(data: QueueData) {
                         content: dbNote.content,
                         inReplyTo: dbNote.inReplyTo ?? undefined,
                         cc: [`${user.actorUrl}/followers`],
+                    });
+                }
+                break;
+            }
+
+            case "Tombstone": {
+                // Delete 的 object：用 note.id 反查 uri，并带上删除时间
+                const dbNote = (await db.select().from(notes).where(eq(notes.id, dbAct.objectId)))[0];
+                if (dbNote) {
+                    object = buildTombstone({
+                        id: dbNote.uri,
+                        formerType: "Note",
+                        deleted: dbNote.deletedAt
+                            ? new Date(dbNote.deletedAt * 1000).toISOString()
+                            : undefined,
                     });
                 }
                 break;

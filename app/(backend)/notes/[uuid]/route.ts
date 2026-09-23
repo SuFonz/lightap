@@ -1,5 +1,5 @@
 import { AP_CONTEXT_PUBLIC } from "@/src/activitypub/ap";
-import { buildNoteWithUri } from "@/src/activitypub/tools";
+import { buildNoteWithUri, buildTombstone } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
 import { notes } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
@@ -33,6 +33,20 @@ export async function GET(
             error: "Note not found.",
         }, {
             status: 404,
+        });
+    }
+
+    // 已删除：返回 410 Gone + Tombstone（id 与原对象 uri 相同）
+    if (note.deletedAt) {
+        const tombstone = buildTombstone({
+            id: note.uri,
+            formerType: "Note",
+        });
+        return Response.json(tombstone, {
+            status: 410,
+            headers: {
+                "Content-Type": "application/activity+json",
+            },
         });
     }
 

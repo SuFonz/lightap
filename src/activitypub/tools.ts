@@ -1,4 +1,4 @@
-import { AP_CONTEXT, APActivity, APActivityType, APActor, APLike, APNote, APObject, APObjectType, APWebfinger } from "./ap";
+import { AP_CONTEXT, APActivity, APActivityType, APActor, APLike, APNote, APObject, APObjectType, APTombstone, APWebfinger } from "./ap";
 
 export function parseResource(
     resource: string
@@ -243,6 +243,26 @@ export function buildLike(options: {
     };
 
     return like;
+}
+
+export function buildTombstone(options: {
+    id: string,
+    /** 被删除对象的原类型，例如 "Note" */
+    formerType?: string,
+    /** 删除时间（ISO 8601） */
+    deleted?: string,
+}) {
+    const { id, formerType, deleted } = options;
+
+    const tombstone: APTombstone = {
+        "@context": AP_CONTEXT,
+        id,
+        type: "Tombstone",
+        formerType,
+        deleted,
+    };
+
+    return tombstone;
 }
 
 export function buildLikeWithUri(options: {

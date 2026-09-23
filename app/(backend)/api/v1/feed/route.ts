@@ -76,6 +76,7 @@ export async function GET(request: Request) {
     // 根据类型查询帖子，查询没有 inReplyTo 的帖子
     const rows = await db.select().from(notes).where(
         and(
+            isNull(notes.deletedAt),
             isNull(notes.inReplyTo),
             body.maxId ? lt(notes.id, body.maxId) : undefined,
             actors ? inArray(notes.actor, actors) : undefined,

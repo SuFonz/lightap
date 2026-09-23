@@ -166,6 +166,33 @@ async function handleActivity(request: Request, params: Params, activity: APActi
 
                 break;
             }
+            case "Delete": {
+                // 先拉取远程 Actor、验证签名并落库
+                const { actor } = await resolveRemoteActor(request, activity, username);
+
+                // object 可能是 Tombstone / Note（对象），也可能只是被删对象的 uri
+                const objectUri = typeof activity.object === "string" ? activity.object : activity.object.id;
+                if (!objectUri) {
+                    break;
+                }
+
+                const note = (await db.select().from(notes).where(eq(notes.uri, objectUri)))[0];
+                if (!note) {
+                    break;
+                }
+
+                // 只有作者本人才能删自己的帖子
+                if (note.actor !== actor.id) {
+                    break;
+                }
+
+                // 软删除（本地也标记删除，feed / 线程即不再展示）
+                await db.update(notes).set({
+                    deletedAt: Math.floor(Date.now() / 1000),
+                }).where(eq(notes.id, note.id));
+
+                break;
+            }
             case "Undo": {
                 const { user, actor } = await resolveRemoteActor(request, activity, username);
 

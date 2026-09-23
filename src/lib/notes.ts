@@ -1,4 +1,4 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 import { likes, notes, users } from "@/src/db/schema";
 
@@ -30,7 +30,10 @@ export async function toNoteListItems(rows: NoteRow[], viewerId?: number) {
     // 批量统计每条的回复数
     const replyRows = await db.select({ inReplyTo: notes.inReplyTo, value: count() })
         .from(notes)
-        .where(inArray(notes.inReplyTo, rows.map(row => row.uri)))
+        .where(and(
+            inArray(notes.inReplyTo, rows.map(row => row.uri)),
+            isNull(notes.deletedAt),
+        ))
         .groupBy(notes.inReplyTo);
     const countByUri = new Map(replyRows.map(row => [row.inReplyTo, row.value]));
 

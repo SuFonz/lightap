@@ -41,6 +41,7 @@ export const notes = sqliteTable("notes", {
     content: text().notNull(),
     inReplyTo: text(),
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
+    deletedAt: integer("deleted_at"),
 })
 
 // TODO: 会考虑做成 id 而不是 uri

@@ -57,6 +57,7 @@ export async function GET(
     const rows = await db.select().from(notes).where(
         and(
             eq(notes.actor, user.actorUrl),
+            isNull(notes.deletedAt),
             isNull(notes.inReplyTo),
             maxId ? lt(notes.id, maxId) : undefined,
         ),

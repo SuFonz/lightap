@@ -13,6 +13,7 @@ export type APActivityType = "Activity" |
                              "Undo";
 
 export type APObjectType = "Note" |
+                            "Tombstone" |
                             APActivityType
 
 // Core Types
@@ -103,4 +104,13 @@ export interface APNote extends APObject {
 export interface APPerson extends APObject {
     type: "Person",
     name: string,
+}
+
+/** 被删除对象的占位（Delete 活动的 object） */
+export interface APTombstone extends APObject {
+    type: "Tombstone",
+    /** 被删除对象的原类型，例如 "Note" */
+    formerType?: string,
+    /** 删除时间（ISO 8601） */
+    deleted?: string,
 }
