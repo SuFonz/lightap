@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { AuthModal } from "@/web/components/auth/auth-modal";
 import { ComposerModal } from "@/web/components/composer/composer-modal";
 import { Background } from "@/web/components/layout/background";
@@ -9,6 +9,7 @@ import { RightRail } from "@/web/components/layout/right-rail";
 import { Sidebar } from "@/web/components/layout/sidebar";
 import { ToastViewport } from "@/web/components/ui/toast";
 import { EditProfileModal } from "@/web/components/user/edit-profile-modal";
+import { initHistoryBaseline } from "@/web/lib/nav-history";
 import { useUi } from "@/web/stores/ui-store";
 
 /** 站点外壳：三栏布局 + 各类全局弹窗。 */
@@ -23,6 +24,11 @@ export function ShellFrame({ children }: { children: ReactNode }) {
         editProfileOpen,
         closeEditProfile,
     } = useUi();
+
+    // 记录进入应用时的历史长度，供「返回键」判断应用内是否有跳转
+    useEffect(() => {
+        initHistoryBaseline();
+    }, []);
 
     return (
         <>

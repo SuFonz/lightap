@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PostCard } from "@/web/components/post/post-card";
 import { ReplyComposer } from "@/web/components/post/reply-composer";
 import { HomeIcon, ReplyIcon } from "@/web/components/ui/icons";
+import { hasInAppHistory } from "@/web/lib/nav-history";
 import { useTimeline } from "@/web/stores/timeline";
 
 export default function PostDetailPage() {
@@ -63,12 +64,21 @@ export default function PostDetailPage() {
     const isThread = thread.length > 1;
     const replies = [...post.replies].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+    // 应用内发生过跳转就返回上一页；直接用网址进来（没有应用内历史）就回首页
+    function handleBack() {
+        if (hasInAppHistory()) {
+            router.back();
+        } else {
+            router.push("/");
+        }
+    }
+
     return (
         <div className="flex flex-col gap-3">
             <section className="glass-card flex items-center gap-3 px-5 py-4">
                 <button
                     type="button"
-                    onClick={() => router.back()}
+                    onClick={handleBack}
                     aria-label="返回"
                     className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-[10px] text-slate-500 transition hover:bg-white/80 hover:text-brand-deep active:scale-90"
                 >
