@@ -1,7 +1,7 @@
 import { APOrderedCollection } from "@/src/activitypub/ap";
 import { buildActor } from "@/src/activitypub/tools";
 import { users } from "@/src/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,12 @@ export async function GET(
 
     // 获取用户
     const db = getDBClient();
-    const user = (await db.select().from(users).where(eq(users.username, username)))[0];
+    const user = (await db.select().from(users).where(
+        and(
+            eq(users.username, username),
+            eq(users.domain, url.host),
+        )
+    ))[0];
     if (!user) {
         return Response.json({ 
             error: "User not found.",

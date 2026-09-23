@@ -88,7 +88,10 @@ export async function GET(request: Request) {
         const atRes = await getActor(pwf.actorUrl, user.privateKey, userMkUrl);
         if (atRes?.ok) {
             actor = await atRes.json<APActor>();
+        } else {
+            console.log(await atRes.json());
         }
+
     } else {
         console.log(await wfRes.json());
     }

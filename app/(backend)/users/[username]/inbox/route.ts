@@ -54,10 +54,15 @@ async function handleActivity(request: Request, params: Params, activity: APActi
     const db = getDBClient();
     const username = params.username;
     const type = activity.type;
+
+    console.log(activity);
     try {
         switch (type) {
             case "Accept": {
                 const { user, actor } = await resolveRemoteActor(request, activity, username);
+
+                console.log(user);
+                console.log(actor);
 
                 // 提取对象：Accept 的 object 是之前发出去的 Follow 活动
                 const obj = await extractObject(activity) as APActivity;
@@ -205,10 +210,16 @@ async function handleActivity(request: Request, params: Params, activity: APActi
  * 3. 验签 + 落库（本地远程用户信息，供 feed 展示作者）
  */
 async function resolveRemoteActor(request: Request, activity: APActivity, username: string) {
+    const url = new URL(request.url);
     const db = getDBClient();
 
     // 获取 User (getActor 签名用)
-    const user = (await db.select().from(users).where(eq(users.username, username)))[0];
+    const user = (await db.select().from(users).where(
+        and(
+            eq(users.username, username),
+            eq(users.domain, url.host),
+        )
+    ))[0];
 
     // TODO: 远程 Actor 如果已经存数据库了可以从数据库里提取
 
