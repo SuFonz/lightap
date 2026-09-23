@@ -1,6 +1,6 @@
 import { buildNote } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
-import { follows, notes } from "@/src/db/schema";
+import { follows, notes, notifications, users } from "@/src/db/schema";
 import { dispatchActivity } from "@/src/lib/activity";
 import { resolveRequestUser } from "@/src/lib/auth";
 import { eq } from "drizzle-orm";
@@ -63,6 +63,17 @@ export async function POST(request: Request) {
             const reply = (await db.select().from(notes).where(eq(notes.uri, body.inReplyTo)))[0];
             if (reply) {
                 inboxes.add(reply.actor);
+
+                // 回复的是本站用户 → 给对方写一条 Reply 通知（自己回复自己不发）
+                const recipient = (await db.select().from(users).where(eq(users.actorUrl, reply.actor)))[0];
+                if (recipient && recipient.domain === url.host && recipient.id !== user.id) {
+                    await db.insert(notifications).values({
+                        userId: recipient.id,
+                        actorId: user.id,
+                        type: "Reply",
+                        noteId: dbNote.id,
+                    });
+                }
             }
         }
         const targets = [...inboxes].filter(actorUrl => !actorUrl.startsWith(`${url.origin}/users/`));

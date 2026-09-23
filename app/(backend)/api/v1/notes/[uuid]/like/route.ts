@@ -1,6 +1,6 @@
 import { buildLike } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
-import { likes, notes } from "@/src/db/schema";
+import { likes, notes, notifications, users } from "@/src/db/schema";
 import { dispatchActivity } from "@/src/lib/activity";
 import { resolveRequestUser } from "@/src/lib/auth";
 import { and, eq } from "drizzle-orm";
@@ -64,6 +64,17 @@ export async function POST(
             userId: user.id,
             noteId: note.id,
         });
+
+        // 通知被点赞帖子的作者（仅本站用户，自己赞自己不发）
+        const recipient = (await db.select().from(users).where(eq(users.actorUrl, note.actor)))[0];
+        if (recipient && recipient.domain === url.host && recipient.id !== user.id) {
+            await db.insert(notifications).values({
+                userId: recipient.id,
+                actorId: user.id,
+                type: "Like",
+                noteId: note.id,
+            });
+        }
 
         // 记录 Like 活动，远程作者异步投递（本地作者走本地数据库，不投递）
         await dispatchActivity(url, {

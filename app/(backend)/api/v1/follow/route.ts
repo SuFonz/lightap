@@ -1,6 +1,6 @@
 import { buildObjecrUri } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
-import { activities, follows, users } from "@/src/db/schema";
+import { activities, follows, notifications, users } from "@/src/db/schema";
 import { dispatchActivity } from "@/src/lib/activity";
 import { resolveRequestUser } from "@/src/lib/auth";
 import { and, eq } from "drizzle-orm";
@@ -66,6 +66,15 @@ export async function POST(request: Request) {
                 follower: user.actorUrl,
                 following: target.actorUrl,
             });
+
+            // 通知被关注的本站用户（自己关注自己不发）
+            if (target.id !== user.id) {
+                await db.insert(notifications).values({
+                    userId: target.id,
+                    actorId: user.id,
+                    type: "Follow",
+                });
+            }
 
             // 目标的 Accept Activity：object 是上面那条 Follow 活动
             const acceptUri = buildObjecrUri({ url, uuid: crypto.randomUUID(), type: "Accept" });
