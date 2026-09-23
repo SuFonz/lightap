@@ -1,6 +1,6 @@
 import { APPerson } from "@/src/activitypub/ap";
-import { users } from "@/src/db/schema";
-import { and, eq } from "drizzle-orm";
+import { follows, users } from "@/src/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
@@ -32,31 +32,31 @@ export async function GET(
             status: 404,
         });
     }
+    const user = result[0];
 
-    // 查询用户 followers 数量
-    
+    // 该用户的 followers：follows.following 是本人，follower 才是粉丝
+    const followRows = await db.select().from(follows).where(eq(follows.following, user.actorUrl));
+    const actorUrls = followRows.map(row => row.follower);
 
-    // TODO: 关注功能尚未实现，这里使用占位数据
-    const placeholderFollowers: APPerson[] = [
-        {
-            type: "Person",
-            id: `${url.origin}/users/placeholder_follower_1`,
-            name: "Placeholder Follower 1",
-        },
-        {
-            type: "Person",
-            id: `${url.origin}/users/placeholder_follower_2`,
-            name: "Placeholder Follower 2",
-        },
-    ];
+    // 批量取展示名，避免 N+1
+    const actors = actorUrls.length > 0
+        ? await db.select().from(users).where(inArray(users.actorUrl, actorUrls))
+        : [];
+    const nameByActor = new Map(actors.map(actor => [actor.actorUrl, actor.displayName]));
+
+    const orderedItems: APPerson[] = actorUrls.map(actorUrl => ({
+        type: "Person",
+        id: actorUrl,
+        name: nameByActor.get(actorUrl) ?? actorUrl,
+    }));
 
     const orderedCollection = {
         "@context": "https://www.w3.org/ns/activitystreams",
         type: "OrderedCollection",
         id: `${url.origin}/users/${username}/followers`,
         summary: `${username}'s followers`,
-        totalItems: placeholderFollowers.length,
-        orderedItems: placeholderFollowers,
+        totalItems: orderedItems.length,
+        orderedItems,
     };
 
     return Response.json(orderedCollection, {
