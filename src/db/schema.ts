@@ -43,6 +43,7 @@ export const notes = sqliteTable("notes", {
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
 })
 
+// TODO: 会考虑做成 id 而不是 uri
 export const follows = sqliteTable("follows", {
     id: integer().primaryKey({ autoIncrement: true }),
     follower: text().notNull(),

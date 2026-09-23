@@ -31,4 +31,6 @@ export interface TimelineValue {
     /** 点赞 / 取消点赞（乐观更新，失败自动回滚） */
     toggleLike: (post: Post) => Promise<void>;
     toggleBoost: (id: string) => void;
+    /** 删除自己的帖子（成功后从时间线 / 线程 / 主页列表移除） */
+    deletePost: (post: Post) => Promise<void>;
 }

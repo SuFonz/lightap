@@ -6,7 +6,7 @@ import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import type { FeedTab, Post } from "@/web/types";
 import { TimelineContext } from "./context";
-import { appendUnique, findPost, fromListItem, fromNoteItem, makePost, mapPost, rememberAuthors } from "./helpers";
+import { appendUnique, findPost, fromListItem, fromNoteItem, makePost, mapPost, removePost, rememberAuthors } from "./helpers";
 import type { Pagination, TimelineValue } from "./types";
 
 const FEED_LIMIT = 30;
@@ -264,6 +264,38 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         [mutate],
     );
 
+    const deletePost = useCallback(
+        async (post: Post) => {
+            if (!session) throw new Error("请先登录");
+
+            await postsApi.deleteNote(post.id, session.token);
+
+            // 从时间线、线程、个人主页列表里就地移除
+            setPosts((prev) => removePost(prev, post.id));
+            setThreads((prev) => {
+                const next: Record<string, Post[]> = {};
+                for (const [key, chain] of Object.entries(prev)) {
+                    // 删掉这条帖子自己的线程缓存（详情页会变成“帖子不存在”）
+                    if (key === post.id) continue;
+                    next[key] = removePost(chain, post.id);
+                }
+                return next;
+            });
+            setUserPosts((prev) => {
+                let next = prev;
+                for (const [username, list] of Object.entries(prev)) {
+                    const updated = removePost(list, post.id);
+                    if (updated !== list) {
+                        if (next === prev) next = { ...prev };
+                        next[username] = updated;
+                    }
+                }
+                return next;
+            });
+        },
+        [session],
+    );
+
     const value = useMemo<TimelineValue>(
         () => ({
             posts,
@@ -283,6 +315,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             loadThread,
             toggleLike,
             toggleBoost,
+            deletePost,
         }),
         [
             posts,
@@ -301,6 +334,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             loadThread,
             toggleLike,
             toggleBoost,
+            deletePost,
         ],
     );
 

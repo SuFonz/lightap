@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PostContent } from "@/web/components/post/post-content";
 import { Avatar } from "@/web/components/ui/avatar";
 import { HeartIcon, MoreIcon, ReplyIcon } from "@/web/components/ui/icons";
+import { Popover } from "@/web/components/ui/popover";
 import { RelativeTime } from "@/web/components/ui/relative-time";
 import { cn } from "@/web/lib/cn";
 import { formatCount } from "@/web/lib/format";
@@ -14,6 +15,19 @@ import { useSession } from "@/web/stores/session-store";
 import { useTimeline } from "@/web/stores/timeline";
 import { useUi } from "@/web/stores/ui-store";
 import type { Post, PostVariant } from "@/web/types";
+
+const MENU_ITEM_CLASS =
+    "flex w-full cursor-pointer items-center rounded-[10px] px-3 py-2 text-left text-sm font-semibold text-slate-600 transition-colors hover:bg-white/80 hover:text-brand-deep";
+
+/** 帖子的 uri host 与本站不一致 → 认为是非本站（远程）的帖子 */
+function isRemoteUri(uri: string, localHost: string): boolean {
+    if (!uri || !localHost) return false;
+    try {
+        return new URL(uri).host !== localHost;
+    } catch {
+        return false;
+    }
+}
 
 export function PostCard({
     post,
@@ -26,20 +40,60 @@ export function PostCard({
     bare?: boolean;
 }) {
     const { getUser } = useDirectory();
-    const { toggleLike } = useTimeline();
-    const { isAuthenticated } = useSession();
+    const { toggleLike, deletePost } = useTimeline();
+    const { session, isAuthenticated } = useSession();
     const { openAuth, showToast } = useUi();
     const router = useRouter();
     const author = getUser(post.authorUsername);
     const detailHref = `/post/${post.id}`;
     const isContext = variant === "context";
 
+    const [menuOpen, setMenuOpen] = useState(false);
+    const moreRef = useRef<HTMLButtonElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
     const openDetail = useCallback(() => router.push(detailHref), [router, detailHref]);
     const stop = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
+
+    // 点击菜单外部时关闭
+    useEffect(() => {
+        if (!menuOpen) return;
+        const onPointerDown = (e: PointerEvent) => {
+            const target = e.target as Node;
+            if (moreRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+            setMenuOpen(false);
+        };
+        document.addEventListener("pointerdown", onPointerDown);
+        return () => document.removeEventListener("pointerdown", onPointerDown);
+    }, [menuOpen]);
 
     if (!author) return null;
 
     const replyCount = post.repliesCount;
+    // 本站 host（仅浏览器端可得；菜单默认关闭，SSR 输出不受影响）
+    const localHost = typeof window === "undefined" ? "" : window.location.host;
+    // 只有非本站的帖子才显示“原始帖子”
+    const isRemote = isRemoteUri(post.uri, localHost);
+    // 只有登录了、且这条帖子是自己发的才显示删除（后端还会再校验作者）
+    const canDelete = isAuthenticated && !!session && session.username === author.username;
+
+    function handleExpand() {
+        setMenuOpen(false);
+        openDetail();
+    }
+
+    function handleOpenOriginal() {
+        setMenuOpen(false);
+        if (post.uri) {
+            window.open(post.uri, "_blank", "noopener,noreferrer");
+        }
+    }
+
+    function handleDelete() {
+        setMenuOpen(false);
+        if (!window.confirm("确定删除这条帖子吗？")) return;
+        void deletePost(post).catch(() => showToast("删除失败，请稍后重试"));
+    }
 
     return (
         <article
@@ -90,9 +144,18 @@ export function PostCard({
                         </span>
                         <button
                             type="button"
+                            ref={moreRef}
                             aria-label="更多操作"
-                            onClick={stop}
-                            className="ml-1 hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-400 opacity-0 transition hover:bg-white/80 hover:text-brand-deep focus-visible:opacity-100 group-hover:opacity-100 sm:inline-flex"
+                            aria-haspopup="menu"
+                            aria-expanded={menuOpen}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuOpen((prev) => !prev);
+                            }}
+                            className={cn(
+                                "ml-1 hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-400 opacity-0 transition hover:bg-white/80 hover:text-brand-deep focus-visible:opacity-100 group-hover:opacity-100 sm:inline-flex",
+                                menuOpen && "opacity-100",
+                            )}
                         >
                             <MoreIcon size={16} />
                         </button>
@@ -150,6 +213,36 @@ export function PostCard({
                     </div>
                 </div>
             </div>
+
+            <Popover
+                open={menuOpen}
+                anchorRef={moreRef}
+                width={168}
+                align="right"
+                className="glass-strong overflow-hidden p-1.5"
+            >
+                {/* portal 到 body，但 React 事件仍会冒泡到 article，这里阻止掉 */}
+                <div ref={menuRef} role="menu" onClick={(e) => e.stopPropagation()} className="flex flex-col">
+                    <button type="button" role="menuitem" onClick={handleExpand} className={MENU_ITEM_CLASS}>
+                        展开
+                    </button>
+                    {isRemote && (
+                        <button type="button" role="menuitem" onClick={handleOpenOriginal} className={MENU_ITEM_CLASS}>
+                            原始帖子
+                        </button>
+                    )}
+                    {canDelete && (
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={handleDelete}
+                            className={cn(MENU_ITEM_CLASS, "text-sakura-deep hover:bg-sakura/10 hover:text-sakura-deep")}
+                        >
+                            删除
+                        </button>
+                    )}
+                </div>
+            </Popover>
         </article>
     );
 }

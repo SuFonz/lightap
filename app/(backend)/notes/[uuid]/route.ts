@@ -15,6 +15,16 @@ export async function GET(
     request: Request,
     { params }: { params: Params },
 ) {
+    // 浏览器直接访问对象地址（Accept 带 text/html）时跳到人类可读页面；
+    // ActivityPub 客户端带 activity+json/ld+json，仍返回 JSON 对象。
+    const accept = request.headers.get("accept") ?? "";
+    const wantsHtml = accept.includes("text/html")
+        && !accept.includes("application/activity+json")
+        && !accept.includes("application/ld+json");
+    if (wantsHtml) {
+        return Response.redirect(`${new URL(request.url).origin}/post/${params.uuid}`, 302);
+    }
+
     // 根据 uuid 查询数据库
     const db = getDBClient();
     const note = (await db.select().from(notes).where(eq(notes.uuid, params.uuid)))[0];

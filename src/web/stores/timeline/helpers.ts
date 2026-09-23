@@ -89,6 +89,26 @@ export function appendUnique(posts: Post[], next: Post[]): Post[] {
     return merged;
 }
 
+/** 递归删除指定帖子；没有变化时返回原数组引用 */
+export function removePost(posts: Post[], id: string): Post[] {
+    let changed = false;
+    const result: Post[] = [];
+    for (const post of posts) {
+        if (post.id === id) {
+            changed = true;
+            continue;
+        }
+        const replies = removePost(post.replies, id);
+        if (replies !== post.replies) {
+            changed = true;
+            result.push({ ...post, replies, repliesCount: replies.length });
+        } else {
+            result.push(post);
+        }
+    }
+    return changed ? result : posts;
+}
+
 export function findPost(posts: Post[], id: string): Post | undefined {
     for (const post of posts) {
         if (post.id === id) return post;

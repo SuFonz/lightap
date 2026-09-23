@@ -12,6 +12,10 @@ interface PopoverProps {
     anchorRef: RefObject<HTMLElement | null>;
     className?: string;
     offset?: number;
+    /** 固定宽度；不传则与锚点等宽 */
+    width?: number;
+    /** 水平对齐方式，默认 left（与锚点左对齐）；right 表示与锚点右对齐 */
+    align?: "left" | "right";
     children: ReactNode;
 }
 
@@ -19,7 +23,7 @@ interface PopoverProps {
  * 锚定浮层：portal 到 body 并按锚点位置定位，
  * 避免被父级 `overflow-y-auto` 裁剪或被后续卡片盖住。
  */
-export function Popover({ open, anchorRef, className, offset = 6, children }: PopoverProps) {
+export function Popover({ open, anchorRef, className, offset = 6, width, align = "left", children }: PopoverProps) {
     const mounted = useMounted();
     const [rect, setRect] = useState<DOMRect | null>(null);
 
@@ -40,14 +44,16 @@ export function Popover({ open, anchorRef, className, offset = 6, children }: Po
 
     if (!mounted || !open || !rect) return null;
 
+    const menuWidth = width ?? rect.width;
+
     return createPortal(
         <div
             className={cn(className)}
             style={{
                 position: "fixed",
                 top: rect.bottom + offset,
-                left: rect.left,
-                width: rect.width,
+                left: align === "right" ? rect.right - menuWidth : rect.left,
+                width: menuWidth,
                 zIndex: zLayers.overlay,
             }}
         >

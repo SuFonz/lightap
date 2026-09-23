@@ -28,6 +28,11 @@ export function createNote(token: string, body: CreateNoteRequest) {
     return request<CreateNoteResponse>("/api/v1/notes", { method: "POST", token, body });
 }
 
+/** 删除帖子：DELETE /api/v1/notes/[uuid] */
+export function deleteNote(uuid: string, token: string) {
+    return request<Record<string, never>>(`/api/v1/notes/${encodeURIComponent(uuid)}`, { method: "DELETE", token });
+}
+
 /** 点赞：POST /api/v1/notes/[uuid]/like */
 export function likeNote(uuid: string, token: string) {
     return request<Record<string, never>>(`/api/v1/notes/${encodeURIComponent(uuid)}/like`, { method: "POST", token });
