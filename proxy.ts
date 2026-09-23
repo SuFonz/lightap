@@ -28,14 +28,15 @@ export async function proxy(req: NextRequest) {
             pathname.startsWith("/api/v1/users/")
         );
 
-    // 必须登录的接口：发帖、删帖、关注、取关、点赞
+    // 必须登录的接口：发帖、删帖、关注、取关、点赞、通知
     const required =
         !publicGet && (
             (pathname === "/api/v1/notes" && req.method === "POST") ||
             (pathname.startsWith("/api/v1/notes/") && req.method === "DELETE") ||
             (pathname.startsWith("/api/v1/notes/") && pathname.endsWith("/like")) ||
             pathname === "/api/v1/follow" ||
-            pathname === "/api/v1/unfollow"
+            pathname === "/api/v1/unfollow" ||
+            pathname.startsWith("/api/v1/notifications")
         );
 
     // 验证 JWT（verifyJwt 无效时返回 null，不会抛异常）

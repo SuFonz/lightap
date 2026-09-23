@@ -1,12 +1,13 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 import { APActivityType, APObjectType } from "@/src/activitypub/ap"
+import { NotificationType } from "../lib/notifications";
 
 export const users = sqliteTable("users", {
     id: integer().primaryKey({ autoIncrement: true }),
     username: text().notNull(),
     domain: text().notNull(),
-    displayName: text("display_name").notNull(),
+    displayName: text("display_name"),
     // 总结
     summary: text(),
     // 头像
@@ -42,7 +43,7 @@ export const notes = sqliteTable("notes", {
     inReplyTo: text(),
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
     deletedAt: integer("deleted_at"),
-})
+});
 
 // TODO: 会考虑做成 id 而不是 uri
 export const follows = sqliteTable("follows", {
@@ -60,4 +61,17 @@ export const likes = sqliteTable("likes", {
     userId: integer("user_id").notNull().references(() => users.id),
     noteId: integer("note_id").notNull().references(() => notes.id),
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
-})
+});
+
+export const notifications = sqliteTable("notifications", {
+    id: integer().primaryKey({ autoIncrement: true }),
+    // 收到通知的用户
+    userId: integer("user_id").notNull().references(() => users.id),
+    // 触发通知的用户
+    actorId: integer("actor_id").notNull().references(() => users.id),
+    type: text().$type<NotificationType>().notNull(),
+    activityId: integer("activity_id").references(() => activities.id),
+    noteId: integer("note_id").references(() => notes.id),
+    readAt: integer("read_at"),
+    createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
+});

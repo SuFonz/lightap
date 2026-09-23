@@ -71,7 +71,7 @@ export async function GET(
     // 返回
     const data: Profile = {
         username: user.username,
-        displayName: user.displayName,
+        displayName: user.displayName ?? "",
         avatarUrl: user.avatarUrl ?? "",
         bio: user.summary ?? "",
         actorUrl: user.actorUrl,

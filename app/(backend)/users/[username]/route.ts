@@ -37,7 +37,7 @@ export async function GET(
     // 构建 Actor
     const actor = buildActor({
         url,
-        name: user.displayName,
+        name: user.displayName ?? "",
         preferredUsername: user.username,
         summary: user.summary,
         publicKeyPem: user.publicKey,

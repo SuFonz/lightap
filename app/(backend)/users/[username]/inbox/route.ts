@@ -1,8 +1,9 @@
 import { APActivity, APActor, APNote, APOrderedCollection } from "@/src/activitypub/ap";
 import { getActor, postInbox } from "@/src/activitypub/network";
 import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
-import { activities, follows, likes, notes, users } from "@/src/db/schema";
+import { activities, follows, likes, notes, notifications, users } from "@/src/db/schema";
 import { storeRemoteActor } from "@/src/lib/actor";
+import { NotificationType } from "@/src/lib/notifications";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
 import { and, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
@@ -54,6 +55,7 @@ async function handleActivity(request: Request, params: Params, activity: APActi
     const db = getDBClient();
     const username = params.username;
     const type = activity.type;
+    const url = new URL(request.url);
 
     console.log(activity);
     try {
@@ -88,7 +90,7 @@ async function handleActivity(request: Request, params: Params, activity: APActi
             }
             case "Create": {
                 // 先拉取远程 Actor、验证签名并落库（feed 才能显示作者信息）
-                await resolveRemoteActor(request, activity, username);
+                const { remoteUser } = await resolveRemoteActor(request, activity, username);
 
                 // 提取对象
                 const obj = await extractObject(activity) as APNote;
@@ -106,28 +108,50 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                     : Math.floor(Date.now() / 1000);
 
                 // 存入数据库
-                await db.insert(notes).values({
+                const newNote = (await db.insert(notes).values({
                     uri: obj.id,
                     uuid: crypto.randomUUID(),
                     actor: activity.actor,
                     content: obj.content,
                     inReplyTo: obj.inReplyTo ?? null,
                     createdAt,
-                });
+                }).returning())[0];
+
+                // 如果是回复本站用户的帖子，给被回复者写一条 Reply 通知
+                if (remoteUser && newNote && obj.inReplyTo) {
+                    const parent = (await db.select().from(notes).where(eq(notes.uri, obj.inReplyTo)))[0];
+                    const recipient = parent ? await findLocalUser(parent.actor, url.host) : undefined;
+                    if (recipient) {
+                        await createNotification({
+                            userId: recipient.id,
+                            actorId: remoteUser.id,
+                            type: "Reply",
+                            noteId: newNote.id,
+                        });
+                    }
+                }
 
                 break;
             }
             case "Follow": {
-                const { user, actor } = await resolveRemoteActor(request, activity, username);
+                const { user, actor, remoteUser } = await resolveRemoteActor(request, activity, username);
 
                 // 存入数据库：远程用户关注本站用户
-                await db.insert(follows).values({
+                const inserted = await db.insert(follows).values({
                     follower: actor.id,
                     following: user.actorUrl,
-                }).onConflictDoNothing();
+                }).onConflictDoNothing().returning();
+
+                // 给被关注的本站用户写一条 Follow 通知（重复投递不重复通知）
+                if (inserted.length > 0 && remoteUser) {
+                    await createNotification({
+                        userId: user.id,
+                        actorId: remoteUser.id,
+                        type: "Follow",
+                    });
+                }
 
                 // 回一个 Accept 给远程用户
-                const url = new URL(request.url);
                 const accept = buildActivity({
                     url,
                     uuid: crypto.randomUUID(),
@@ -142,27 +166,34 @@ async function handleActivity(request: Request, params: Params, activity: APActi
             }
             case "Like": {
                 // 先拉取远程 Actor、验证签名并落库
-                const { actor } = await resolveRemoteActor(request, activity, username);
+                const { remoteUser } = await resolveRemoteActor(request, activity, username);
 
                 // Like 的 object 是被点赞的 Note（本站 Note 的 uri）
                 const objectUri = typeof activity.object === "string" ? activity.object : activity.object.id;
                 const note = (await db.select().from(notes).where(eq(notes.uri, objectUri)))[0];
-                if (!note) {
-                    break;
-                }
-
-                // 点赞者：远程 Actor 已落库，按 actorUrl 取本地 users 行
-                const liker = (await db.select().from(users).where(eq(users.actorUrl, actor.id)))[0];
-                if (!liker) {
+                if (!note || !remoteUser) {
                     break;
                 }
 
                 // 存入数据库（ActivityPub 会重投，uri 唯一，重复插入忽略）
-                await db.insert(likes).values({
+                const inserted = await db.insert(likes).values({
                     uri: activity.id,
-                    userId: liker.id,
+                    userId: remoteUser.id,
                     noteId: note.id,
-                }).onConflictDoNothing();
+                }).onConflictDoNothing().returning();
+
+                // 给被点赞帖子的作者写一条 Like 通知（仅本站用户，重复投递不重复通知）
+                if (inserted.length > 0) {
+                    const recipient = await findLocalUser(note.actor, url.host);
+                    if (recipient) {
+                        await createNotification({
+                            userId: recipient.id,
+                            actorId: remoteUser.id,
+                            type: "Like",
+                            noteId: note.id,
+                        });
+                    }
+                }
 
                 break;
             }
@@ -270,7 +301,38 @@ async function resolveRemoteActor(request: Request, activity: APActivity, userna
     // 远程 Actor 落库，feed 才能显示作者信息
     await storeRemoteActor(actor);
 
-    return { user, actor };
+    // 落库后再取回远程 Actor 的本地 users 行（通知的 actorId 要用）
+    const remoteUser = (await db.select().from(users).where(eq(users.actorUrl, actor.id)))[0];
+
+    return { user, actor, remoteUser };
+}
+
+/** 写一条通知（自己触发自己的忽略） */
+async function createNotification(input: {
+    userId: number,
+    actorId: number,
+    type: NotificationType,
+    noteId?: number,
+}) {
+    if (input.userId === input.actorId) return;
+
+    const db = getDBClient();
+    await db.insert(notifications).values({
+        userId: input.userId,
+        actorId: input.actorId,
+        type: input.type,
+        noteId: input.noteId ?? null,
+    });
+}
+
+/** 按 actorUrl 找本站用户；不存在或 domain 不是本站时返回 undefined */
+async function findLocalUser(actorUrl: string, host: string) {
+    const db = getDBClient();
+    const user = (await db.select().from(users).where(eq(users.actorUrl, actorUrl)))[0];
+    if (!user || user.domain !== host) {
+        return undefined;
+    }
+    return user;
 }
 
 async function extractObject(activity: APActivity) {

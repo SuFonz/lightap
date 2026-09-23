@@ -63,7 +63,7 @@ export async function GET(request: Request) {
             for (const local of locals) {
                 data.items.push({
                     username: local.username,
-                    displayName: local.displayName,
+                    displayName: local.displayName ?? "",
                     avatarUrl: local.avatarUrl ?? "",
                     actorUrl: local.actorUrl,
                     domain: local.domain === url.host ? null : local.domain,
