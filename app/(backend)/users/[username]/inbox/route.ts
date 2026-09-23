@@ -248,8 +248,6 @@ async function resolveRemoteActor(request: Request, activity: APActivity, userna
         )
     ))[0];
 
-    // TODO: 远程 Actor 如果已经存数据库了可以从数据库里提取
-
     // 获取远程 Actor
     const rmRes = await getActor(activity.actor, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
     if (!rmRes.ok) {
