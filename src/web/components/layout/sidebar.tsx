@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import { WelcomePanel } from "@/web/components/auth/welcome-panel";
 import { Avatar } from "@/web/components/ui/avatar";
-import { EditIcon, FeatherIcon, GearIcon, GlobeIcon, HomeIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
+import { BellIcon, EditIcon, FeatherIcon, GearIcon, GlobeIcon, HomeIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
 import { useDirectory } from "@/web/stores/directory";
+import { useNotifications } from "@/web/stores/notifications-store";
 import { useSession } from "@/web/stores/session-store";
 import { useUi } from "@/web/stores/ui-store";
 
@@ -22,10 +23,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     const { isAuthenticated } = useSession();
     const { currentUser } = useDirectory();
     const { openComposer, openEditProfile } = useUi();
+    const { unreadCount } = useNotifications();
 
     const navItems: NavItem[] = [
         { href: "/", label: "首页", icon: HomeIcon },
         { href: "/search", label: "搜索", icon: SearchIcon },
+        { href: "/notifications", label: "通知", icon: BellIcon },
         { href: `/u/${currentUser.username}`, label: "我的资料", icon: UserIcon },
         { href: "/settings", label: "设置", icon: GearIcon },
     ];
@@ -111,6 +114,11 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                                                 )}
                                             />
                                             {label}
+                                            {href === "/notifications" && unreadCount > 0 && (
+                                                <span className="ml-auto rounded-full bg-sakura-deep px-1.5 py-0.5 text-[10px] font-extrabold tabular-nums text-white">
+                                                    {unreadCount > 99 ? "99+" : unreadCount}
+                                                </span>
+                                            )}
                                         </Link>
                                     </li>
                                 );

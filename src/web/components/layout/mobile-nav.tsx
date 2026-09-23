@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import { SidebarContent } from "@/web/components/layout/sidebar";
 import { Avatar } from "@/web/components/ui/avatar";
-import { FeatherIcon, GearIcon, HomeIcon, MenuIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
+import { BellIcon, FeatherIcon, GearIcon, HomeIcon, MenuIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
 import { useDirectory } from "@/web/stores/directory";
+import { useNotifications } from "@/web/stores/notifications-store";
 import { useSession } from "@/web/stores/session-store";
 import { useUi } from "@/web/stores/ui-store";
 
@@ -15,6 +16,7 @@ export function MobileTopBar() {
     const { setDrawerOpen } = useUi();
     const { isAuthenticated } = useSession();
     const { currentUser } = useDirectory();
+    const { unreadCount } = useNotifications();
 
     return (
         <header className="glass-bar fixed inset-x-0 top-0 z-40 flex items-center gap-2 px-4 py-2.5 lg:hidden">
@@ -43,6 +45,20 @@ export function MobileTopBar() {
                     <SearchIcon size={21} />
                 </Link>
                 {isAuthenticated && (
+                    <Link
+                        href="/notifications"
+                        aria-label="通知"
+                        className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/80 hover:text-brand-deep"
+                    >
+                        <BellIcon size={21} />
+                        {unreadCount > 0 && (
+                            <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sakura-deep px-1 text-[9px] font-extrabold tabular-nums text-white">
+                                {unreadCount > 99 ? "99+" : unreadCount}
+                            </span>
+                        )}
+                    </Link>
+                )}
+                {isAuthenticated && (
                     <Link href={`/u/${currentUser.username}`} aria-label="我的资料" className="ml-1">
                         <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={34} />
                     </Link>
@@ -58,7 +74,7 @@ interface BottomNavItem {
     icon: ComponentType<{ size?: number }>;
 }
 
-function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean }) {
+function BottomNavLink({ item, active, badge = 0 }: { item: BottomNavItem; active: boolean; badge?: number }) {
     const IconCmp = item.icon;
     return (
         <Link
@@ -71,6 +87,11 @@ function BottomNavLink({ item, active }: { item: BottomNavItem; active: boolean 
         >
             <span className={cn("relative rounded-full p-1", active && "bg-brand/15")}>
                 <IconCmp size={21} />
+                {badge > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-sakura-deep px-1 text-[9px] font-extrabold tabular-nums text-white">
+                        {badge > 99 ? "99+" : badge}
+                    </span>
+                )}
             </span>
             {item.label}
         </Link>
@@ -82,12 +103,14 @@ export function MobileBottomNav() {
     const { openComposer } = useUi();
     const { isAuthenticated } = useSession();
     const { currentUser } = useDirectory();
+    const { unreadCount } = useNotifications();
 
     const items: BottomNavItem[] = [
         { href: "/", label: "首页", icon: HomeIcon },
         { href: "/search", label: "搜索", icon: SearchIcon },
         ...(isAuthenticated
             ? [
+                  { href: "/notifications", label: "通知", icon: BellIcon },
                   { href: `/u/${currentUser.username}`, label: "我的", icon: UserIcon },
                   { href: "/settings", label: "设置", icon: GearIcon },
               ]
@@ -102,7 +125,12 @@ export function MobileBottomNav() {
             aria-label="底部导航"
         >
             {items.slice(0, 2).map((item) => (
-                <BottomNavLink key={item.href} item={item} active={isActive(item.href)} />
+                <BottomNavLink
+                    key={item.href}
+                    item={item}
+                    active={isActive(item.href)}
+                    badge={item.href === "/notifications" ? unreadCount : 0}
+                />
             ))}
 
             {isAuthenticated && (
@@ -119,7 +147,12 @@ export function MobileBottomNav() {
             )}
 
             {items.slice(2).map((item) => (
-                <BottomNavLink key={item.href} item={item} active={isActive(item.href)} />
+                <BottomNavLink
+                    key={item.href}
+                    item={item}
+                    active={isActive(item.href)}
+                    badge={item.href === "/notifications" ? unreadCount : 0}
+                />
             ))}
         </nav>
     );

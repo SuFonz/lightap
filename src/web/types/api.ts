@@ -133,3 +133,32 @@ export interface UnfollowRequest {
     domain: string;
     targetActorUrl: string;
 }
+
+// 通知：GET /api/v1/notifications
+export type NotificationType = "Follow" | "Like" | "Reply" | "Mention";
+
+export interface NotificationItem {
+    id: number;
+    type: NotificationType;
+    /** 是否已读 */
+    read: boolean;
+    /** 秒 */
+    createdAt: number;
+    /** 触发通知的用户 */
+    user: {
+        id: number;
+        username: string;
+        domain: string;
+        displayName: string;
+        avatarUrl: string;
+    };
+    /** 相关帖子（Follow 没有 note） */
+    note: {
+        uuid: string;
+        content: string;
+    } | null;
+}
+
+export interface NotificationsResponse {
+    items: NotificationItem[];
+}
