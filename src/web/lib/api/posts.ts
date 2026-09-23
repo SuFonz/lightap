@@ -28,6 +28,16 @@ export function createNote(token: string, body: CreateNoteRequest) {
     return request<CreateNoteResponse>("/api/v1/notes", { method: "POST", token, body });
 }
 
+/** 点赞：POST /api/v1/notes/[uuid]/like */
+export function likeNote(uuid: string, token: string) {
+    return request<Record<string, never>>(`/api/v1/notes/${encodeURIComponent(uuid)}/like`, { method: "POST", token });
+}
+
+/** 取消点赞：DELETE /api/v1/notes/[uuid]/like */
+export function unlikeNote(uuid: string, token: string) {
+    return request<Record<string, never>>(`/api/v1/notes/${encodeURIComponent(uuid)}/like`, { method: "DELETE", token });
+}
+
 export function fetchThread(uuid: string, token?: string) {
     return request<NoteThreadResponse>(`/api/v1/notes/${encodeURIComponent(uuid)}`, { token });
 }

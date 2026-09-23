@@ -44,6 +44,8 @@ export function fromListItem(item: PostListItem): Post {
     post.cursorId = item.id;
     post.repliesCount = item.repliesCount;
     post.uri = item.uri;
+    post.likedByMe = item.liked;
+    post.likes = item.likeCount;
     return post;
 }
 
@@ -57,6 +59,8 @@ export function fromNoteItem(item: NoteItem): Post {
     );
     post.repliesCount = item.repliesCount;
     post.uri = item.uri;
+    post.likedByMe = item.liked;
+    post.likes = item.likeCount;
     return post;
 }
 

@@ -28,6 +28,7 @@ export interface TimelineValue {
     getThread: (id: string) => Post[] | undefined;
     /** 从后端拉取整条线程并缓存 */
     loadThread: (id: string) => Promise<void>;
-    toggleLike: (id: string) => void;
+    /** 点赞 / 取消点赞（乐观更新，失败自动回滚） */
+    toggleLike: (post: Post) => Promise<void>;
     toggleBoost: (id: string) => void;
 }

@@ -11,7 +11,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "DELETE";
     /** JWT，放到 Authorization: Bearer */
     token?: string;
     body?: unknown;

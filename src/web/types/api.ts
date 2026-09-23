@@ -64,6 +64,9 @@ export interface PostListItem {
     domain: string;
     content: string;
     inReplyTo: string | null;
+    /** 当前登录用户是否已点赞 */
+    liked: boolean;
+    likeCount: number;
     repliesCount: number;
     createdAt: number;
 }
@@ -88,6 +91,10 @@ export interface CreateNoteResponse {
     /** ActivityPub 规范地址，回复时作为 inReplyTo */
     uri: string;
     content: string;
+    /** 新建时一定为 false */
+    liked: boolean;
+    /** 新建时一定为 0 */
+    likeCount: number;
 }
 
 // 帖子线程：GET /api/v1/notes/[uuid]
@@ -99,6 +106,9 @@ export interface NoteItem {
     domain: string;
     content: string;
     inReplyTo: string | null;
+    /** 当前登录用户是否已点赞 */
+    liked: boolean;
+    likeCount: number;
     repliesCount: number;
     createdAt: number;
 }

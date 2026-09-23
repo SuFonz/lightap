@@ -12,6 +12,8 @@ interface Item {
     uuid: string,
     uri: string,
     content: string,
+    liked: boolean,
+    likeCount: number,
 }
 
 interface Body {
@@ -69,12 +71,14 @@ export async function POST(request: Request) {
             targets,
         });
 
-        // 返回新建的 Note
+        // 返回新建的 Note（刚发布，还没有点赞）
         data = {
             id: dbNote.id,
             uuid: dbNote.uuid,
             uri: dbNote.uri,
             content: dbNote.content,
+            liked: false,
+            likeCount: 0,
         };
     } catch (error: any) {
         console.log(error.message);

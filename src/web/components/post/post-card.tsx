@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import { PostContent } from "@/web/components/post/post-content";
 import { Avatar } from "@/web/components/ui/avatar";
-import { MoreIcon, ReplyIcon } from "@/web/components/ui/icons";
+import { HeartIcon, MoreIcon, ReplyIcon } from "@/web/components/ui/icons";
 import { RelativeTime } from "@/web/components/ui/relative-time";
 import { cn } from "@/web/lib/cn";
 import { formatCount } from "@/web/lib/format";
 import { useDirectory } from "@/web/stores/directory";
+import { useSession } from "@/web/stores/session-store";
+import { useTimeline } from "@/web/stores/timeline";
+import { useUi } from "@/web/stores/ui-store";
 import type { Post, PostVariant } from "@/web/types";
 
 export function PostCard({
@@ -23,6 +26,9 @@ export function PostCard({
     bare?: boolean;
 }) {
     const { getUser } = useDirectory();
+    const { toggleLike } = useTimeline();
+    const { isAuthenticated } = useSession();
+    const { openAuth, showToast } = useUi();
     const router = useRouter();
     const author = getUser(post.authorUsername);
     const detailHref = `/post/${post.id}`;
@@ -110,6 +116,36 @@ export function PostCard({
                                 <ReplyIcon size={17} />
                             </span>
                             {formatCount(replyCount)}
+                        </button>
+
+                        <button
+                            type="button"
+                            aria-label={post.likedByMe ? `取消点赞，${post.likes} 个赞` : `点赞，${post.likes} 个赞`}
+                            aria-pressed={post.likedByMe}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isAuthenticated) {
+                                    openAuth("login");
+                                    return;
+                                }
+                                void toggleLike(post).catch(() => {
+                                    showToast(post.likedByMe ? "取消点赞失败，请稍后重试" : "点赞失败，请稍后重试");
+                                });
+                            }}
+                            className={cn(
+                                "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold transition-colors duration-150 [&:hover_.bubble]:bg-sakura/15",
+                                post.likedByMe ? "text-sakura-deep" : "text-slate-400 hover:text-sakura-deep",
+                            )}
+                        >
+                            <span
+                                className={cn(
+                                    "bubble rounded-full p-1.5 transition-colors",
+                                    post.likedByMe && "bg-sakura/15",
+                                )}
+                            >
+                                <HeartIcon size={17} fill={post.likedByMe ? "currentColor" : "none"} />
+                            </span>
+                            {formatCount(post.likes)}
                         </button>
                     </div>
                 </div>

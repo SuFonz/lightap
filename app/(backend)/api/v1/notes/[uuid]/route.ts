@@ -1,5 +1,6 @@
 import { notes } from "@/src/db/schema";
 import { getDBClient } from "@/src/db";
+import { resolveRequestUser } from "@/src/lib/auth";
 import { toNoteListItems } from "@/src/lib/notes";
 import { eq } from "drizzle-orm";
 
@@ -14,6 +15,8 @@ interface Item {
     domain: string,
     content: string,
     inReplyTo: string | null,
+    liked: boolean,
+    likeCount: number,
     repliesCount: number,
     createdAt: number,
 }
@@ -29,7 +32,6 @@ export async function GET(
     { params }: { params: Params },
 ) {
     // 根据当前 uuid 查询数据库
-    const url = new URL(request.url);
     const db = getDBClient();
     const note = (await db.select().from(notes).where(eq(notes.uuid, params.uuid)))[0];
     if (!note) {
@@ -55,8 +57,11 @@ export async function GET(
     // 查询哪个 note 引用了当前 note
     const replies = await db.select().from(notes).where(eq(notes.inReplyTo, note.uri));
 
+    // 当前登录用户（可选），用于 liked 状态
+    const viewer = await resolveRequestUser(request);
+
     // 组装返回
-    const items: Item[] = await toNoteListItems([...chain, ...replies]);
+    const items: Item[] = await toNoteListItems([...chain, ...replies], viewer?.id);
 
     // 返回
     return Response.json({

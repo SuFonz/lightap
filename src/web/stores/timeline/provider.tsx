@@ -75,6 +75,8 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             const post = makePost(created.uuid, currentUser.username, created.content, new Date().toISOString());
             post.uri = created.uri;
             post.cursorId = created.id;
+            post.likedByMe = created.liked;
+            post.likes = created.likeCount;
 
             // 插到自己的帖子列表顶部（若该用户主页已加载）
             setUserPosts((prev) => {
@@ -210,16 +212,46 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             for (const [key, chain] of Object.entries(prev)) next[key] = mapPost(chain, id, updater);
             return next;
         });
+        // 个人主页的帖子列表也同步（只动确实包含该帖的那几个列表）
+        setUserPosts((prev) => {
+            let next = prev;
+            for (const [username, list] of Object.entries(prev)) {
+                if (!findPost(list, id)) continue;
+                if (next === prev) next = { ...prev };
+                next[username] = mapPost(list, id, updater);
+            }
+            return next;
+        });
     }, []);
 
     const toggleLike = useCallback(
-        (id: string) =>
-            mutate(id, (post) => ({
-                ...post,
-                likedByMe: !post.likedByMe,
-                likes: post.likes + (post.likedByMe ? -1 : 1),
-            })),
-        [mutate],
+        async (post: Post) => {
+            if (!session) throw new Error("请先登录");
+
+            const id = post.id;
+            const willLike = !post.likedByMe;
+
+            // 立即反馈：先乐观更新
+            mutate(id, (item) => ({
+                ...item,
+                likedByMe: willLike,
+                likes: item.likes + (willLike ? 1 : -1),
+            }));
+
+            try {
+                if (willLike) await postsApi.likeNote(id, session.token);
+                else await postsApi.unlikeNote(id, session.token);
+            } catch (error) {
+                // 服务器失败：回滚到原来的状态
+                mutate(id, (item) => ({
+                    ...item,
+                    likedByMe: !willLike,
+                    likes: item.likes + (willLike ? -1 : 1),
+                }));
+                throw error;
+            }
+        },
+        [session, mutate],
     );
 
     const toggleBoost = useCallback(

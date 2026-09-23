@@ -23,6 +23,8 @@ interface Item {
     domain: string,
     content: string,
     inReplyTo: string | null,
+    liked: boolean,
+    likeCount: number,
     repliesCount: number,
     createdAt: number,
 }
@@ -38,6 +40,9 @@ export async function GET(request: Request) {
 
     const db = getDBClient();
 
+    // 当前登录用户（可选）：关注流需要它，liked 状态也需要它
+    const viewer = await resolveRequestUser(request);
+
     // 根据类型确定作者范围：all = 数据库全部，local = 本站用户，following = 当前用户关注的人
     let actors: string[] | null = null;
     if (type === "local") {
@@ -47,8 +52,7 @@ export async function GET(request: Request) {
         )).map(user => user.actorUrl);
     } else if (type === "following") {
         // 关注流需要登录
-        const user = await resolveRequestUser(request);
-        if (!user) {
+        if (!viewer) {
             return Response.json({
                 error: "Unauthorized.",
             }, {
@@ -56,8 +60,8 @@ export async function GET(request: Request) {
             });
         }
         // 关注流包含自己发的帖
-        actors = (await db.select().from(follows).where(eq(follows.follower, user.actorUrl))).map(f => f.following);
-        actors.push(user.actorUrl);
+        actors = (await db.select().from(follows).where(eq(follows.follower, viewer.actorUrl))).map(f => f.following);
+        actors.push(viewer.actorUrl);
     }
 
     // 没有可查询的作者直接返回空
@@ -79,7 +83,7 @@ export async function GET(request: Request) {
     ).orderBy(desc(notes.id)).limit(body.limit ?? MAX_LIMIT);
 
     // 组装返回
-    const items: Item[] = await toNoteListItems(rows);
+    const items: Item[] = await toNoteListItems(rows, viewer?.id);
 
     return Response.json({
         items,

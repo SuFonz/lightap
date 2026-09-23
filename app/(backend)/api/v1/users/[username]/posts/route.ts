@@ -1,5 +1,6 @@
 import { notes, users } from "@/src/db/schema";
 import { getDBClient } from "@/src/db";
+import { resolveRequestUser } from "@/src/lib/auth";
 import { toNoteListItems } from "@/src/lib/notes";
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 
@@ -21,6 +22,8 @@ interface Item {
     domain: string,
     content: string,
     inReplyTo: string | null,
+    liked: boolean,
+    likeCount: number,
     repliesCount: number,
     createdAt: number,
 }
@@ -54,8 +57,11 @@ export async function GET(
         ),
     ).orderBy(desc(notes.id)).limit(limit);
 
+    // 当前登录用户（可选），用于 liked 状态
+    const viewer = await resolveRequestUser(request);
+
     // 组装返回
-    const items: Item[] = await toNoteListItems(rows);
+    const items: Item[] = await toNoteListItems(rows, viewer?.id);
 
     return Response.json({
         items,
