@@ -31,8 +31,13 @@ export async function POST(request: Request) {
 
         // 是否本地用户
         if (body.domain == url.host) {
-            // 是：查询另一位用户
-            const target = (await db.select().from(users).where(eq(users.username, body.username)))[0];
+            // 是：查询另一位用户（限定本站，避免命中同名远程用户）
+            const target = (await db.select().from(users).where(
+                and(
+                    eq(users.username, body.username),
+                    eq(users.domain, url.host),
+                ),
+            ))[0];
 
             // 已经关注过则直接返回
             const existing = (await db.select().from(follows).where(

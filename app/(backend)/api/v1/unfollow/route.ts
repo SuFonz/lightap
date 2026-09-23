@@ -27,7 +27,10 @@ export async function POST(request: Request) {
             const found = await db.select().from(users).where(
                 or(
                     eq(users.id, userId),
-                    eq(users.username, body.username),
+                    and(
+                        eq(users.username, body.username),
+                        eq(users.domain, url.host),
+                    ),
                 ),
             );
             const user = found.find(item => item.id === userId);

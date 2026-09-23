@@ -1,6 +1,6 @@
 import { APPerson } from "@/src/activitypub/ap";
 import { users } from "@/src/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,12 @@ export async function GET(
 
     // 检查用户是否存在
     const db = getDBClient();
-    const result = await db.select().from(users).where(eq(users.username, username));
+    const result = await db.select().from(users).where(
+        and(
+            eq(users.username, username),
+            eq(users.domain, url.host),
+        ),
+    );
     if (result.length == 0) {
         return Response.json({ 
             error: "User not found.",

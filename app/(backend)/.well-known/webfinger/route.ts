@@ -1,6 +1,6 @@
 import { buildWebfinger, parseResource } from "@/src/activitypub/tools";
 import { users } from "@/src/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
@@ -20,9 +20,14 @@ export async function GET(request: Request) {
     // 解析 acct:username@example.com
     const [username, domain] = parseResource(resource);
 
-    // 检查用户是否存在
+    // 检查用户是否存在（限定 acct 里的域名，避免命中同名远程用户）
     const db = getDBClient();
-    const result = await db.select().from(users).where(eq(users.username, username));
+    const result = await db.select().from(users).where(
+        and(
+            eq(users.username, username),
+            eq(users.domain, domain),
+        ),
+    );
     if (result.length == 0) {
         return Response.json({
             error: "User not found."

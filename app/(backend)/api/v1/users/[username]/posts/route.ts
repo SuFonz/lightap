@@ -37,9 +37,14 @@ export async function GET(
     const limit = Math.min(Number(url.searchParams.get("limit")) || MAX_LIMIT, MAX_LIMIT);
     const maxId = Number(url.searchParams.get("maxId")) || undefined;
 
-    // 只查本地数据库里的用户
+    // 只查本地数据库里的用户（限定本站，避免命中同名远程用户）
     const db = getDBClient();
-    const user = (await db.select().from(users).where(eq(users.username, params.username)))[0];
+    const user = (await db.select().from(users).where(
+        and(
+            eq(users.username, params.username),
+            eq(users.domain, url.host),
+        ),
+    ))[0];
     if (!user) {
         return Response.json({
             error: "User not found.",

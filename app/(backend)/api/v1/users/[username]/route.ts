@@ -32,9 +32,14 @@ export async function GET(
     const url = new URL(request.url);
     const username = params.username;
 
-    // 只查本地数据库
+    // 只查本地数据库（限定本站，避免命中同名远程用户）
     const db = getDBClient();
-    const user = (await db.select().from(users).where(eq(users.username, username)))[0];
+    const user = (await db.select().from(users).where(
+        and(
+            eq(users.username, username),
+            eq(users.domain, url.host),
+        ),
+    ))[0];
     if (!user) {
         return Response.json({
             error: "User not found.",
