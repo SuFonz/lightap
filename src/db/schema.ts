@@ -70,7 +70,6 @@ export const notifications = sqliteTable("notifications", {
     // 触发通知的用户
     actorId: integer("actor_id").notNull().references(() => users.id),
     type: text().$type<NotificationType>().notNull(),
-    activityId: integer("activity_id").references(() => activities.id),
     noteId: integer("note_id").references(() => notes.id),
     readAt: integer("read_at"),
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
