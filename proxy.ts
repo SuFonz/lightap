@@ -64,7 +64,10 @@ export async function proxy(req: NextRequest) {
     }
 
     // 把用户 id 透传给后续请求（要改请求头，不是响应头；无效 token 时不带）
+    // 先无条件清掉客户端自带的 x-user-id：未登录（payload 为 null）时若不清，
+    // 攻击者可自带 x-user-id 冒充任意用户，命中 resolveRequestUser 造成越权。
     const requestHeaders = new Headers(req.headers);
+    requestHeaders.delete("x-user-id");
     if (payload) {
         requestHeaders.set("x-user-id", String(payload.sub));
     }
