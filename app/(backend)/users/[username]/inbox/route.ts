@@ -3,9 +3,11 @@ import { getActor, postInbox } from "@/src/activitypub/network";
 import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
 import { activities, follows, likes, notes, users } from "@/src/db/schema";
 import { storeRemoteActor } from "@/src/lib/actor";
+import { toNoteListItems } from "@/src/lib/notes";
 import { createNotification } from "@/src/lib/notify";
+import { publishEvent } from "@/src/realtime/sse";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
@@ -117,10 +119,14 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                     createdAt,
                 }).returning())[0];
 
+                // 回复的话先找到父帖
+                const parent = obj.inReplyTo
+                    ? (await db.select().from(notes).where(eq(notes.uri, obj.inReplyTo)))[0]
+                    : undefined;
+
                 // 如果是回复本站用户的帖子，给被回复者写一条 Reply 通知
-                if (remoteUser && newNote && obj.inReplyTo) {
-                    const parent = (await db.select().from(notes).where(eq(notes.uri, obj.inReplyTo)))[0];
-                    const recipient = parent ? await findLocalUser(parent.actor, url.host) : undefined;
+                if (remoteUser && parent) {
+                    const recipient = await findLocalUser(parent.actor, url.host);
                     if (recipient) {
                         await createNotification({
                             userId: recipient.id,
@@ -128,6 +134,39 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                             type: "Reply",
                             noteId: newNote.id,
                         });
+                    }
+                }
+
+                // 实时推送
+                if (obj.inReplyTo) {
+                    // 回复：不进时间线，只让父帖评论数 +1
+                    if (parent) {
+                        await publishEvent({
+                            type: "reply.created",
+                            data: { parentUuid: parent.uuid, actorUsername: remoteUser?.username ?? "" },
+                        }, { type: "all" });
+                    }
+                } else {
+                    // 顶层帖：广播给所有人（含访客）+ 定向推给作者的本站粉丝
+                    const [item] = await toNoteListItems([newNote]);
+                    if (item) {
+                        await publishEvent({ type: "note.created", data: item }, { type: "all" });
+
+                        if (remoteUser) {
+                            const followerActorUrls = (await db.select().from(follows).where(eq(follows.following, remoteUser.actorUrl))).map(f => f.follower);
+                            if (followerActorUrls.length > 0) {
+                                const localFollowers = await db.select().from(users).where(
+                                    and(
+                                        inArray(users.actorUrl, followerActorUrls),
+                                        eq(users.domain, url.host),
+                                    ),
+                                );
+                                const userIds = localFollowers.map(u => u.id);
+                                if (userIds.length > 0) {
+                                    await publishEvent({ type: "following.note", data: item }, { type: "users", userIds });
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -193,6 +232,12 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                             noteId: note.id,
                         });
                     }
+
+                    // 实时：让正在看这条帖子的人点赞数 +1
+                    await publishEvent({
+                        type: "like.created",
+                        data: { noteUuid: note.uuid },
+                    }, { type: "all" });
                 }
 
                 break;
