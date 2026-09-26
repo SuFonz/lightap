@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { DirectoryProvider } from "@/web/stores/directory";
 import { NotificationsProvider } from "@/web/stores/notifications-store";
+import { RealtimeProvider } from "@/web/realtime/realtime-provider";
 import { SessionProvider } from "@/web/stores/session-store";
 import { TimelineProvider } from "@/web/stores/timeline";
 import { UiProvider } from "@/web/stores/ui-store";
@@ -21,7 +22,9 @@ export function StoreProvider({
             <DirectoryProvider>
                 <TimelineProvider>
                     <UiProvider>
-                        <NotificationsProvider>{children}</NotificationsProvider>
+                        <NotificationsProvider>
+                            <RealtimeProvider>{children}</RealtimeProvider>
+                        </NotificationsProvider>
                     </UiProvider>
                 </TimelineProvider>
             </DirectoryProvider>

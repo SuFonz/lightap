@@ -1,4 +1,4 @@
-import type { FeedTab, Post } from "@/web/types";
+import type { FeedTab, Post, PostListItem } from "@/web/types";
 
 export interface Pagination {
     hasMore: boolean;
@@ -33,4 +33,6 @@ export interface TimelineValue {
     toggleBoost: (id: string) => void;
     /** 删除自己的帖子（成功后从时间线 / 线程 / 主页列表移除） */
     deletePost: (post: Post) => Promise<void>;
+    /** 收到实时新帖（SSE）时按当前 tab 插入时间线 */
+    applyRemoteNote: (item: PostListItem) => void;
 }

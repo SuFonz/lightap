@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { postsApi } from "@/web/lib/api";
 import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
-import type { FeedTab, Post } from "@/web/types";
+import type { FeedTab, Post, PostListItem } from "@/web/types";
 import { TimelineContext } from "./context";
 import { appendUnique, findPost, fromListItem, fromNoteItem, makePost, mapPost, removePost, rememberAuthors } from "./helpers";
 import type { Pagination, TimelineValue } from "./types";
@@ -13,7 +13,7 @@ const FEED_LIMIT = 30;
 
 export function TimelineProvider({ children }: { children: ReactNode }) {
     const { session } = useSession();
-    const { currentUser, rememberUser } = useDirectory();
+    const { currentUser, rememberUser, isFollowing } = useDirectory();
     const [posts, setPosts] = useState<Post[]>([]);
     const [threads, setThreads] = useState<Record<string, Post[]>>({});
     const [userPosts, setUserPosts] = useState<Record<string, Post[]>>({});
@@ -263,6 +263,28 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         [mutate],
     );
 
+    const applyRemoteNote = useCallback(
+        (item: PostListItem) => {
+            // 记住作者展示信息
+            rememberAuthors([item], rememberUser);
+
+            const post = fromListItem(item);
+            setPosts((prev) => {
+                if (prev.some((p) => p.id === post.id)) return prev;
+
+                // 只有在当前 tab 覆盖范围内才插入
+                const belongs =
+                    tab === "all" ||
+                    (tab === "local" && item.domain === session?.instance) ||
+                    (tab === "following" && (isFollowing(item.username) || item.username === session?.username));
+                if (!belongs) return prev;
+
+                return appendUnique([post], prev);
+            });
+        },
+        [tab, session, isFollowing, rememberUser],
+    );
+
     const deletePost = useCallback(
         async (post: Post) => {
             if (!session) throw new Error("请先登录");
@@ -315,6 +337,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             toggleLike,
             toggleBoost,
             deletePost,
+            applyRemoteNote,
         }),
         [
             posts,
@@ -334,6 +357,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             toggleLike,
             toggleBoost,
             deletePost,
+            applyRemoteNote,
         ],
     );
 

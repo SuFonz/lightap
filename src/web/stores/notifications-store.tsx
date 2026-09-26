@@ -22,6 +22,8 @@ interface NotificationsValue {
     refresh: () => Promise<void>;
     /** 标记全部已读并刷新 */
     markAllRead: () => Promise<void>;
+    /** 收到实时通知（SSE）时插入列表 */
+    addNotification: (item: NotificationItem) => void;
 }
 
 const NotificationsContext = createContext<NotificationsValue | null>(null);
@@ -69,6 +71,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         }
     }, [session, items]);
 
+    const addNotification = useCallback((item: NotificationItem) => {
+        setItems((prev) => (prev.some((n) => n.id === item.id) ? prev : [item, ...prev]));
+    }, []);
+
     const value = useMemo<NotificationsValue>(
         () => ({
             items,
@@ -76,8 +82,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             loading,
             refresh,
             markAllRead,
+            addNotification,
         }),
-        [items, loading, refresh, markAllRead],
+        [items, loading, refresh, markAllRead, addNotification],
     );
 
     return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
