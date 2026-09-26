@@ -77,6 +77,16 @@ export async function POST(request: Request) {
                         noteId: dbNote.id,
                     });
                 }
+
+                // 回复不广播到时间线，只让前端把父帖的评论数 +1
+                try {
+                    await publishEvent({
+                        type: "reply.created",
+                        data: { parentUuid: reply.uuid, actorUsername: user.username },
+                    }, { type: "all" });
+                } catch {
+                    // 实时推送失败不影响回复
+                }
             }
         }
         const targets = [...inboxes].filter(actorUrl => !actorUrl.startsWith(`${url.origin}/users/`));
@@ -90,14 +100,16 @@ export async function POST(request: Request) {
             targets,
         });
 
-        // 广播新帖给所有人（含访客）
-        try {
-            const [item] = await toNoteListItems([dbNote], user.id);
-            if (item) {
-                await publishEvent({ type: "note.created", data: item }, { type: "all" });
+        // 顶层帖才广播到时间线（回复只走上面的 reply.created，不进时间线）
+        if (!body.inReplyTo) {
+            try {
+                const [item] = await toNoteListItems([dbNote], user.id);
+                if (item) {
+                    await publishEvent({ type: "note.created", data: item }, { type: "all" });
+                }
+            } catch {
+                // 实时推送失败不影响发帖
             }
-        } catch {
-            // 实时推送失败不影响发帖
         }
 
         // 返回新建的 Note（刚发布，还没有点赞）
