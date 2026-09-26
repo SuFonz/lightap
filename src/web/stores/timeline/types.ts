@@ -35,8 +35,12 @@ export interface TimelineValue {
     toggleBoost: (id: string) => void;
     /** 删除自己的帖子（成功后从时间线 / 线程 / 主页列表移除） */
     deletePost: (post: Post) => Promise<void>;
-    /** 收到实时新帖（SSE）时按当前 tab 插入时间线（live 段） */
+    /** 收到「全部」实时新帖（SSE note.created） */
     applyRemoteNote: (item: PostListItem) => void;
-    /** SSE 重连后补漏：拉取 sinceId 之后的新帖并合进 live */
+    /** 收到「已关注」实时新帖（SSE following.note，服务端定向推送） */
+    applyFollowingNote: (item: PostListItem) => void;
+    /** SSE 重连后补漏：拉最新的帖子合并进来 */
     syncNew: () => Promise<void>;
+    /** 收到实时回复（SSE）时给父帖评论数 +1 */
+    applyRemoteReply: (payload: { parentUuid: string; actorUsername?: string }) => void;
 }

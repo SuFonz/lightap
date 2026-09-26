@@ -30,6 +30,10 @@ export interface Post {
     /** 后端数字 id，仅列表项有，用作分页游标 */
     cursorId?: number;
     authorUsername: string;
+    /** 作者所在实例域名（用于按 tab 过滤「本地」） */
+    domain?: string;
+    /** 这条「实时帖」在服务端判断下属于哪些 tab（客户端按此过滤） */
+    tabs?: FeedTab[];
     content: string;
     createdAt: string;
     /** 被回复帖子的 id，非回复时省略 */

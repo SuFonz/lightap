@@ -6,56 +6,76 @@ import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import type { FeedTab, Post, PostListItem } from "@/web/types";
 import { TimelineContext } from "./context";
-import { appendUnique, findPost, fromListItem, fromNoteItem, makePost, mapPost, mergeLive, removePost, rememberAuthors } from "./helpers";
+import { appendUnique, findPost, fromListItem, fromNoteItem, makePost, mapPost, removePost, rememberAuthors, upsertRealtime } from "./helpers";
 import type { Pagination, TimelineValue } from "./types";
 
 const FEED_LIMIT = 30;
-/** 补漏时最多向上翻几页，防止极端情况一直拉 */
-const MAX_CATCHUP_PAGES = 5;
+/** 重连补漏时最多拉多少条 */
+const REALTIME_SYNC_LIMIT = 30;
 const FEED_TABS: FeedTab[] = ["all", "local", "following"];
 
-interface FeedState {
-    /** SSE 新帖（id > sinceId），新的在前 */
-    live: Post[];
+interface HistoryState {
     /** GET 分页的历史，新的在前 */
-    history: Post[];
-    /** 已加载部分里最新一条的 id（live / history 分界） */
-    sinceId: number | null;
-    /** 是否已加载过（用于切 tab 时走缓存） */
+    posts: Post[];
+    /** 是否已加载过（切 tab 走缓存） */
     loaded: boolean;
     loading: boolean;
     hasMore: boolean;
     loadingMore: boolean;
 }
 
-function emptyFeed(): FeedState {
-    return { live: [], history: [], sinceId: null, loaded: false, loading: false, hasMore: false, loadingMore: false };
+function emptyHistory(): HistoryState {
+    return { posts: [], loaded: false, loading: false, hasMore: false, loadingMore: false };
+}
+
+/** 一条新帖（对某个接收者）属于哪些 tab：all 总是；本地看 domain；following 由服务端定向推送决定 */
+function tabsForPost(post: Post, localHost: string, following = false): FeedTab[] {
+    const tabs: FeedTab[] = ["all"];
+    if (post.domain === localHost) tabs.push("local");
+    if (following) tabs.push("following");
+    return tabs;
 }
 
 export function TimelineProvider({ children }: { children: ReactNode }) {
     const { session } = useSession();
-    const { currentUser, rememberUser, isFollowing } = useDirectory();
+    const { currentUser, rememberUser } = useDirectory();
 
-    const [feeds, setFeeds] = useState<Record<FeedTab, FeedState>>(() => ({
-        all: emptyFeed(),
-        local: emptyFeed(),
-        following: emptyFeed(),
+    // 实时帖子：所有 tab 共用一个数组，展示时按 tab 过滤
+    const [realtime, setRealtime] = useState<Post[]>([]);
+    // 历史帖子：每个 tab 各一份（可缓存）
+    const [history, setHistory] = useState<Record<FeedTab, HistoryState>>(() => ({
+        all: emptyHistory(),
+        local: emptyHistory(),
+        following: emptyHistory(),
     }));
     const [threads, setThreads] = useState<Record<string, Post[]>>({});
     const [userPosts, setUserPosts] = useState<Record<string, Post[]>>({});
     const [userPostsMeta, setUserPostsMeta] = useState<Record<string, Pagination>>({});
     const [tab, setTab] = useState<FeedTab>("all");
+    // 实时帖与历史帖的分界：历史帖 id <= sinceId，实时帖 id > sinceId
+    const [sinceId, setSinceId] = useState<number | null>(null);
 
-    // 用 ref 读取最新 feeds，避免 callback 依赖 feeds 而频繁变化
-    const feedsRef = useRef(feeds);
-    feedsRef.current = feeds;
+    const historyRef = useRef(history);
+    historyRef.current = history;
+    const sinceIdRef = useRef(sinceId);
+    sinceIdRef.current = sinceId;
 
-    const active = feeds[tab];
-    const posts = useMemo(() => [...active.live, ...active.history], [active]);
+    // 本站 host：登录用户用 session.instance，访客用当前浏览器 host（否则访客的「本地」tab 会全被过滤掉）
+    const localHost = session?.instance || (typeof window === "undefined" ? "" : window.location.host);
 
-    const patchFeed = useCallback(
-        (target: FeedTab, patch: Partial<FeedState> | ((prev: FeedState) => Partial<FeedState>)) => {
-            setFeeds((prev) => {
+    const active = history[tab];
+
+    // 当前 tab 的实时帖：服务端标记的 tabs 含该 tab、且不在历史里（去重）
+    const realtimeForTab = useMemo(() => {
+        const historyIds = new Set(active.posts.map((p) => p.id));
+        return realtime.filter((p) => (p.tabs?.includes(tab) ?? false) && !historyIds.has(p.id));
+    }, [realtime, tab, active.posts]);
+
+    const posts = useMemo(() => [...realtimeForTab, ...active.posts], [realtimeForTab, active.posts]);
+
+    const patchHistory = useCallback(
+        (target: FeedTab, patch: Partial<HistoryState> | ((prev: HistoryState) => Partial<HistoryState>)) => {
+            setHistory((prev) => {
                 const current = prev[target];
                 const next = typeof patch === "function" ? patch(current) : patch;
                 return { ...prev, [target]: { ...current, ...next } };
@@ -65,7 +85,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     );
 
     const fetchPage = useCallback(
-        async (target: FeedTab, opts: { maxId?: number; sinceId?: number } = {}) => {
+        async (target: FeedTab, opts: { maxId?: number } = {}) => {
             const { items } = await postsApi.fetchFeed(target, { limit: FEED_LIMIT, ...opts });
             rememberAuthors(items, rememberUser);
             return items.map(fromListItem);
@@ -76,28 +96,48 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     const loadFeed = useCallback(
         async (target: FeedTab) => {
             setTab(target);
-            // 已经加载过的 tab 直接用缓存，切回来不再发 GET
-            if (feedsRef.current[target].loaded) return;
+            // 已加载过的 tab 走缓存，不再发 GET
+            if (historyRef.current[target].loaded) return;
 
-            patchFeed(target, { loading: true, hasMore: false, loadingMore: false });
+            patchHistory(target, { loading: true, hasMore: false, loadingMore: false });
             try {
-                const page = await fetchPage(target);
-                const topId = page[0]?.cursorId ?? null;
-                patchFeed(target, (prev) => ({
-                    // GET 期间可能已从 SSE 收到更新的帖，保留比 sinceId 还新的
-                    live: prev.live.filter((p) => p.cursorId != null && topId != null && p.cursorId > topId),
-                    history: page,
-                    sinceId: topId,
+                let boundary = sinceIdRef.current;
+                if (boundary === null) {
+                    // 首次先用 type=all 建立全局边界（all 是超集，最新 id 即全局最新）
+                    const allPage = await fetchPage("all");
+                    boundary = allPage[0]?.cursorId ?? null;
+                    setSinceId(boundary);
+                    // 边界确立后，把之前收到、但已落到历史区（<= boundary）的实时帖剔除
+                    if (boundary !== null) {
+                        const top = boundary;
+                        setRealtime((prev) => prev.filter((p) => p.cursorId != null && p.cursorId > top));
+                    }
+                    if (target === "all") {
+                        patchHistory(target, {
+                            posts: allPage,
+                            loaded: true,
+                            loading: false,
+                            hasMore: allPage.length === FEED_LIMIT,
+                            loadingMore: false,
+                        });
+                        return;
+                    }
+                }
+
+                // 从边界往下取该 tab 的历史（id <= sinceId）
+                const page = boundary === null
+                    ? await fetchPage(target)
+                    : await fetchPage(target, { maxId: boundary + 1 });
+                patchHistory(target, {
+                    posts: page,
                     loaded: true,
                     loading: false,
                     hasMore: page.length === FEED_LIMIT,
                     loadingMore: false,
-                }));
+                });
             } catch {
-                patchFeed(target, {
-                    live: [],
-                    history: [],
-                    sinceId: null,
+                patchHistory(target, {
+                    posts: [],
                     loaded: true,
                     loading: false,
                     hasMore: false,
@@ -105,93 +145,85 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                 });
             }
         },
-        [fetchPage, patchFeed],
+        [fetchPage, patchHistory],
     );
 
     const loadMore = useCallback(async () => {
-        const state = feedsRef.current[tab];
+        const state = historyRef.current[tab];
         if (state.loading || state.loadingMore || !state.hasMore) return;
-        const last = state.history[state.history.length - 1];
+        const last = state.posts[state.posts.length - 1];
         if (!last?.cursorId) return;
 
-        patchFeed(tab, { loadingMore: true });
+        patchHistory(tab, { loadingMore: true });
         try {
             const page = await fetchPage(tab, { maxId: last.cursorId });
-            patchFeed(tab, (prev) => ({
-                history: appendUnique(prev.history, page),
+            patchHistory(tab, (prev) => ({
+                posts: appendUnique(prev.posts, page),
                 hasMore: page.length === FEED_LIMIT,
                 loadingMore: false,
             }));
         } catch {
-            patchFeed(tab, { loadingMore: false });
+            patchHistory(tab, { loadingMore: false });
         }
-    }, [tab, fetchPage, patchFeed]);
+    }, [tab, fetchPage, patchHistory]);
 
-    // 向上补漏：从 sinceId 往上翻，直到不足一页或达到上限
-    const catchUp = useCallback(
-        async (target: FeedTab, fromSinceId: number) => {
-            const collected: Post[] = [];
-            let upper: number | undefined;
-            for (let i = 0; i < MAX_CATCHUP_PAGES; i++) {
-                const page = await fetchPage(target, { sinceId: fromSinceId, maxId: upper });
-                collected.push(...page);
-                if (page.length < FEED_LIMIT) break;
-                const oldest = page[page.length - 1]?.cursorId;
-                if (oldest == null) break;
-                upper = oldest;
-            }
-            return collected;
-        },
-        [fetchPage],
-    );
-
-    // SSE 重连后：把所有「已加载」tab 漏掉的新帖都补回来
+    // 重连补漏：拉最新的最多 30 条（all + following），合并进实时数组并去重、标 tabs
     const syncNew = useCallback(async () => {
-        const targets = FEED_TABS.filter((t) => feedsRef.current[t].sinceId !== null);
-        await Promise.all(
-            targets.map(async (target) => {
-                const fromSinceId = feedsRef.current[target].sinceId;
-                if (fromSinceId === null) return;
-                try {
-                    const page = await catchUp(target, fromSinceId);
-                    if (page.length === 0) return;
-                    patchFeed(target, (prev) => ({ live: mergeLive(prev.live, page) }));
-                } catch {
-                    // 补漏失败就算了，下次重连再试
+        const boundary = sinceIdRef.current;
+        const accept = (p: Post) => boundary === null || (p.cursorId != null && p.cursorId > boundary);
+        try {
+            const { items: allItems } = await postsApi.fetchFeed("all", { limit: REALTIME_SYNC_LIMIT });
+            rememberAuthors(allItems, rememberUser);
+            setRealtime((prev) => {
+                let next = prev;
+                for (const post of allItems.map(fromListItem).filter(accept)) {
+                    next = upsertRealtime(next, post, tabsForPost(post, localHost));
                 }
-            }),
-        );
-    }, [catchUp, patchFeed]);
+                return next;
+            });
 
-    // 批量把某条帖子映射更新（跨所有 tab）
-    const mapAllFeeds = useCallback((id: string, updater: (post: Post) => Post) => {
-        setFeeds((prev) => {
+            if (session) {
+                const { items: followingItems } = await postsApi.fetchFeed("following", { limit: REALTIME_SYNC_LIMIT });
+                rememberAuthors(followingItems, rememberUser);
+                setRealtime((prev) => {
+                    let next = prev;
+                    for (const post of followingItems.map(fromListItem).filter(accept)) {
+                        next = upsertRealtime(next, post, tabsForPost(post, localHost, true));
+                    }
+                    return next;
+                });
+            }
+        } catch {
+            // 补漏失败就算了，下次重连再试
+        }
+    }, [session, localHost, rememberUser]);
+
+    // 跨「实时 + 所有 tab 的历史」更新一条帖子
+    const mapAll = useCallback((id: string, updater: (post: Post) => Post) => {
+        setRealtime((prev) => mapPost(prev, id, updater));
+        setHistory((prev) => {
             let changed = false;
             const next = { ...prev };
             for (const target of FEED_TABS) {
                 const state = prev[target];
-                if (!findPost(state.live, id) && !findPost(state.history, id)) continue;
-                next[target] = {
-                    ...state,
-                    live: mapPost(state.live, id, updater),
-                    history: mapPost(state.history, id, updater),
-                };
+                if (!findPost(state.posts, id)) continue;
+                next[target] = { ...state, posts: mapPost(state.posts, id, updater) };
                 changed = true;
             }
             return changed ? next : prev;
         });
     }, []);
 
-    const removeAllFeeds = useCallback((id: string) => {
-        setFeeds((prev) => {
+    const removeAll = useCallback((id: string) => {
+        setRealtime((prev) => removePost(prev, id));
+        setHistory((prev) => {
             let changed = false;
             const next = { ...prev };
             for (const target of FEED_TABS) {
                 const state = prev[target];
-                const live = removePost(state.live, id);
-                const history = removePost(state.history, id);
-                if (live !== state.live || history !== state.history) {
-                    next[target] = { ...state, live, history };
+                const updated = removePost(state.posts, id);
+                if (updated !== state.posts) {
+                    next[target] = { ...state, posts: updated };
                     changed = true;
                 }
             }
@@ -203,34 +235,23 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         async (content: string) => {
             if (!session) throw new Error("请先登录");
 
-            // 等后端返回后再显示：用返回的 id / uuid / uri / content 构造新帖
             const created = await postsApi.createNote({ content });
 
             const post = makePost(created.uuid, currentUser.username, created.content, new Date().toISOString());
             post.uri = created.uri;
             post.cursorId = created.id;
+            post.domain = session.instance;
             post.likedByMe = created.liked;
             post.likes = created.likeCount;
 
-            // 插到自己的帖子列表顶部（若该用户主页已加载）
+            // 自己的主页列表（若已加载）
             setUserPosts((prev) => {
                 const list = prev[currentUser.username];
                 if (!list) return prev;
                 return { ...prev, [currentUser.username]: appendUnique([post], list) };
             });
-            // 自己的新帖是最新的，放进所有「已加载」tab 的 live
-            setFeeds((prev) => {
-                let changed = false;
-                const next = { ...prev };
-                for (const target of FEED_TABS) {
-                    const state = prev[target];
-                    if (!state.loaded) continue;
-                    if (state.live.some((p) => p.id === post.id)) continue;
-                    next[target] = { ...state, live: [post, ...state.live] };
-                    changed = true;
-                }
-                return changed ? next : prev;
-            });
+            // 自己的新帖：all / local / following 都算
+            setRealtime((prev) => upsertRealtime(prev, post, ["all", "local", "following"]));
         },
         [session, currentUser],
     );
@@ -240,14 +261,12 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             if (!session) throw new Error("请先登录");
             const inReplyTo = target.uri || undefined;
 
-            // 等后端返回后再显示：用返回的数据构造回复
             const created = await postsApi.createNote({ content, inReplyTo });
 
             const newReply = makePost(created.uuid, currentUser.username, created.content, new Date().toISOString(), inReplyTo);
             newReply.uri = created.uri;
             newReply.cursorId = created.id;
 
-            // 把回复挂到目标帖下，并让回复数 +1（线程和时间线都更新）
             const append = (item: Post) => ({
                 ...item,
                 replies: [...item.replies, newReply],
@@ -258,9 +277,9 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                 if (!chain) return prev;
                 return { ...prev, [target.id]: mapPost(chain, target.id, append) };
             });
-            mapAllFeeds(target.id, append);
+            mapAll(target.id, append);
         },
-        [session, currentUser, mapAllFeeds],
+        [session, currentUser, mapAll],
     );
 
     const loadUserPosts = useCallback(
@@ -313,8 +332,10 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
 
     const getPost = useCallback(
         (id: string) => {
-            for (const state of Object.values(feeds)) {
-                const found = findPost(state.live, id) ?? findPost(state.history, id);
+            const inRealtime = findPost(realtime, id);
+            if (inRealtime) return inRealtime;
+            for (const state of Object.values(history)) {
+                const found = findPost(state.posts, id);
                 if (found) return found;
             }
             for (const chain of Object.values(threads)) {
@@ -323,7 +344,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             }
             return undefined;
         },
-        [feeds, threads],
+        [realtime, history, threads],
     );
 
     const getThread = useCallback((id: string) => threads[id], [threads]);
@@ -353,13 +374,12 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
 
     const mutate = useCallback(
         (id: string, updater: (post: Post) => Post) => {
-            mapAllFeeds(id, updater);
+            mapAll(id, updater);
             setThreads((prev) => {
                 const next: Record<string, Post[]> = {};
                 for (const [key, chain] of Object.entries(prev)) next[key] = mapPost(chain, id, updater);
                 return next;
             });
-            // 个人主页的帖子列表也同步（只动确实包含该帖的那几个列表）
             setUserPosts((prev) => {
                 let next = prev;
                 for (const [username, list] of Object.entries(prev)) {
@@ -370,7 +390,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                 return next;
             });
         },
-        [mapAllFeeds],
+        [mapAll],
     );
 
     const toggleLike = useCallback(
@@ -380,7 +400,6 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             const id = post.id;
             const willLike = !post.likedByMe;
 
-            // 立即反馈：先乐观更新
             mutate(id, (item) => ({
                 ...item,
                 likedByMe: willLike,
@@ -391,7 +410,6 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                 if (willLike) await postsApi.likeNote(id);
                 else await postsApi.unlikeNote(id);
             } catch (error) {
-                // 服务器失败：回滚到原来的状态
                 mutate(id, (item) => ({
                     ...item,
                     likedByMe: !willLike,
@@ -415,36 +433,36 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
 
     const applyRemoteNote = useCallback(
         (item: PostListItem) => {
-            // 记住作者展示信息
             rememberAuthors([item], rememberUser);
             const post = fromListItem(item);
-
-            setFeeds((prev) => {
-                let changed = false;
-                const next = { ...prev };
-                for (const target of FEED_TABS) {
-                    const state = prev[target];
-                    // 没加载过的 tab 等切过去再拉，不用现在塞
-                    if (!state.loaded) continue;
-
-                    // 这条帖子是否属于该 tab
-                    const belongs =
-                        target === "all" ||
-                        (target === "local" && item.domain === session?.instance) ||
-                        (target === "following" && (isFollowing(item.username) || item.username === session?.username));
-                    if (!belongs) continue;
-
-                    // 比 sinceId 旧的属于 history 段（GET 会拿到），不塞进 live
-                    if (post.cursorId != null && state.sinceId != null && post.cursorId <= state.sinceId) continue;
-                    if (state.live.some((p) => p.id === post.id)) continue;
-
-                    next[target] = { ...state, live: [post, ...state.live] };
-                    changed = true;
-                }
-                return changed ? next : prev;
-            });
+            // 只收「边界之上」（更新的）实时帖；边界之下属于历史区
+            const boundary = sinceIdRef.current;
+            if (boundary !== null && post.cursorId != null && post.cursorId <= boundary) return;
+            // 服务端广播的：all（作者是本站的话再带 local）
+            setRealtime((prev) => upsertRealtime(prev, post, tabsForPost(post, localHost)));
         },
-        [session, isFollowing, rememberUser],
+        [localHost, rememberUser],
+    );
+
+    const applyFollowingNote = useCallback(
+        (item: PostListItem) => {
+            rememberAuthors([item], rememberUser);
+            const post = fromListItem(item);
+            const boundary = sinceIdRef.current;
+            if (boundary !== null && post.cursorId != null && post.cursorId <= boundary) return;
+            // 服务端定向推送的「已关注」：再带上 following
+            setRealtime((prev) => upsertRealtime(prev, post, tabsForPost(post, localHost, true)));
+        },
+        [localHost, rememberUser],
+    );
+
+    const applyRemoteReply = useCallback(
+        (payload: { parentUuid: string; actorUsername?: string }) => {
+            // 自己的回复本地已经 +1，避免重复
+            if (payload.actorUsername && payload.actorUsername === session?.username) return;
+            mutate(payload.parentUuid, (post) => ({ ...post, repliesCount: post.repliesCount + 1 }));
+        },
+        [session, mutate],
     );
 
     const deletePost = useCallback(
@@ -453,12 +471,10 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
 
             await postsApi.deleteNote(post.id);
 
-            // 从时间线、线程、个人主页列表里就地移除
-            removeAllFeeds(post.id);
+            removeAll(post.id);
             setThreads((prev) => {
                 const next: Record<string, Post[]> = {};
                 for (const [key, chain] of Object.entries(prev)) {
-                    // 删掉这条帖子自己的线程缓存（详情页会变成“帖子不存在”）
                     if (key === post.id) continue;
                     next[key] = removePost(chain, post.id);
                 }
@@ -476,13 +492,13 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                 return next;
             });
         },
-        [session, removeAllFeeds],
+        [session, removeAll],
     );
 
     const value = useMemo<TimelineValue>(
         () => ({
             posts,
-            liveCount: active.live.length,
+            liveCount: realtimeForTab.length,
             loading: active.loading,
             hasMore: active.hasMore,
             loadingMore: active.loadingMore,
@@ -501,10 +517,13 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             toggleBoost,
             deletePost,
             applyRemoteNote,
+            applyFollowingNote,
             syncNew,
+            applyRemoteReply,
         }),
         [
             posts,
+            realtimeForTab,
             active,
             loadFeed,
             loadMore,
@@ -521,7 +540,9 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             toggleBoost,
             deletePost,
             applyRemoteNote,
+            applyFollowingNote,
             syncNew,
+            applyRemoteReply,
         ],
     );
 

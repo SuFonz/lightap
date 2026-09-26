@@ -1,5 +1,5 @@
 import { normalizeNoteContent } from "@/web/lib/html";
-import type { NoteItem, Post, PostListItem } from "@/web/types";
+import type { FeedTab, NoteItem, Post, PostListItem } from "@/web/types";
 
 export interface RememberUserInput {
     username: string;
@@ -44,6 +44,7 @@ export function fromListItem(item: PostListItem): Post {
     post.cursorId = item.id;
     post.repliesCount = item.repliesCount;
     post.uri = item.uri;
+    post.domain = item.domain;
     post.likedByMe = item.liked;
     post.likes = item.likeCount;
     return post;
@@ -59,6 +60,7 @@ export function fromNoteItem(item: NoteItem): Post {
     );
     post.repliesCount = item.repliesCount;
     post.uri = item.uri;
+    post.domain = item.domain;
     post.likedByMe = item.liked;
     post.likes = item.likeCount;
     return post;
@@ -87,6 +89,23 @@ export function appendUnique(posts: Post[], next: Post[]): Post[] {
         merged.push(post);
     }
     return merged;
+}
+
+/**
+ * 把一条实时帖按 id 合并进列表（存在则取 tabs 并集），保持 cursorId 倒序。
+ * 同一条帖子可能先由 note.created、后由 following.note 到达，用并集避免丢 tab。
+ */
+export function upsertRealtime(list: Post[], post: Post, tabs: FeedTab[]): Post[] {
+    const index = list.findIndex((p) => p.id === post.id);
+    if (index === -1) {
+        return [{ ...post, tabs }, ...list].sort((a, b) => (b.cursorId ?? 0) - (a.cursorId ?? 0));
+    }
+    const existing = list[index];
+    const merged = [...new Set([...(existing.tabs ?? []), ...tabs])];
+    if (merged.length === (existing.tabs?.length ?? 0)) return list;
+    const next = [...list];
+    next[index] = { ...existing, tabs: merged };
+    return next;
 }
 
 /** 把两段「新的在前」的列表按 cursorId 倒序合并去重（SSE 补漏用） */

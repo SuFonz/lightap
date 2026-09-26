@@ -16,12 +16,16 @@ import type { NotificationItem, PostListItem } from "@/web/types";
  */
 export function RealtimeProvider({ children }: { children: ReactNode }) {
     const { session } = useSession();
-    const { applyRemoteNote, syncNew } = useTimeline();
+    const { applyRemoteNote, applyFollowingNote, applyRemoteReply, syncNew } = useTimeline();
     const { addNotification } = useNotifications();
 
     // 用 ref 持有最新回调，避免回调变化（例如切换 tab）导致整个连接重连
     const applyNoteRef = useRef(applyRemoteNote);
     applyNoteRef.current = applyRemoteNote;
+    const applyFollowingRef = useRef(applyFollowingNote);
+    applyFollowingRef.current = applyFollowingNote;
+    const applyReplyRef = useRef(applyRemoteReply);
+    applyReplyRef.current = applyRemoteReply;
     const addNotificationRef = useRef(addNotification);
     addNotificationRef.current = addNotification;
     const syncNewRef = useRef(syncNew);
@@ -42,6 +46,20 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                 // 忽略坏数据
             }
         };
+        const onFollowingNote = (event: Event) => {
+            try {
+                applyFollowingRef.current(JSON.parse((event as MessageEvent).data) as PostListItem);
+            } catch {
+                // 忽略坏数据
+            }
+        };
+        const onReply = (event: Event) => {
+            try {
+                applyReplyRef.current(JSON.parse((event as MessageEvent).data) as { parentUuid: string; actorUsername?: string });
+            } catch {
+                // 忽略坏数据
+            }
+        };
         const onNotification = (event: Event) => {
             try {
                 addNotificationRef.current(JSON.parse((event as MessageEvent).data) as NotificationItem);
@@ -52,11 +70,15 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
         source.addEventListener("open", onOpen);
         source.addEventListener("note.created", onNote);
+        source.addEventListener("following.note", onFollowingNote);
+        source.addEventListener("reply.created", onReply);
         source.addEventListener("notification.created", onNotification);
 
         return () => {
             source.removeEventListener("open", onOpen);
             source.removeEventListener("note.created", onNote);
+            source.removeEventListener("following.note", onFollowingNote);
+            source.removeEventListener("reply.created", onReply);
             source.removeEventListener("notification.created", onNotification);
             source.close();
         };
