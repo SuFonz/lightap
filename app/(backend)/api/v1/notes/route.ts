@@ -6,7 +6,7 @@ import { resolveRequestUser } from "@/src/lib/auth";
 import { toNoteListItems } from "@/src/lib/notes";
 import { createNotification } from "@/src/lib/notify";
 import { publishEvent } from "@/src/realtime/sse";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -59,9 +59,8 @@ export async function POST(request: Request) {
         }).returning())[0];
 
         // 递送目标：关注者 + 被回复者（本地实例的用户直接跳过，他们走本地数据库）
-        const inboxes = new Set(
-            (await db.select().from(follows).where(eq(follows.following, user.actorUrl))).map(f => f.follower)
-        );
+        const followerActorUrls = (await db.select().from(follows).where(eq(follows.following, user.actorUrl))).map(f => f.follower);
+        const inboxes = new Set(followerActorUrls);
         if (body.inReplyTo) {
             const reply = (await db.select().from(notes).where(eq(notes.uri, body.inReplyTo)))[0];
             if (reply) {
@@ -105,7 +104,22 @@ export async function POST(request: Request) {
             try {
                 const [item] = await toNoteListItems([dbNote], user.id);
                 if (item) {
+                    // 「全部 / 本地」：广播给所有人（含访客）
                     await publishEvent({ type: "note.created", data: item }, { type: "all" });
+
+                    // 「已关注」：定向推给关注了作者的本站用户
+                    if (followerActorUrls.length > 0) {
+                        const localFollowers = await db.select().from(users).where(
+                            and(
+                                inArray(users.actorUrl, followerActorUrls),
+                                eq(users.domain, url.host),
+                            ),
+                        );
+                        const userIds = localFollowers.map(u => u.id);
+                        if (userIds.length > 0) {
+                            await publishEvent({ type: "following.note", data: item }, { type: "users", userIds });
+                        }
+                    }
                 }
             } catch {
                 // 实时推送失败不影响发帖

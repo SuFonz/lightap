@@ -15,6 +15,7 @@ export interface RealtimeEvent<T = unknown> {
  */
 export type RealtimeAudience =
     | { type: "user"; userId: number }
+    | { type: "users"; userIds: number[] }
     | { type: "authenticated" }
     | { type: "guests" }
     | { type: "all" };
@@ -70,6 +71,8 @@ function matches(subscriber: Subscriber, audience: RealtimeAudience): boolean {
     switch (audience.type) {
         case "user":
             return subscriber.userId === audience.userId;
+        case "users":
+            return subscriber.userId !== null && audience.userIds.includes(subscriber.userId);
         case "authenticated":
             return subscriber.userId !== null;
         case "guests":
