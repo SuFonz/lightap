@@ -16,7 +16,7 @@ import type { NotificationItem, PostListItem } from "@/web/types";
  */
 export function RealtimeProvider({ children }: { children: ReactNode }) {
     const { session } = useSession();
-    const { applyRemoteNote, applyFollowingNote, applyRemoteReply, syncNew } = useTimeline();
+    const { applyRemoteNote, applyFollowingNote, applyRemoteReply, applyRemoteLike, syncNew } = useTimeline();
     const { addNotification } = useNotifications();
 
     // 用 ref 持有最新回调，避免回调变化（例如切换 tab）导致整个连接重连
@@ -24,6 +24,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     applyNoteRef.current = applyRemoteNote;
     const applyFollowingRef = useRef(applyFollowingNote);
     applyFollowingRef.current = applyFollowingNote;
+    const applyLikeRef = useRef(applyRemoteLike);
+    applyLikeRef.current = applyRemoteLike;
     const applyReplyRef = useRef(applyRemoteReply);
     applyReplyRef.current = applyRemoteReply;
     const addNotificationRef = useRef(addNotification);
@@ -60,6 +62,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                 // 忽略坏数据
             }
         };
+        const onLike = (event: Event) => {
+            try {
+                applyLikeRef.current(JSON.parse((event as MessageEvent).data) as { noteUuid: string });
+            } catch {
+                // 忽略坏数据
+            }
+        };
         const onNotification = (event: Event) => {
             try {
                 addNotificationRef.current(JSON.parse((event as MessageEvent).data) as NotificationItem);
@@ -72,6 +81,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         source.addEventListener("note.created", onNote);
         source.addEventListener("following.note", onFollowingNote);
         source.addEventListener("reply.created", onReply);
+        source.addEventListener("like.created", onLike);
         source.addEventListener("notification.created", onNotification);
 
         return () => {
@@ -79,6 +89,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             source.removeEventListener("note.created", onNote);
             source.removeEventListener("following.note", onFollowingNote);
             source.removeEventListener("reply.created", onReply);
+            source.removeEventListener("like.created", onLike);
             source.removeEventListener("notification.created", onNotification);
             source.close();
         };

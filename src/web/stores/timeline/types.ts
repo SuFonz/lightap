@@ -43,4 +43,6 @@ export interface TimelineValue {
     syncNew: () => Promise<void>;
     /** 收到实时回复（SSE）时给父帖评论数 +1 */
     applyRemoteReply: (payload: { parentUuid: string; actorUsername?: string }) => void;
+    /** 收到实时点赞（SSE）时给对应帖子点赞数 +1 */
+    applyRemoteLike: (payload: { noteUuid: string }) => void;
 }

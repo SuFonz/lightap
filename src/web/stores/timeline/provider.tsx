@@ -465,6 +465,13 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         [session, mutate],
     );
 
+    const applyRemoteLike = useCallback(
+        (payload: { noteUuid: string }) => {
+            mutate(payload.noteUuid, (post) => ({ ...post, likes: post.likes + 1 }));
+        },
+        [mutate],
+    );
+
     const deletePost = useCallback(
         async (post: Post) => {
             if (!session) throw new Error("请先登录");
@@ -520,6 +527,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             applyFollowingNote,
             syncNew,
             applyRemoteReply,
+            applyRemoteLike,
         }),
         [
             posts,
@@ -543,6 +551,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             applyFollowingNote,
             syncNew,
             applyRemoteReply,
+            applyRemoteLike,
         ],
     );
 
