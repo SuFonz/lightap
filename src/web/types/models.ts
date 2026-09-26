@@ -2,7 +2,6 @@
 
 export interface Session {
     username: string;
-    token: string;
     /** 当前实例域名，用于展示 @username@instance */
     instance: string;
 }

@@ -1,4 +1,4 @@
-/** 后端请求底座：统一拼 JSON、带 JWT、把错误响应转成 ApiError。 */
+/** 后端请求底座：统一拼 JSON、把错误响应转成 ApiError。登录态走 HttpOnly cookie（同源自动携带）。 */
 
 export class ApiError extends Error {
     readonly status: number;
@@ -12,15 +12,12 @@ export class ApiError extends Error {
 
 interface RequestOptions {
     method?: "GET" | "POST" | "DELETE";
-    /** JWT，放到 Authorization: Bearer */
-    token?: string;
     body?: unknown;
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const headers = new Headers();
     if (options.body !== undefined) headers.set("Content-Type", "application/json");
-    if (options.token) headers.set("Authorization", `Bearer ${options.token}`);
 
     const response = await fetch(path, {
         method: options.method ?? "GET",

@@ -26,7 +26,7 @@ type Subscriber = {
  * vinext 侧（events 路由）只调用这个函数，不接触任何 Cloudflare API。
  */
 export async function getRealtime(userId: number): Promise<Response> {
-    const stub = env.SSO_DO.get(env.SSO_DO.idFromName(HUB));
+    const stub = env.SSE_DO.get(env.SSE_DO.idFromName(HUB));
     const url = new URL("https://realtime/subscribe");
     url.searchParams.set("userId", String(userId));
     return stub.fetch(url.toString());
@@ -34,7 +34,7 @@ export async function getRealtime(userId: number): Promise<Response> {
 
 /** 给某个用户推一条事件（业务代码调用，例如写通知之后） */
 export async function publishEvent<T>(userId: number, event: RealtimeEvent<T>): Promise<void> {
-    const stub = env.SSO_DO.get(env.SSO_DO.idFromName(HUB));
+    const stub = env.SSE_DO.get(env.SSE_DO.idFromName(HUB));
     await stub.fetch("https://realtime/broadcast", {
         method: "POST",
         headers: {
@@ -44,7 +44,7 @@ export async function publishEvent<T>(userId: number, event: RealtimeEvent<T>): 
     });
 }
 
-export class SSODurableObject extends DurableObject {
+export class SSEDurableObject extends DurableObject {
     private subscribers = new Set<Subscriber>();
 
     constructor(ctx: DurableObjectState, env: Env) {

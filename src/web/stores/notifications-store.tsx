@@ -38,7 +38,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         }
         setLoading(true);
         try {
-            const { items } = await notificationsApi.list(session.token);
+            const { items } = await notificationsApi.list();
             setItems(items);
         } catch {
             // 拉取失败按“没有通知”处理，不打断页面
@@ -60,7 +60,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         if (unreadIds.length === 0) return;
 
         try {
-            await notificationsApi.markRead(unreadIds, session.token);
+            await notificationsApi.markRead(unreadIds);
             setItems((prev) =>
                 prev.map((item) => (unreadIds.includes(item.id) ? { ...item, read: true } : item)),
             );

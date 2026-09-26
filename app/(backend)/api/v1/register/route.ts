@@ -5,6 +5,7 @@ import { hashPassword } from "@/src/utils/password";
 import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
+import { cookieHeaders, sessionCookieValues } from "@/src/lib/cookies";
 
 export const dynamic = "force-dynamic";
 
@@ -69,12 +70,11 @@ export async function POST(request: Request) {
         privateKey: privateKey,
     }).returning({ insertedId: users.id });
     
-    // 发送jwt
+    // 签发 JWT 并写进 HttpOnly cookie（响应体为空）
     const id = result[0].insertedId;
     const token = await signJwt({ sub: String(id), username }, env.JWT_SECRET, { expiresIn: 7 * 24 * 60 * 60 });
-    return Response.json({
-        token: token,
-    }, {
+    return new Response(null, {
         status: 200,
+        headers: cookieHeaders(sessionCookieValues(token, username)),
     });
 }

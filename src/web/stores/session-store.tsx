@@ -9,7 +9,6 @@ import {
     type ReactNode,
 } from "react";
 import { authApi } from "@/web/lib/api";
-import { writeSessionCookies } from "@/web/lib/session";
 import type { Session } from "@/web/types";
 
 interface SessionValue {
@@ -36,23 +35,23 @@ export function SessionProvider({
     const [session, setSession] = useState<Session | null>(initialSession);
 
     const applySession = useCallback((next: Session | null) => {
-        // 同步 cookie，刷新后服务端仍能读到登录态
-        writeSessionCookies(next?.username ?? null, next?.token ?? null);
+        // cookie 由服务端下发/清除，这里只更新客户端状态
         setSession(next);
     }, []);
 
     const login = useCallback(
         async (username: string, password: string) => {
-            const { token } = await authApi.login({ username, password });
-            applySession({ username, token, instance: instanceHost() });
+            await authApi.login({ username, password });
+            // JWT 在 HttpOnly cookie 里，客户端只记用户名
+            applySession({ username, instance: instanceHost() });
         },
         [applySession],
     );
 
     const register = useCallback(
         async (username: string, password: string) => {
-            const { token } = await authApi.register({ username, password });
-            applySession({ username, token, instance: instanceHost() });
+            await authApi.register({ username, password });
+            applySession({ username, instance: instanceHost() });
         },
         [applySession],
     );

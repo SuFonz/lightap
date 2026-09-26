@@ -24,7 +24,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
 
     const fetchPage = useCallback(
         async (target: FeedTab, maxId?: number) => {
-            const { items } = await postsApi.fetchFeed(target, { limit: FEED_LIMIT, maxId }, session?.token);
+            const { items } = await postsApi.fetchFeed(target, { limit: FEED_LIMIT, maxId });
             rememberAuthors(items, rememberUser);
             return items.map(fromListItem);
         },
@@ -70,7 +70,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             if (!session) throw new Error("请先登录");
 
             // 等后端返回后再显示：用返回的 id / uuid / uri / content 构造新帖
-            const created = await postsApi.createNote(session.token, { content });
+            const created = await postsApi.createNote({ content });
 
             const post = makePost(created.uuid, currentUser.username, created.content, new Date().toISOString());
             post.uri = created.uri;
@@ -96,7 +96,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             const inReplyTo = target.uri || undefined;
 
             // 等后端返回后再显示：用返回的数据构造回复
-            const created = await postsApi.createNote(session.token, { content, inReplyTo });
+            const created = await postsApi.createNote({ content, inReplyTo });
 
             const newReply = makePost(created.uuid, currentUser.username, created.content, new Date().toISOString(), inReplyTo);
             newReply.uri = created.uri;
@@ -122,7 +122,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         async (username: string) => {
             if (!username) return;
             try {
-                const { items } = await postsApi.fetchUserPosts(username, { limit: FEED_LIMIT }, session?.token);
+                const { items } = await postsApi.fetchUserPosts(username, { limit: FEED_LIMIT });
                 rememberAuthors(items, rememberUser);
                 const page = items.map(fromListItem);
                 setUserPosts((prev) => ({ ...prev, [username]: page }));
@@ -151,7 +151,6 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                 const { items } = await postsApi.fetchUserPosts(
                     username,
                     { limit: FEED_LIMIT, maxId: last.cursorId },
-                    session?.token,
                 );
                 rememberAuthors(items, rememberUser);
                 const page = items.map(fromListItem);
@@ -184,7 +183,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
 
     const loadThread = useCallback(
         async (id: string) => {
-            const { chain, replies } = await postsApi.fetchThread(id, session?.token);
+            const { chain, replies } = await postsApi.fetchThread(id);
             const mapped = chain.map((item) => {
                 rememberUser({ username: item.username, domain: item.domain });
                 return fromNoteItem(item);
@@ -239,8 +238,8 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             }));
 
             try {
-                if (willLike) await postsApi.likeNote(id, session.token);
-                else await postsApi.unlikeNote(id, session.token);
+                if (willLike) await postsApi.likeNote(id);
+                else await postsApi.unlikeNote(id);
             } catch (error) {
                 // 服务器失败：回滚到原来的状态
                 mutate(id, (item) => ({
@@ -268,7 +267,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         async (post: Post) => {
             if (!session) throw new Error("请先登录");
 
-            await postsApi.deleteNote(post.id, session.token);
+            await postsApi.deleteNote(post.id);
 
             // 从时间线、线程、个人主页列表里就地移除
             setPosts((prev) => removePost(prev, post.id));

@@ -22,7 +22,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     const token = cookieStore.get(SESSION_TOKEN_COOKIE)?.value ?? null;
     const username = cookieStore.get(SESSION_USERNAME_COOKIE)?.value ?? null;
     const instance = (await headers()).get("host") ?? "";
-    const initialSession: Session | null = token && username ? { username, token, instance } : null;
+    // JWT 只存在 HttpOnly cookie 里，不下发给客户端；客户端靠 cookie 鉴权
+    const initialSession: Session | null = token && username ? { username, instance } : null;
 
     return (
         <html lang="zh-CN">

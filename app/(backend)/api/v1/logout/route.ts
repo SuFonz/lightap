@@ -1,19 +1,11 @@
-import { users } from "@/src/db/schema";
-import { signJwt } from "@/src/utils/jwt";
-import { verifyPassword } from "@/src/utils/password";
-import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
+import { clearSessionCookieValues, cookieHeaders } from "@/src/lib/cookies";
 
 export const dynamic = "force-dynamic";
 
+/** 退出登录：清除会话 cookie（响应体为空） */
 export async function POST(request: Request) {
-    return Response.json({
-        message: "Logged out",
-    }, {
+    return new Response(null, {
         status: 200,
-        headers: {
-            "Set-Cookie": "token=; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
-            "Content-Type": "application/json",
-        },
+        headers: cookieHeaders(clearSessionCookieValues()),
     });
 }

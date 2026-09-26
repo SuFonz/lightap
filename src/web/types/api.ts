@@ -14,10 +14,6 @@ export interface AuthRequest {
     password: string;
 }
 
-export interface AuthResponse {
-    token: string;
-}
-
 // 搜索：GET /api/v1/search?q=@user@domain
 export interface SearchUserItem {
     username: string;

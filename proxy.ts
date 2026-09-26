@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { JwtPayload, verifyJwt } from "@/src/utils/jwt";
 import { env } from "cloudflare:workers";
+import { SESSION_TOKEN_COOKIE } from "@/src/lib/cookies";
 
 type UserPayload = JwtPayload & {
     username: string,
@@ -39,12 +40,12 @@ export async function proxy(req: NextRequest) {
             pathname.startsWith("/api/v1/notifications")
         );
 
-    // 验证 JWT（verifyJwt 无效时返回 null，不会抛异常）
-    const authorization = req.headers.get("authorization");
+    // 从 cookie 里取 JWT 验证（verifyJwt 无效时返回 null，不会抛异常）
+    const token = req.cookies.get(SESSION_TOKEN_COOKIE)?.value;
     let payload: UserPayload | null = null;
-    if (authorization?.startsWith("Bearer ")) {
-        payload = await verifyJwt<UserPayload>(authorization.slice(7), env.JWT_SECRET);
-        // 公开 GET 不因坏 token 被拦；其余接口坏 token 直接 401
+    if (token) {
+        payload = await verifyJwt<UserPayload>(token, env.JWT_SECRET);
+        // 公开 GET 不因坏 cookie 被拦；其余接口坏 cookie 直接 401
         if (!payload && !publicGet) {
             return NextResponse.json({
                 error: "Invalid token",

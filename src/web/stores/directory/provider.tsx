@@ -89,7 +89,7 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
             if (!q) return [];
             // 后端要求 acct 形式，这里自动补全前导 @
             const term = q.startsWith("@") ? q : `@${q}`;
-            const { items } = await usersApi.search(term, session?.token);
+            const { items } = await usersApi.search(term);
             const found = items.map((item) => makeRemoteUser(item, instance));
             upsert(found);
             // 用后端返回的 isFollowing 校准关注状态，让关注按钮显示正确
@@ -112,7 +112,7 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
             requested.current.add(username);
             try {
                 // 只查后端本地数据库里的用户资料
-                const profile = await usersApi.fetchProfile(username, session?.token);
+                const profile = await usersApi.fetchProfile(username);
                 upsert([
                     {
                         username: profile.username,
@@ -160,13 +160,13 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
 
             try {
                 if (wasFollowing) {
-                    await usersApi.unfollow(session.token, {
+                    await usersApi.unfollow({
                         username: user.username,
                         domain: user.domain ?? session.instance,
                         targetActorUrl: user.actorUrl,
                     });
                 } else {
-                    await usersApi.follow(session.token, {
+                    await usersApi.follow({
                         username: user.username,
                         domain: user.domain ?? session.instance,
                         targetActorUrl: user.actorUrl,
