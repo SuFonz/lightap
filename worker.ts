@@ -1,6 +1,6 @@
 import handler from "vinext/server/fetch-handler";
 import { consume, type QueueData } from "@/src/queue";
-
+export { SSEDurableObject } from "@/src/realtime/sse";
 
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
