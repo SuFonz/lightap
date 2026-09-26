@@ -89,6 +89,18 @@ export function appendUnique(posts: Post[], next: Post[]): Post[] {
     return merged;
 }
 
+/** 把两段「新的在前」的列表按 cursorId 倒序合并去重（SSE 补漏用） */
+export function mergeLive(live: Post[], incoming: Post[]): Post[] {
+    const seen = new Set<string>();
+    const merged: Post[] = [];
+    for (const post of [...live, ...incoming]) {
+        if (seen.has(post.id)) continue;
+        seen.add(post.id);
+        merged.push(post);
+    }
+    return merged.sort((a, b) => (b.cursorId ?? 0) - (a.cursorId ?? 0));
+}
+
 /** 递归删除指定帖子；没有变化时返回原数组引用 */
 export function removePost(posts: Post[], id: string): Post[] {
     let changed = false;

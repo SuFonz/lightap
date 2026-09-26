@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { LoginRequiredPanel } from "@/web/components/auth/login-required-panel";
 import { ComposerField } from "@/web/components/composer/composer-field";
 import { PostCard } from "@/web/components/post/post-card";
@@ -15,7 +15,7 @@ import type { FeedTab } from "@/web/types";
 export default function HomePage() {
     const { isAuthenticated } = useSession();
     const { currentUser } = useDirectory();
-    const { posts, loading, hasMore, loadingMore, loadFeed, loadMore, compose } = useTimeline();
+    const { posts, liveCount, loading, hasMore, loadingMore, loadFeed, loadMore, compose } = useTimeline();
     const [tab, setTab] = useState<FeedTab>("all");
     const [greeting, setGreeting] = useState("欢迎回来");
 
@@ -88,8 +88,18 @@ export default function HomePage() {
 
             {/* 时间线：一个玻璃容器，内容优先 */}
             <section className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="时间线">
-                {posts.map((post) => (
-                    <PostCard key={post.id} post={post} bare />
+                {posts.map((post, index) => (
+                    <Fragment key={post.id}>
+                        {/* live（实时新帖）与 history（历史分页）的分界线 */}
+                        {liveCount > 0 && index === liveCount && (
+                            <div className="flex items-center gap-3 px-5 py-2 text-[11px] font-bold text-slate-400">
+                                <span className="h-px flex-1 bg-sky-200/70" />
+                                以上为实时新帖
+                                <span className="h-px flex-1 bg-sky-200/70" />
+                            </div>
+                        )}
+                        <PostCard post={post} bare />
+                    </Fragment>
                 ))}
             </section>
 

@@ -16,7 +16,7 @@ import type { NotificationItem, PostListItem } from "@/web/types";
  */
 export function RealtimeProvider({ children }: { children: ReactNode }) {
     const { session } = useSession();
-    const { applyRemoteNote } = useTimeline();
+    const { applyRemoteNote, syncNew } = useTimeline();
     const { addNotification } = useNotifications();
 
     // 用 ref 持有最新回调，避免回调变化（例如切换 tab）导致整个连接重连
@@ -24,9 +24,16 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     applyNoteRef.current = applyRemoteNote;
     const addNotificationRef = useRef(addNotification);
     addNotificationRef.current = addNotification;
+    const syncNewRef = useRef(syncNew);
+    syncNewRef.current = syncNew;
 
     useEffect(() => {
         const source = new EventSource("/api/v1/events");
+
+        // 重连成功（含首次）后补漏：把断线期间漏掉的新帖拉回来
+        const onOpen = () => {
+            void syncNewRef.current();
+        };
 
         const onNote = (event: Event) => {
             try {
@@ -43,10 +50,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             }
         };
 
+        source.addEventListener("open", onOpen);
         source.addEventListener("note.created", onNote);
         source.addEventListener("notification.created", onNotification);
 
         return () => {
+            source.removeEventListener("open", onOpen);
             source.removeEventListener("note.created", onNote);
             source.removeEventListener("notification.created", onNotification);
             source.close();

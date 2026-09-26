@@ -7,6 +7,8 @@ export interface Pagination {
 
 export interface TimelineValue {
     posts: Post[];
+    /** live（SSE 新帖）段条数，用于在 live/history 分界处画分隔线 */
+    liveCount: number;
     loading: boolean;
     hasMore: boolean;
     loadingMore: boolean;
@@ -33,6 +35,8 @@ export interface TimelineValue {
     toggleBoost: (id: string) => void;
     /** 删除自己的帖子（成功后从时间线 / 线程 / 主页列表移除） */
     deletePost: (post: Post) => Promise<void>;
-    /** 收到实时新帖（SSE）时按当前 tab 插入时间线 */
+    /** 收到实时新帖（SSE）时按当前 tab 插入时间线（live 段） */
     applyRemoteNote: (item: PostListItem) => void;
+    /** SSE 重连后补漏：拉取 sinceId 之后的新帖并合进 live */
+    syncNew: () => Promise<void>;
 }

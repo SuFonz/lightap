@@ -2,7 +2,7 @@ import { follows, notes, users } from "@/src/db/schema";
 import { getDBClient } from "@/src/db";
 import { resolveRequestUser } from "@/src/lib/auth";
 import { toNoteListItems } from "@/src/lib/notes";
-import { and, desc, eq, inArray, isNull, lt } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, lt } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,10 @@ const MAX_LIMIT = 50;
 
 interface Body {
     limit?: number,
+    /** 向下翻页：取 id 小于它的 */
     maxId?: number,
+    /** 向上补漏：取 id 大于它的（用于 SSE 断线重连后补齐） */
+    sinceId?: number,
 }
 
 interface Item {
@@ -36,6 +39,7 @@ export async function GET(request: Request) {
     const body: Body = {
         limit: Math.min(Number(url.searchParams.get("limit")) || MAX_LIMIT, MAX_LIMIT),
         maxId: Number(url.searchParams.get("maxId")) || undefined,
+        sinceId: Number(url.searchParams.get("sinceId")) || undefined,
     };
 
     const db = getDBClient();
@@ -79,6 +83,7 @@ export async function GET(request: Request) {
             isNull(notes.deletedAt),
             isNull(notes.inReplyTo),
             body.maxId ? lt(notes.id, body.maxId) : undefined,
+            body.sinceId ? gt(notes.id, body.sinceId) : undefined,
             actors ? inArray(notes.actor, actors) : undefined,
         ),
     ).orderBy(desc(notes.id)).limit(body.limit ?? MAX_LIMIT);

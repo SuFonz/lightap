@@ -8,10 +8,11 @@ import type {
 import { request } from "./client";
 
 /** 时间线：GET /api/v1/feed?type=all|local|following */
-export function fetchFeed(type: FeedTab, params: { limit?: number; maxId?: number } = {}) {
+export function fetchFeed(type: FeedTab, params: { limit?: number; maxId?: number; sinceId?: number } = {}) {
     const query = new URLSearchParams({ type });
     if (params.limit !== undefined) query.set("limit", String(params.limit));
     if (params.maxId !== undefined) query.set("maxId", String(params.maxId));
+    if (params.sinceId !== undefined) query.set("sinceId", String(params.sinceId));
     return request<PostListResponse>(`/api/v1/feed?${query}`);
 }
 
