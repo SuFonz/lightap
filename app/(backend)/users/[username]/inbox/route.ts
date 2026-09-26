@@ -1,9 +1,9 @@
 import { APActivity, APActor, APNote, APOrderedCollection } from "@/src/activitypub/ap";
 import { getActor, postInbox } from "@/src/activitypub/network";
 import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
-import { activities, follows, likes, notes, notifications, users } from "@/src/db/schema";
+import { activities, follows, likes, notes, users } from "@/src/db/schema";
 import { storeRemoteActor } from "@/src/lib/actor";
-import { NotificationType } from "@/src/lib/notifications";
+import { createNotification } from "@/src/lib/notify";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
 import { and, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
@@ -305,24 +305,6 @@ async function resolveRemoteActor(request: Request, activity: APActivity, userna
     const remoteUser = (await db.select().from(users).where(eq(users.actorUrl, actor.id)))[0];
 
     return { user, actor, remoteUser };
-}
-
-/** 写一条通知（自己触发自己的忽略） */
-async function createNotification(input: {
-    userId: number,
-    actorId: number,
-    type: NotificationType,
-    noteId?: number,
-}) {
-    if (input.userId === input.actorId) return;
-
-    const db = getDBClient();
-    await db.insert(notifications).values({
-        userId: input.userId,
-        actorId: input.actorId,
-        type: input.type,
-        noteId: input.noteId ?? null,
-    });
 }
 
 /** 按 actorUrl 找本站用户；不存在或 domain 不是本站时返回 undefined */

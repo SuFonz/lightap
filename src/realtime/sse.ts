@@ -7,6 +7,19 @@ export interface RealtimeEvent<T = unknown> {
 };
 
 /**
+ * 广播的接收对象：
+ * - user：只发给某个登录用户
+ * - authenticated：所有登录用户
+ * - guests：所有访客（未登录）
+ * - all：所有人（用户 + 访客）
+ */
+export type RealtimeAudience =
+    | { type: "user"; userId: number }
+    | { type: "authenticated" }
+    | { type: "guests" }
+    | { type: "all" };
+
+/**
  * 所有连接共用一个 DO 实例（单例 hub）。
  *
  * SSE 是长连接，只要连着 DO 就没法休眠、会一直计 duration；
@@ -14,34 +27,56 @@ export interface RealtimeEvent<T = unknown> {
  */
 const HUB = "realtime-hub";
 
-/** 单个 SSE 订阅者 */
+/** 单个 SSE 订阅者；userId 为 null 表示访客 */
 type Subscriber = {
-    userId: number,
+    userId: number | null,
     write: (chunk: string) => void,
 };
 
 /**
- * 打开某个用户的 SSE 事件流，返回可直接 `return` 的 Response。
+ * 打开 SSE 事件流，返回可直接 `return` 的 Response。
  *
- * vinext 侧（events 路由）只调用这个函数，不接触任何 Cloudflare API。
+ * @param userId 登录用户 id；`null` 表示访客。
  */
-export async function getRealtime(userId: number): Promise<Response> {
+export async function getRealtime(userId: number | null): Promise<Response> {
     const stub = env.SSE_DO.get(env.SSE_DO.idFromName(HUB));
     const url = new URL("https://realtime/subscribe");
-    url.searchParams.set("userId", String(userId));
+    if (userId !== null) {
+        url.searchParams.set("userId", String(userId));
+    }
     return stub.fetch(url.toString());
 }
 
-/** 给某个用户推一条事件（业务代码调用，例如写通知之后） */
-export async function publishEvent<T>(userId: number, event: RealtimeEvent<T>): Promise<void> {
+/**
+ * 广播一条事件给指定受众。
+ *
+ * @example
+ * publishEvent({ type: "notification.created", data }, { type: "user", userId });
+ * publishEvent({ type: "note.created", data }, { type: "all" });
+ */
+export async function publishEvent<T>(event: RealtimeEvent<T>, audience: RealtimeAudience): Promise<void> {
     const stub = env.SSE_DO.get(env.SSE_DO.idFromName(HUB));
     await stub.fetch("https://realtime/broadcast", {
         method: "POST",
         headers: {
             "content-type": "application/json",
         },
-        body: JSON.stringify({ userId, event }),
+        body: JSON.stringify({ audience, event }),
     });
+}
+
+/** 判断某个订阅者是否属于该受众 */
+function matches(subscriber: Subscriber, audience: RealtimeAudience): boolean {
+    switch (audience.type) {
+        case "user":
+            return subscriber.userId === audience.userId;
+        case "authenticated":
+            return subscriber.userId !== null;
+        case "guests":
+            return subscriber.userId === null;
+        case "all":
+            return true;
+    }
 }
 
 export class SSEDurableObject extends DurableObject {
@@ -54,16 +89,19 @@ export class SSEDurableObject extends DurableObject {
     async fetch(request: Request): Promise<Response> {
         const url = new URL(request.url);
 
-        // 内部广播：POST https://realtime/broadcast { userId, event }
+        // 内部广播：POST https://realtime/broadcast { audience, event }
         if (url.pathname === "/broadcast") {
-            const { userId, event } = await request.json<{ userId: number, event: RealtimeEvent }>();
-            this.broadcast(userId, event);
+            const { audience, event } = await request.json<{ audience: RealtimeAudience, event: RealtimeEvent }>();
+            this.broadcast(event, audience);
             return Response.json({ ok: true });
         }
 
-        // 内部订阅：GET https://realtime/subscribe?userId=xxx
+        // 内部订阅：GET https://realtime/subscribe（登录用户带 ?userId=xxx，访客不带）
         if (url.pathname === "/subscribe") {
-            return this.subscribe(Number(url.searchParams.get("userId")));
+            const raw = url.searchParams.get("userId");
+            const parsed = raw ? Number(raw) : NaN;
+            const userId = Number.isInteger(parsed) ? parsed : null;
+            return this.subscribe(userId);
         }
 
         return new Response("Not found", {
@@ -71,7 +109,7 @@ export class SSEDurableObject extends DurableObject {
         });
     }
 
-    private subscribe(userId: number): Response {
+    private subscribe(userId: number | null): Response {
         const encoder = new TextEncoder();
         const subscriber: Subscriber = {
             userId,
@@ -98,14 +136,14 @@ export class SSEDurableObject extends DurableObject {
         });
     }
 
-    private broadcast(userId: number, event: RealtimeEvent): void {
+    private broadcast(event: RealtimeEvent, audience: RealtimeAudience): void {
         const chunk = `event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`;
-        for (const sub of this.subscribers) {
-            if (sub.userId !== userId) continue;
+        for (const subscriber of this.subscribers) {
+            if (!matches(subscriber, audience)) continue;
             try {
-                sub.write(chunk);
+                subscriber.write(chunk);
             } catch {
-                this.subscribers.delete(sub);
+                this.subscribers.delete(subscriber);
             }
         }
     }

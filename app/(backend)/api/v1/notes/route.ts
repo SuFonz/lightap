@@ -1,8 +1,11 @@
 import { buildNote } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
-import { follows, notes, notifications, users } from "@/src/db/schema";
+import { follows, notes, users } from "@/src/db/schema";
 import { dispatchActivity } from "@/src/lib/activity";
 import { resolveRequestUser } from "@/src/lib/auth";
+import { toNoteListItems } from "@/src/lib/notes";
+import { createNotification } from "@/src/lib/notify";
+import { publishEvent } from "@/src/realtime/sse";
 import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -66,8 +69,8 @@ export async function POST(request: Request) {
 
                 // 回复的是本站用户 → 给对方写一条 Reply 通知（自己回复自己不发）
                 const recipient = (await db.select().from(users).where(eq(users.actorUrl, reply.actor)))[0];
-                if (recipient && recipient.domain === url.host && recipient.id !== user.id) {
-                    await db.insert(notifications).values({
+                if (recipient && recipient.domain === url.host) {
+                    await createNotification({
                         userId: recipient.id,
                         actorId: user.id,
                         type: "Reply",
@@ -86,6 +89,16 @@ export async function POST(request: Request) {
             objectType: "Note",
             targets,
         });
+
+        // 广播新帖给所有人（含访客）
+        try {
+            const [item] = await toNoteListItems([dbNote], user.id);
+            if (item) {
+                await publishEvent({ type: "note.created", data: item }, { type: "all" });
+            }
+        } catch {
+            // 实时推送失败不影响发帖
+        }
 
         // 返回新建的 Note（刚发布，还没有点赞）
         data = {

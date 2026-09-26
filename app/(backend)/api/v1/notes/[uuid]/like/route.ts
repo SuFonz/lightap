@@ -1,8 +1,9 @@
 import { buildLike } from "@/src/activitypub/tools";
 import { getDBClient } from "@/src/db";
-import { likes, notes, notifications, users } from "@/src/db/schema";
+import { likes, notes, users } from "@/src/db/schema";
 import { dispatchActivity } from "@/src/lib/activity";
 import { resolveRequestUser } from "@/src/lib/auth";
+import { createNotification } from "@/src/lib/notify";
 import { and, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -67,8 +68,8 @@ export async function POST(
 
         // 通知被点赞帖子的作者（仅本站用户，自己赞自己不发）
         const recipient = (await db.select().from(users).where(eq(users.actorUrl, note.actor)))[0];
-        if (recipient && recipient.domain === url.host && recipient.id !== user.id) {
-            await db.insert(notifications).values({
+        if (recipient && recipient.domain === url.host) {
+            await createNotification({
                 userId: recipient.id,
                 actorId: user.id,
                 type: "Like",
