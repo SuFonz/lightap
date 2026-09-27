@@ -11,8 +11,7 @@ export const SESSION_USERNAME_COOKIE = "lightap_user";
 /** 7 天 */
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
 
-// TODO: 加上 Secure
-const BASE = "Path=/; HttpOnly; SameSite=Lax";
+const BASE = "Path=/; HttpOnly; SameSite=Lax; Secure";
 
 /** 登录成功后要下发的 Set-Cookie 值（JWT + 用户名） */
 export function sessionCookieValues(token: string, username: string): string[] {
