@@ -1,6 +1,7 @@
 "use client";
 
 import { CloseIcon, HistoryIcon } from "@/web/components/ui/icons";
+import { useI18n } from "@/web/lib/i18n";
 
 interface SearchHistoryListProps {
     history: string[];
@@ -14,22 +15,24 @@ interface SearchHistoryListProps {
  * 这里只渲染内容，避免被祖先的 overflow / 层叠上下文裁剪。
  */
 export function SearchHistoryList({ history, onPick, onRemove, onClear }: SearchHistoryListProps) {
+    const { t } = useI18n();
+
     if (history.length === 0) return null;
 
     return (
         <div
             className="glass-card w-full overflow-hidden rounded-2xl p-2 shadow-xl shadow-brand/20"
             role="listbox"
-            aria-label="搜索历史"
+            aria-label={t("search.history")}
         >
             <div className="flex items-center justify-between px-2 py-1">
-                <span className="text-xs font-bold text-slate-400">最近搜索</span>
+                <span className="text-xs font-bold text-slate-400">{t("search.recent")}</span>
                 <button
                     type="button"
                     onClick={onClear}
                     className="cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-bold text-slate-400 transition hover:bg-white/70 hover:text-sakura-deep"
                 >
-                    清空
+                    {t("search.clearHistory")}
                 </button>
             </div>
             <ul className="flex flex-col">
@@ -47,7 +50,7 @@ export function SearchHistoryList({ history, onPick, onRemove, onClear }: Search
                         </button>
                         <button
                             type="button"
-                            aria-label={`删除搜索记录 ${term}`}
+                            aria-label={t("search.removeHistory", { term })}
                             onClick={() => onRemove(term)}
                             className="mr-1 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-brand/10 hover:text-brand-deep"
                         >

@@ -10,6 +10,7 @@ import { Popover } from "@/web/components/ui/popover";
 import { RelativeTime } from "@/web/components/ui/relative-time";
 import { cn } from "@/web/lib/cn";
 import { formatCount } from "@/web/lib/format";
+import { useI18n } from "@/web/lib/i18n";
 import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import { useTimeline } from "@/web/stores/timeline";
@@ -40,6 +41,7 @@ export function PostCard({
     bare?: boolean;
 }) {
     const { getUser } = useDirectory();
+    const { t } = useI18n();
     const { toggleLike, deletePost } = useTimeline();
     const { session, isAuthenticated } = useSession();
     const { openAuth, showToast } = useUi();
@@ -91,8 +93,8 @@ export function PostCard({
 
     function handleDelete() {
         setMenuOpen(false);
-        if (!window.confirm("确定删除这条帖子吗？")) return;
-        void deletePost(post).catch(() => showToast("删除失败，请稍后重试"));
+        if (!window.confirm(t("post.confirmDelete"))) return;
+        void deletePost(post).catch(() => showToast(t("common.deleteFailed")));
     }
 
     return (
@@ -106,7 +108,7 @@ export function PostCard({
             }}
             role="link"
             tabIndex={0}
-            aria-label={`查看 ${author.displayName} 的帖子详情`}
+            aria-label={t("post.viewDetail", { name: author.displayName })}
             className={cn(
                 "group relative cursor-pointer transition-colors duration-150",
                 bare
@@ -122,7 +124,7 @@ export function PostCard({
             <div className="flex items-start gap-3">
                 <Link
                     href={`/u/${author.username}`}
-                    aria-label={`${author.displayName} 的主页`}
+                    aria-label={t("post.authorHome", { name: author.displayName })}
                     onClick={stop}
                 >
                     <Avatar name={author.displayName} src={author.avatarUrl} size={46} />
@@ -145,7 +147,7 @@ export function PostCard({
                         <button
                             type="button"
                             ref={moreRef}
-                            aria-label="更多操作"
+                            aria-label={t("common.more")}
                             aria-haspopup="menu"
                             aria-expanded={menuOpen}
                             onClick={(e) => {
@@ -168,7 +170,7 @@ export function PostCard({
                     <div className="mt-2.5 flex max-w-sm items-center gap-2 sm:max-w-md">
                         <button
                             type="button"
-                            aria-label={`回复，${replyCount} 条回复`}
+                            aria-label={t("post.replyCount", { count: replyCount })}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 openDetail();
@@ -183,7 +185,7 @@ export function PostCard({
 
                         <button
                             type="button"
-                            aria-label={post.likedByMe ? `取消点赞，${post.likes} 个赞` : `点赞，${post.likes} 个赞`}
+                            aria-label={t(post.likedByMe ? "post.unlike" : "post.like", { count: post.likes })}
                             aria-pressed={post.likedByMe}
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -192,7 +194,7 @@ export function PostCard({
                                     return;
                                 }
                                 void toggleLike(post).catch(() => {
-                                    showToast(post.likedByMe ? "取消点赞失败，请稍后重试" : "点赞失败，请稍后重试");
+                                    showToast(t(post.likedByMe ? "common.unlikeFailed" : "common.likeFailed"));
                                 });
                             }}
                             className={cn(
@@ -224,11 +226,11 @@ export function PostCard({
                 {/* portal 到 body，但 React 事件仍会冒泡到 article，这里阻止掉 */}
                 <div ref={menuRef} role="menu" onClick={(e) => e.stopPropagation()} className="flex flex-col">
                     <button type="button" role="menuitem" onClick={handleExpand} className={MENU_ITEM_CLASS}>
-                        展开
+                        {t("post.expand")}
                     </button>
                     {isRemote && (
                         <button type="button" role="menuitem" onClick={handleOpenOriginal} className={MENU_ITEM_CLASS}>
-                            原始帖子
+                            {t("post.original")}
                         </button>
                     )}
                     {canDelete && (
@@ -238,7 +240,7 @@ export function PostCard({
                             onClick={handleDelete}
                             className={cn(MENU_ITEM_CLASS, "text-sakura-deep hover:bg-sakura/10 hover:text-sakura-deep")}
                         >
-                            删除
+                            {t("post.delete")}
                         </button>
                     )}
                 </div>

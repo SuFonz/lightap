@@ -2,13 +2,23 @@ import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import { AppShell } from "@/web/components/layout/app-shell";
 import { SESSION_TOKEN_COOKIE, SESSION_USERNAME_COOKIE } from "@/web/lib/session";
+import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE } from "@/web/lib/i18n/dictionaries";
 import type { Session } from "@/web/types";
 import "./globals.css";
 
-export const metadata: Metadata = {
-    title: "LightAP · 轻量 ActivityPub 社区",
-    description: "一个可爱的去中心化联邦宇宙小站，基于 ActivityPub 协议。",
-};
+export async function generateMetadata(): Promise<Metadata> {
+    const raw = (await cookies()).get(LOCALE_COOKIE)?.value;
+    const locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
+    return locale === "en"
+        ? {
+              title: "LightAP · Lightweight ActivityPub community",
+              description: "A cute, decentralized fediverse instance built on ActivityPub.",
+          }
+        : {
+              title: "LightAP · 轻量 ActivityPub 社区",
+              description: "一个可爱的去中心化联邦宇宙小站，基于 ActivityPub 协议。",
+          };
+}
 
 export const viewport: Viewport = {
     width: "device-width",
@@ -25,10 +35,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     // JWT 只存在 HttpOnly cookie 里，不下发给客户端；客户端靠 cookie 鉴权
     const initialSession: Session | null = token && username ? { username, instance } : null;
 
+    // 语言：cookie 里读，默认中文
+    const rawLocale = cookieStore.get(LOCALE_COOKIE)?.value;
+    const initialLocale = isLocale(rawLocale) ? rawLocale : DEFAULT_LOCALE;
+
     return (
-        <html lang="zh-CN">
+        <html lang={initialLocale === "en" ? "en" : "zh-CN"}>
             <body>
-                <AppShell initialSession={initialSession}>{children}</AppShell>
+                <AppShell initialSession={initialSession} initialLocale={initialLocale}>{children}</AppShell>
             </body>
         </html>
     );

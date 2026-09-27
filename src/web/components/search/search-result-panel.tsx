@@ -2,6 +2,7 @@
 
 import { UserResultList } from "@/web/components/search/user-result-list";
 import { UsersIcon } from "@/web/components/ui/icons";
+import { useI18n } from "@/web/lib/i18n";
 import type { User } from "@/web/types";
 
 interface SearchResultPanelProps {
@@ -11,11 +12,13 @@ interface SearchResultPanelProps {
 }
 
 export function SearchResultPanel({ query, users, loading }: SearchResultPanelProps) {
+    const { t } = useI18n();
+
     if (loading) {
         return (
             <div className="glass-card flex items-center justify-center gap-2 px-6 py-14 text-slate-400">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-                <span className="text-sm font-semibold">正在搜索「{query}」…</span>
+                <span className="text-sm font-semibold">{t("search.searching", { query })}</span>
             </div>
         );
     }
@@ -26,8 +29,8 @@ export function SearchResultPanel({ query, users, loading }: SearchResultPanelPr
                 <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand/15 text-brand">
                     <UsersIcon size={24} />
                 </span>
-                <p className="font-display font-extrabold text-slate-700">没有找到与「{query}」相关的用户</p>
-                <p className="text-sm text-slate-400">试试完整的 @用户名@实例 格式吧～</p>
+                <p className="font-display font-extrabold text-slate-700">{t("search.notFound", { query })}</p>
+                <p className="text-sm text-slate-400">{t("search.notFoundHint")}</p>
             </div>
         );
     }

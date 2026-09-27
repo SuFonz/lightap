@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/web/lib/cn";
+import { useI18n } from "@/web/lib/i18n";
 import { useDirectory } from "@/web/stores/directory";
 import type { User } from "@/web/types";
 
@@ -13,6 +14,7 @@ interface FollowButtonProps {
 
 export function FollowButton({ user, size = "md", className }: FollowButtonProps) {
     const { isFollowing, toggleFollow, currentUser } = useDirectory();
+    const { t } = useI18n();
     const [pending, setPending] = useState(false);
     const following = isFollowing(user.username);
 
@@ -47,7 +49,7 @@ export function FollowButton({ user, size = "md", className }: FollowButtonProps
                 className,
             )}
         >
-            {following ? "已关注" : pending ? "…" : "关注"}
+            {following ? t("user.following") : pending ? "…" : t("user.follow")}
         </button>
     );
 }

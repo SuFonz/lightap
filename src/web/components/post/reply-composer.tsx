@@ -1,6 +1,7 @@
 "use client";
 
 import { ComposerField } from "@/web/components/composer/composer-field";
+import { useI18n } from "@/web/lib/i18n";
 import { useSession } from "@/web/stores/session-store";
 import { useTimeline } from "@/web/stores/timeline";
 import { useUi } from "@/web/stores/ui-store";
@@ -14,17 +15,18 @@ export function ReplyComposer({ post }: { post: Post }) {
     const { isAuthenticated } = useSession();
     const { reply } = useTimeline();
     const { openAuth } = useUi();
+    const { t } = useI18n();
 
     if (!isAuthenticated) {
         return (
-            <section className="glass-card flex items-center justify-between gap-3 p-4" aria-label="回复">
-                <p className="text-sm font-semibold text-slate-500">登录后即可参与回复</p>
+            <section className="glass-card flex items-center justify-between gap-3 p-4" aria-label={t("reply.title")}>
+                <p className="text-sm font-semibold text-slate-500">{t("reply.loginRequired")}</p>
                 <button
                     type="button"
                     onClick={() => openAuth("login")}
                     className="btn-solid px-4 py-2 font-display text-sm font-bold"
                 >
-                    登录
+                    {t("common.login")}
                 </button>
             </section>
         );
@@ -32,10 +34,10 @@ export function ReplyComposer({ post }: { post: Post }) {
 
     return (
         <ComposerField
-            label="写下你的回复…"
-            title="回复帖子"
-            placeholder="写下你的回复…"
-            submitLabel="回复"
+            label={t("reply.placeholder")}
+            title={t("reply.title")}
+            placeholder={t("reply.placeholder")}
+            submitLabel={t("reply.submit")}
             onSubmit={(content) => reply(post, content)}
         />
     );

@@ -6,6 +6,7 @@ import { ComposerField } from "@/web/components/composer/composer-field";
 import { PostCard } from "@/web/components/post/post-card";
 import { ImageIcon, SparklesIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
+import { useI18n, type TranslationKey } from "@/web/lib/i18n";
 import { useInfiniteScroll } from "@/web/hooks/use-infinite-scroll";
 import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
@@ -15,22 +16,31 @@ import type { FeedTab } from "@/web/types";
 export default function HomePage() {
     const { isAuthenticated } = useSession();
     const { currentUser } = useDirectory();
+    const { t } = useI18n();
     const { posts, liveCount, loading, hasMore, loadingMore, loadFeed, loadMore, compose } = useTimeline();
     const [tab, setTab] = useState<FeedTab>("all");
-    const [greeting, setGreeting] = useState("欢迎回来");
+    const [greetingKey, setGreetingKey] = useState<TranslationKey>("home.welcomeBack");
 
     useEffect(() => {
         const hour = new Date().getHours();
-        setGreeting(hour < 5 ? "夜深了" : hour < 12 ? "早上好" : hour < 18 ? "下午好" : "晚上好");
+        setGreetingKey(
+            hour < 5
+                ? "home.greeting.lateNight"
+                : hour < 12
+                  ? "home.greeting.morning"
+                  : hour < 18
+                    ? "home.greeting.afternoon"
+                    : "home.greeting.evening",
+        );
     }, []);
 
     // 访客只能看「全部 / 本地」；未登录时把「关注」回退到「全部」
     const feedTab: FeedTab = !isAuthenticated && tab === "following" ? "all" : tab;
 
     const tabs: { key: FeedTab; label: string }[] = [
-        { key: "all", label: "全部" },
-        { key: "local", label: "本地" },
-        ...(isAuthenticated ? [{ key: "following" as FeedTab, label: "已关注" }] : []),
+        { key: "all", label: t("home.tab.all") },
+        { key: "local", label: t("home.tab.local") },
+        ...(isAuthenticated ? [{ key: "following" as FeedTab, label: t("home.tab.following") }] : []),
     ];
 
     useEffect(() => {
@@ -54,19 +64,17 @@ export default function HomePage() {
                 </span>
                 <div>
                     <h1 className="font-display text-lg font-black text-slate-800">
-                        {isAuthenticated ? `${greeting}，${currentUser.displayName}～` : "欢迎来到 LightAP～"}
+                        {isAuthenticated ? `${t(greetingKey)}，${currentUser.displayName}～` : t("home.welcomeTo")}
                     </h1>
                     <p className="text-xs font-medium text-slate-400">
-                        {isAuthenticated
-                            ? "今天联邦宇宙里也有有趣的事发生哦"
-                            : "登录后即可发布动态，和联邦宇宙的伙伴们聊聊天"}
+                        {t(isAuthenticated ? "home.subtitle" : "home.subtitleGuest")}
                     </p>
                 </div>
             </section>
 
             {isAuthenticated ? <ComposerField onSubmit={handlePost} /> : <LoginRequiredPanel />}
 
-            <div className="glass-card flex gap-1 p-1.5" role="tablist" aria-label="时间线切换">
+            <div className="glass-card flex gap-1 p-1.5" role="tablist" aria-label={t("home.tablist")}>
                 {tabs.map(({ key, label }) => (
                     <button
                         key={key}
@@ -87,14 +95,14 @@ export default function HomePage() {
             </div>
 
             {/* 时间线：一个玻璃容器，内容优先 */}
-            <section className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="时间线">
+            <section className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("home.timeline")}>
                 {posts.map((post, index) => (
                     <Fragment key={post.id}>
                         {/* live（实时新帖）与 history（历史分页）的分界线 */}
                         {liveCount > 0 && index === liveCount && (
                             <div className="flex items-center gap-3 px-5 py-2 text-[11px] font-bold text-slate-400">
                                 <span className="h-px flex-1 bg-sky-200/70" />
-                                以上为实时新帖
+                                {t("home.realtimeDivider")}
                                 <span className="h-px flex-1 bg-sky-200/70" />
                             </div>
                         )}
@@ -109,10 +117,10 @@ export default function HomePage() {
                         <ImageIcon size={24} />
                     </span>
                     <p className="font-display font-extrabold text-slate-700">
-                        {loading ? "加载中…" : "这里还什么都没有"}
+                        {loading ? t("common.loading") : t("home.emptyTitle")}
                     </p>
                     <p className="text-sm text-slate-400">
-                        {isAuthenticated ? "发第一条动态，让大家认识你吧！" : "登录后即可发布动态，加入讨论～"}
+                        {t(isAuthenticated ? "home.emptyMine" : "home.emptyGuest")}
                     </p>
                 </div>
             )}
@@ -122,7 +130,7 @@ export default function HomePage() {
             {loadingMore && (
                 <div className="glass-card flex items-center justify-center gap-2 px-6 py-6 text-slate-400">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-                    <span className="text-sm font-semibold">加载中…</span>
+                    <span className="text-sm font-semibold">{t("common.loading")}</span>
                 </div>
             )}
         </div>

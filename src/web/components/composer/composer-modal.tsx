@@ -5,6 +5,7 @@ import { Avatar } from "@/web/components/ui/avatar";
 import { CloseIcon, SendIcon } from "@/web/components/ui/icons";
 import { Modal } from "@/web/components/ui/modal";
 import { cn } from "@/web/lib/cn";
+import { useI18n } from "@/web/lib/i18n";
 import { useDirectory } from "@/web/stores/directory";
 import { useTimeline } from "@/web/stores/timeline";
 import { useUi } from "@/web/stores/ui-store";
@@ -23,16 +24,20 @@ interface ComposerModalProps {
 export function ComposerModal({
     open,
     onClose,
-    title = "发布新帖",
-    submitLabel = "发布",
-    placeholder = "今天有什么开心的事呀？用 #话题 和大家分享吧～",
+    title,
+    submitLabel,
+    placeholder,
     maxLength = 500,
     showTips = true,
     onSubmit,
 }: ComposerModalProps) {
+    const { t } = useI18n();
     const { currentUser } = useDirectory();
     const { compose } = useTimeline();
     const { showToast } = useUi();
+    const titleText = title ?? t("composer.title");
+    const submitText = submitLabel ?? t("composer.submit");
+    const placeholderText = placeholder ?? t("composer.placeholder");
     const [content, setContent] = useState("");
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -60,8 +65,8 @@ export function ComposerModal({
             onClose();
         } catch (e) {
             // 弹窗内保留详细错误，同时给一个全局提示
-            setError(e instanceof Error && e.message ? e.message : "发送失败，请稍后重试");
-            showToast("发送失败，请稍后重试");
+            setError(e instanceof Error && e.message ? e.message : t("common.sendFailed"));
+            showToast(t("common.sendFailed"));
         } finally {
             setSending(false);
         }
@@ -71,15 +76,15 @@ export function ComposerModal({
         <Modal
             open={open}
             onClose={onClose}
-            label={title}
+            label={titleText}
             alignClassName="items-start justify-center p-3 pt-[72px] sm:items-center sm:p-4"
             panelClassName="glass-strong w-full max-w-xl p-5"
         >
             <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-display text-lg font-extrabold text-slate-800">{title}</h2>
+                <h2 className="font-display text-lg font-extrabold text-slate-800">{titleText}</h2>
                 <button
                     type="button"
-                    aria-label="关闭"
+                    aria-label={t("common.close")}
                     onClick={onClose}
                     className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-slate-400 transition hover:bg-white/80 hover:text-brand-deep active:scale-90"
                 >
@@ -95,8 +100,8 @@ export function ComposerModal({
                     onChange={(e) => setContent(e.target.value)}
                     rows={4}
                     maxLength={maxLength + 50}
-                    placeholder={placeholder}
-                    aria-label={placeholder}
+                    placeholder={placeholderText}
+                    aria-label={placeholderText}
                     className="w-full resize-none rounded-xl border border-transparent bg-white/55 px-4 py-3 text-[15px] leading-relaxed text-slate-700 placeholder:text-slate-400 transition focus:border-brand/40 focus:bg-white/85 focus:outline-none focus:ring-4 focus:ring-brand/15"
                 />
             </div>
@@ -123,7 +128,7 @@ export function ComposerModal({
                     disabled={!canSend}
                     className="btn-solid px-5 py-2 font-display text-sm font-bold"
                 >
-                    {sending ? "发送中…" : submitLabel}
+                    {sending ? t("composer.sending") : submitText}
                     <SendIcon size={15} />
                 </button>
             </div>

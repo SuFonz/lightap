@@ -5,6 +5,7 @@ import { CloseIcon, FeatherIcon, LockIcon, UserIcon } from "@/web/components/ui/
 import { Modal } from "@/web/components/ui/modal";
 import { ApiError } from "@/web/lib/api";
 import { cn } from "@/web/lib/cn";
+import { useI18n } from "@/web/lib/i18n";
 import { useSession } from "@/web/stores/session-store";
 import type { AuthMode } from "@/web/types";
 
@@ -17,6 +18,7 @@ interface AuthModalProps {
 
 export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps) {
     const { login, register } = useSession();
+    const { t } = useI18n();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -35,14 +37,14 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
 
     function validate(): string | null {
         const u = username.trim();
-        if (!u) return "请输入用户名";
-        if (u.length < 2) return "用户名至少 2 个字符";
-        if (!/^[a-zA-Z0-9_]+$/.test(u)) return "用户名只能包含字母、数字和下划线";
-        if (!password) return "请输入密码";
-        if (password.length < 6) return "密码至少 6 位";
+        if (!u) return t("auth.usernameRequired");
+        if (u.length < 2) return t("auth.usernameMin");
+        if (!/^[a-zA-Z0-9_]+$/.test(u)) return t("auth.usernameCharset");
+        if (!password) return t("auth.passwordRequired");
+        if (password.length < 6) return t("auth.passwordMin");
         if (!isLogin) {
-            if (!confirmPassword) return "请再次输入密码";
-            if (confirmPassword !== password) return "两次输入的密码不一致";
+            if (!confirmPassword) return t("auth.confirmRequired");
+            if (confirmPassword !== password) return t("auth.confirmMismatch");
         }
         return null;
     }
@@ -62,14 +64,14 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
             onClose();
         } catch (e) {
             if (!isLogin && e instanceof ApiError && e.status === 409) {
-                setError("该用户名已被占用，换一个试试吧～");
+                setError(t("auth.taken"));
             } else {
                 setError(
                     e instanceof Error && e.message
                         ? e.message
                         : isLogin
-                          ? "登录失败，请稍后重试"
-                          : "注册失败，请稍后重试",
+                          ? t("auth.loginFailed")
+                          : t("auth.registerFailed"),
                 );
             }
         } finally {
@@ -83,7 +85,7 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
         <Modal
             open={open}
             onClose={onClose}
-            label={isLogin ? "登录" : "注册"}
+            label={t(isLogin ? "common.login" : "common.register")}
             alignClassName="items-center justify-center p-3 sm:p-4"
             panelClassName="glass-strong w-full max-w-sm p-6 sm:p-7"
         >
@@ -93,12 +95,12 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                         <FeatherIcon size={17} />
                     </span>
                     <h2 className="font-display text-lg font-black text-slate-800">
-                        {isLogin ? "登录 LightAP" : "加入 LightAP"}
+                        {t(isLogin ? "auth.loginTitle" : "auth.registerTitle")}
                     </h2>
                 </div>
                 <button
                     type="button"
-                    aria-label="关闭"
+                    aria-label={t("common.close")}
                     onClick={onClose}
                     className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-slate-400 transition hover:bg-white/80 hover:text-brand-deep active:scale-90"
                 >
@@ -107,7 +109,7 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
             </div>
 
             <p className="mb-5 text-sm leading-relaxed text-slate-500">
-                {isLogin ? "欢迎回来！输入用户名和密码即可继续。" : "创建一个账号，加入联邦宇宙，分享你的日常。"}
+                {t(isLogin ? "auth.loginHint" : "auth.registerHint")}
             </p>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-3.5" noValidate>
@@ -117,8 +119,8 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        placeholder="用户名"
-                        aria-label="用户名"
+                        placeholder={t("auth.username")}
+                        aria-label={t("auth.username")}
                         autoFocus
                         autoComplete="username"
                         className="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
@@ -131,8 +133,8 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="密码"
-                        aria-label="密码"
+                        placeholder={t("auth.password")}
+                        aria-label={t("auth.password")}
                         autoComplete={isLogin ? "current-password" : "new-password"}
                         className="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
                     />
@@ -145,8 +147,8 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                             type="password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="确认密码"
-                            aria-label="确认密码"
+                            placeholder={t("auth.confirmPassword")}
+                            aria-label={t("auth.confirmPassword")}
                             autoComplete="new-password"
                             className="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
                         />
@@ -164,12 +166,12 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                     disabled={submitting}
                     className="btn-solid w-full py-2.5 font-display text-sm font-extrabold tracking-wide"
                 >
-                    {submitting ? "请稍候…" : isLogin ? "登录" : "注册"}
+                    {submitting ? t("auth.pleaseWait") : t(isLogin ? "common.login" : "common.register")}
                 </button>
             </form>
 
             <p className="mt-4 text-center text-sm text-slate-500">
-                {isLogin ? "还没有账号？" : "已经有账号了？"}
+                {t(isLogin ? "auth.noAccount" : "auth.hasAccount")}
                 <button
                     type="button"
                     onClick={() => {
@@ -178,7 +180,7 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                     }}
                     className={cn("mx-1 cursor-pointer font-bold transition hover:underline", "text-brand-deep")}
                 >
-                    {isLogin ? "去注册" : "去登录"}
+                    {t(isLogin ? "auth.goRegister" : "auth.goLogin")}
                 </button>
             </p>
         </Modal>

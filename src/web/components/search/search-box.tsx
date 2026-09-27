@@ -6,6 +6,7 @@ import { SearchHistoryList } from "@/web/components/search/search-history-list";
 import { CloseIcon, SearchIcon } from "@/web/components/ui/icons";
 import { Popover } from "@/web/components/ui/popover";
 import { cn } from "@/web/lib/cn";
+import { useI18n } from "@/web/lib/i18n";
 import { useSearchHistory } from "@/web/hooks/use-search-history";
 
 interface SearchBoxProps {
@@ -14,12 +15,14 @@ interface SearchBoxProps {
     placeholder?: string;
 }
 
-export function SearchBox({ className, autoFocus = false, placeholder = "搜索用户…" }: SearchBoxProps) {
+export function SearchBox({ className, autoFocus = false, placeholder }: SearchBoxProps) {
     const router = useRouter();
+    const { t } = useI18n();
     const { history, add, remove, clear } = useSearchHistory();
     const [query, setQuery] = useState("");
     const [open, setOpen] = useState(false);
     const anchorRef = useRef<HTMLDivElement>(null);
+    const placeholderText = placeholder ?? t("search.placeholder");
 
     function runSearch(term: string) {
         const value = term.trim();
@@ -45,8 +48,8 @@ export function SearchBox({ className, autoFocus = false, placeholder = "搜索�
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onBlur={() => setTimeout(() => setOpen(false), 120)}
-                        placeholder={placeholder}
-                        aria-label="搜索"
+                        placeholder={placeholderText}
+                        aria-label={t("search.action")}
                         autoFocus={autoFocus}
                         autoComplete="off"
                         className="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
@@ -54,7 +57,7 @@ export function SearchBox({ className, autoFocus = false, placeholder = "搜索�
                     {query && (
                         <button
                             type="button"
-                            aria-label="清空搜索"
+                            aria-label={t("search.clear")}
                             onClick={() => setQuery("")}
                             className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-brand/10 hover:text-brand-deep"
                         >

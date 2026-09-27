@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { Avatar } from "@/web/components/ui/avatar";
 import { FollowButton } from "@/web/components/user/follow-button";
+import { useI18n } from "@/web/lib/i18n";
 import type { User } from "@/web/types";
 
 export function UserResultList({ users }: { users: User[] }) {
+    const { t } = useI18n();
+
     return (
-        <ul className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label="用户结果">
+        <ul className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("search.results")}>
             {users.map((user) => (
                 <li
                     key={user.username}

@@ -4,9 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import { WelcomePanel } from "@/web/components/auth/welcome-panel";
+import { LanguageSwitcher } from "@/web/components/layout/language-switcher";
 import { Avatar } from "@/web/components/ui/avatar";
 import { BellIcon, EditIcon, FeatherIcon, GearIcon, GlobeIcon, HomeIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
+import { useI18n } from "@/web/lib/i18n";
 import { useDirectory } from "@/web/stores/directory";
 import { useNotifications } from "@/web/stores/notifications-store";
 import { useSession } from "@/web/stores/session-store";
@@ -24,13 +26,14 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     const { currentUser } = useDirectory();
     const { openComposer, openEditProfile } = useUi();
     const { unreadCount } = useNotifications();
+    const { t } = useI18n();
 
     const navItems: NavItem[] = [
-        { href: "/", label: "首页", icon: HomeIcon },
-        { href: "/search", label: "搜索", icon: SearchIcon },
-        { href: "/notifications", label: "通知", icon: BellIcon },
-        { href: `/u/${currentUser.username}`, label: "我的资料", icon: UserIcon },
-        { href: "/settings", label: "设置", icon: GearIcon },
+        { href: "/", label: t("nav.home"), icon: HomeIcon },
+        { href: "/search", label: t("nav.search"), icon: SearchIcon },
+        { href: "/notifications", label: t("nav.notifications"), icon: BellIcon },
+        { href: `/u/${currentUser.username}`, label: t("nav.profile"), icon: UserIcon },
+        { href: "/settings", label: t("nav.settings"), icon: GearIcon },
     ];
 
     const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
@@ -43,19 +46,19 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 </span>
                 <span className="font-display text-lg font-black tracking-tight text-brand-ink">LightAP</span>
                 <span className="ml-auto rounded-full bg-magic/15 px-2 py-0.5 text-[10px] font-extrabold text-magic-deep">
-                    Fediverse
+                    {t("app.fediverse")}
                 </span>
             </div>
 
             {isAuthenticated ? (
                 <>
                     {/* 用户区：小巧、半透明、不抢内容 */}
-                    <section aria-label="个人资料">
+                    <section aria-label={t("nav.profile")}>
                         <div className="flex items-center gap-2.5">
                             <Link
                                 href={`/u/${currentUser.username}`}
                                 onClick={onNavigate}
-                                aria-label="我的资料"
+                                aria-label={t("nav.profile")}
                                 className="shrink-0 transition-transform duration-150 hover:scale-105 active:scale-95"
                             >
                                 <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={46} />
@@ -70,8 +73,8 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                             </Link>
                             <button
                                 type="button"
-                                aria-label="编辑资料"
-                                title="编辑资料"
+                                aria-label={t("nav.editProfile")}
+                                title={t("nav.editProfile")}
                                 onClick={() => {
                                     openEditProfile();
                                     onNavigate?.();
@@ -83,7 +86,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         </div>
                     </section>
 
-                    <nav aria-label="主菜单">
+                    <nav aria-label={t("nav.mainMenu")}>
                         <ul className="flex flex-col gap-1">
                             {navItems.map(({ href, label, icon: IconCmp }) => {
                                 const active = isActive(href);
@@ -135,25 +138,30 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         }}
                         className="btn-solid w-full py-2.5 font-display text-[15px] font-extrabold tracking-wide"
                     >
-                        <FeatherIcon size={17} /> 发布新帖
+                        <FeatherIcon size={17} /> {t("nav.publish")}
                     </button>
 
                     <p className="flex items-center justify-center gap-1.5 pb-2 text-center text-[11px] font-semibold text-slate-400/90">
-                        <GlobeIcon size={12} /> LightAP · 联邦宇宙小站
+                        <GlobeIcon size={12} /> {t("app.footer")}
                     </p>
                 </>
             ) : (
                 <WelcomePanel />
             )}
+
+            {/* 底部：语言切换（左下方） */}
+            <LanguageSwitcher />
         </div>
     );
 }
 
 export function Sidebar() {
+    const { t } = useI18n();
+
     return (
         <aside
             className="sticky top-6 z-20 hidden max-h-[calc(100dvh-3rem)] w-[240px] shrink-0 self-start overflow-y-auto scrollbar-none lg:block"
-            aria-label="侧边栏"
+            aria-label={t("nav.sidebar")}
         >
             <SidebarContent />
         </aside>
