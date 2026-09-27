@@ -3,7 +3,7 @@
 > [!WARNING]
 > **早期阶段。** LightAP 是一个非常早期的项目，在 AI 的帮助下完成。
 > 可能会遇到 bug 和性能问题，接口和行为也可能随时发生变化。
-> 发现了问题？欢迎提 issue 告诉我。
+> 发现 bug？请提 issue。
 
 [English](./README.md) | **简体中文**
 
@@ -41,7 +41,7 @@ LightAP 是一个基于 [ActivityPub](https://activitypub.rocks/) 联邦协议�
 
 - 用用户名和密码注册、登录
 - 密码用 PBKDF2-SHA256 哈希（31 万次迭代，16 字节随机盐）
-- 会话是自实现的 HS256 JWT，放在 HttpOnly Cookie 里，有效期 7 天
+- 会话是自实现的 HS256 JWT，放在 HttpOnly Cookie 里（`Secure`、`SameSite=Lax`），有效期 7 天
 - 远程用户和本站用户存在同一张表里，这样他们的帖子能显示昵称和头像；但远程用户无法登录
 
 ## 技术栈
@@ -158,16 +158,16 @@ copy /Y wrangler.example.jsonc wrangler.jsonc
 Copy-Item wrangler.example.jsonc wrangler.jsonc
 ```
 
-然后编辑 `wrangler.jsonc`，把 `d1_databases` 里的 `database_id` 改成上一步拿到的 id。本地开发填个占位 UUID 也可以——D1 会跑在本地 SQLite 文件上。
+然后编辑 `wrangler.jsonc`，把 `d1_databases` 里的 `database_id` 改成上一步拿到的 id。本地开发可填占位 UUID —— D1 会跑在本地 SQLite 文件上。
 
-模板里已经指向了 Drizzle 的输出目录，这两项不用动：
+模板已指向 Drizzle 的输出目录，以下两项无需修改：
 
 ```jsonc
 "migrations_dir": "drizzle",
 "migrations_pattern": "drizzle/*/migration.sql",
 ```
 
-> `wrangler.jsonc` 在 `.gitignore` 里，只存在于你自己的机器上。Vite 开发服务器也会读它，所以在开发环境下 binding 不用额外配置就能用。
+> `wrangler.jsonc` 在 `.gitignore` 里，不会提交。Vite 开发服务器也会读取它，因此开发环境无需额外配置即可使用 binding。
 
 ### 4. 创建本地密钥文件
 
@@ -184,7 +184,7 @@ copy /Y .dev.vars.example .dev.vars
 Copy-Item .dev.vars.example .dev.vars
 ```
 
-编辑 `.dev.vars`，填一个真正随机的密钥：
+在 `.dev.vars` 中设置密钥：
 
 ```bash
 JWT_SECRET="<一串足够长的随机字符串>"
@@ -206,9 +206,11 @@ npx wrangler d1 migrations apply lightap-db --local
 npm run dev
 ```
 
-打开开发服务器打印出来的地址，注册一个账号，就可以发帖、关注、点赞了。
+打开开发服务器打印出的地址，注册账号即可开始使用。
 
-### 查看数据库
+> 会话 Cookie 带 `Secure` 属性，浏览器只会在 HTTPS 下发送。`http://localhost` 属于安全上下文，可直接使用；其他纯 HTTP 主机（例如局域网 IP）不属于，登录会表现为无任何反应。请使用 `localhost`，或为开发服务器启用 HTTPS。
+
+### 查看本地数据库
 
 ```bash
 npx wrangler d1 execute lightap-db --local --command "SELECT id, username, domain FROM users"
@@ -224,7 +226,7 @@ npx wrangler login
 
 ### 2. 准备 `wrangler.jsonc`
 
-如果还没有（比如你是从一份新 clone 下来部署的），先从模板复制一份：
+若尚未创建（例如从新的 clone 直接部署），先从模板复制一份：
 
 ```bash
 # macOS / Linux
@@ -263,7 +265,7 @@ npx wrangler d1 migrations apply lightap-db --remote
 npx wrangler secret put JWT_SECRET
 ```
 
-Wrangler 会提示你输入值。它会被加密存储，并在运行时作为环境变量注入，不会出现在 `wrangler.jsonc` 里。
+Wrangler 会提示输入值。该值加密存储，并在运行时作为环境变量注入，不会出现在 `wrangler.jsonc` 里。
 
 ### 6. 构建并部署
 
@@ -281,24 +283,23 @@ npm run preview
 
 ### 7. 用真实域名
 
-这一步比看上去重要。默认情况下 Worker 在 `*.workers.dev` 上提供服务，但这个域名对联邦账号来说是很差的身份：它在 Public Suffix List 上，很多实例会把它当成共享域名直接屏蔽，而且用户的地址会变成 `acct:you@xxx.workers.dev` 这种样子。
+默认情况下 Worker 在 `*.workers.dev` 上提供服务，而这对联邦账号是不合适的身份：该域名位于 Public Suffix List 上，很多实例会将其视为共享域名并屏蔽；用户的地址也会变成 `acct:you@xxx.workers.dev` 这种形式。
 
 可以在 Cloudflare 控制台绑定自定义域名，或者在 `wrangler.jsonc` 里配置 `routes`。
 
-> 一定要**先绑定域名再开放注册**。`actorUrl` 是注册时根据请求 origin 生成的，在 `workers.dev` 上注册的账号会永远绑定那个域名，之后再绑域名也改不掉。想改就得迁移所有账号。
+> 应在注册账号**之前**绑定域名。`actorUrl` 在注册时根据请求 origin 生成，在 `workers.dev` 上创建的账号会保留该域名，之后绑定自定义域名也不会改变它；如需更改则要迁移所有账号。
 
 ## 实现范围
 
-LightAP 只做了跑通联邦所必需的部分，以下几项是明确排在后面的：
+LightAP 只实现跑通联邦所必需的部分，以下功能尚未实现：
 
-- **不对外暴露 outbox**：投递由内部 API 加 Queue 完成，所以 `GET /users/[username]/outbox` 返回空集合，`POST` 返回 `501`
-- **收件箱的 GET 是占位**：只有 `POST` 是真实实现，而这也正是别的实例唯一会用到的部分
-- **不支持头像上传，也没有填写链接的入口**：本站账号始终使用默认头像。`avatar_url` 只会为远程用户写入（从对方 Actor 的 `icon` 读取），而本站 Actor 文档同样不带 `icon`，所以远端实例也看不到本站用户的头像
-- **不做审核与限流**：定位是个人小站，暂不引入这套东西
-- **不拉取远程回复**：帖子线程只显示已经存在本地库里的回复
-- **Mention 暂不投递**：类型已经预留，投递逻辑未实现
-- **会话 Cookie 缺 `Secure` 标记**：`src/lib/cookies.ts` 里留了 `TODO`，部署到 HTTPS 的话记得加上
-- **`/@username` 只在 WebFinger 里声明了，没有对应路由**：WebFinger 把它列为 profile-page，但实际只实现了 `/u/[username]`
+- **公开 outbox** —— 投递由内部 API 与 Queue 完成。`GET /users/[username]/outbox` 返回空集合，`POST` 返回 `501`。
+- **收件箱 GET** —— 返回空集合，只有 `POST` 是真实实现。
+- **头像上传** —— 本站账号使用默认头像，没有上传接口，也没有填写链接的入口。`avatar_url` 仅对远程用户写入（取自对方 Actor 的 `icon`），本站 Actor 文档不带 `icon`。
+- **审核与限流** —— 未实现。
+- **远程回复** —— 线程页只显示已存于本地库的回复。
+- **Mention** —— 通知类型定义中存在，但没有代码会创建它。
+- **`/@username` 路由** —— WebFinger 将其声明为 profile-page 别名，实际只路由了 `/u/[username]`。
 
 ## 开源许可
 

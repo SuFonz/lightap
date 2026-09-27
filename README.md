@@ -3,7 +3,7 @@
 > [!WARNING]
 > **Early stage.** LightAP is a very early-stage project that was built with the help of AI.
 > Expect bugs, performance issues, and breaking changes without notice.
-> Found something broken? Please open an issue and let me know.
+> Found a bug? Open an issue.
 
 **English** | [简体中文](./README.zh-CN.md)
 
@@ -21,7 +21,7 @@ It is a serverless project: the whole app is bundled into a single Cloudflare Wo
 - Incoming requests are verified against the sender's public key before anything is written to the database
 - `Digest` / `Content-Digest` body digests, computed with SHA-256
 - Every user gets an RSA keypair (RSASSA-PKCS1-v1_5, 2048-bit) generated at registration
-- Outgoing activities are delivered through a Cloudflare Queue with automatic retry, so a slow remote instance never blocks a request
+- Outgoing activities are delivered through a Cloudflare Queue with automatic retry; remote latency does not block requests
 - `followers` and `following` are served as real ActivityPub `OrderedCollection`s
 - Deleted posts answer with `410 Gone` and a `Tombstone`
 
@@ -41,7 +41,7 @@ It is a serverless project: the whole app is bundled into a single Cloudflare Wo
 
 - Register and log in with a username and password
 - Passwords are hashed with PBKDF2-SHA256 (310,000 iterations, 16-byte salt)
-- Sessions are a hand-rolled HS256 JWT in an HttpOnly cookie, valid for 7 days
+- Sessions are a hand-rolled HS256 JWT in an HttpOnly cookie (`Secure`, `SameSite=Lax`), valid for 7 days
 - Remote users are stored alongside local ones so their posts render with avatars and display names, but they cannot log in
 
 ## Tech stack
@@ -158,16 +158,16 @@ copy /Y wrangler.example.jsonc wrangler.jsonc
 Copy-Item wrangler.example.jsonc wrangler.jsonc
 ```
 
-Then edit `wrangler.jsonc` and set `database_id` in `d1_databases` to the id from step 2. A placeholder UUID is fine while developing locally — D1 runs against a local SQLite file.
+Then edit `wrangler.jsonc` and set `database_id` in `d1_databases` to the id from step 2. A placeholder UUID is sufficient for local development, where D1 runs against a local SQLite file.
 
-The template already points Wrangler at Drizzle's output, so leave these alone:
+The template already points Wrangler at Drizzle's output. Leave these unchanged:
 
 ```jsonc
 "migrations_dir": "drizzle",
 "migrations_pattern": "drizzle/*/migration.sql",
 ```
 
-> `wrangler.jsonc` is gitignored, so this file stays on your machine. The Vite dev server reads it too, which is why bindings work in development without any extra setup.
+> `wrangler.jsonc` is gitignored. The Vite dev server reads it as well, so bindings are available in development without extra configuration.
 
 ### 4. Create the local secrets file
 
@@ -184,7 +184,7 @@ copy /Y .dev.vars.example .dev.vars
 Copy-Item .dev.vars.example .dev.vars
 ```
 
-Edit `.dev.vars` and put a real secret in:
+Edit `.dev.vars` and set a secret:
 
 ```bash
 JWT_SECRET="<a-long-random-string>"
@@ -206,9 +206,11 @@ This creates the tables in a local SQLite database under `.wrangler/state`. The 
 npm run dev
 ```
 
-Open the URL the dev server prints, register an account, and you can start posting, following and liking.
+Open the URL printed by the dev server, then register an account.
 
-### Poking at the database
+> Session cookies carry the `Secure` attribute, so browsers send them only over HTTPS. `http://localhost` is a secure context and works as-is; other plain-HTTP hosts, such as a LAN IP, do not, and login will appear to do nothing. Use `localhost`, or serve the dev server over HTTPS.
+
+### Inspect the local database
 
 ```bash
 npx wrangler d1 execute lightap-db --local --command "SELECT id, username, domain FROM users"
@@ -224,7 +226,7 @@ npx wrangler login
 
 ### 2. Prepare `wrangler.jsonc`
 
-If you don't have one yet (for example you are deploying from a fresh clone), create it from the template first:
+If `wrangler.jsonc` does not exist yet (for example when deploying from a fresh clone), create it from the template:
 
 ```bash
 # macOS / Linux
@@ -281,24 +283,23 @@ This builds and then serves the built Worker with Wrangler — as close to produ
 
 ### 7. Use a real domain
 
-This step matters more than it looks. By default the Worker answers on `*.workers.dev`, but a `workers.dev` host is a poor identity for a federated account: it sits on the Public Suffix List, which many instances treat as a shared domain and block, and it makes `acct:you@xxx.workers.dev` the address people have to type.
+By default the Worker answers on `*.workers.dev`, which is a poor identity for a federated account: the host is on the Public Suffix List, which many instances treat as a shared domain and block, and it turns the account address into `acct:you@xxx.workers.dev`.
 
 Attach a custom domain in the Cloudflare dashboard, or configure `routes` in `wrangler.jsonc`.
 
-> Deploy before you register anyone. `actorUrl` is derived from the request origin at registration time, so an account created on the `workers.dev` host keeps that host forever, even after you attach a domain. Changing it later means migrating every account.
+> Attach the domain before registering accounts. `actorUrl` is derived from the request origin at registration time, so an account created on the `workers.dev` host keeps that host even after a domain is attached; changing it later requires migrating every account.
 
 ## Scope
 
-LightAP only implements what is needed to federate. The following are deliberately left for later:
+LightAP implements the subset of ActivityPub required to federate. The following are not implemented:
 
-- **No public outbox**: delivery is handled by an internal API plus a Queue, so `GET /users/[username]/outbox` returns an empty collection and `POST` responds with `501`
-- **The inbox GET is a placeholder**: only the `POST` side is real, which is the only part other instances use
-- **No avatar upload or URL**: local accounts always render the default avatar. `avatar_url` is only ever populated for remote users, read from their Actor `icon` — and local Actor documents omit `icon` in turn, so remote instances cannot see a local avatar either
-- **No moderation or rate limiting**: this is a small personal instance, so none of that is pulled in
-- **Remote replies are not fetched**: a thread only shows replies already stored locally
-- **Mentions are not delivered**: the type is reserved, the delivery logic is not written
-- **Session cookies are missing the `Secure` flag**: there is a `TODO` for it in `src/lib/cookies.ts`, so set one if you deploy over HTTPS
-- **`/@username` is advertised but not routed**: WebFinger lists it as a profile-page alias while only `/u/[username]` exists
+- **Public outbox** — delivery uses an internal API and a Queue. `GET /users/[username]/outbox` returns an empty collection; `POST` returns `501`.
+- **Inbox GET** — returns an empty collection. Only `POST` is implemented.
+- **Avatar upload** — local accounts use the default avatar; there is no upload endpoint and no URL field. `avatar_url` is written only for remote users, from their Actor `icon`, and local Actor documents omit `icon`.
+- **Moderation and rate limiting** — not implemented.
+- **Remote replies** — thread views list only replies already stored locally.
+- **Mentions** — `Mention` is present in the notification type union, but no code creates one.
+- **`/@username`** — WebFinger advertises it as a profile-page alias; only `/u/[username]` is routed.
 
 ## License
 
