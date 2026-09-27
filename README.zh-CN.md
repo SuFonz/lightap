@@ -11,6 +11,10 @@ LightAP 是一个基于 [ActivityPub](https://activitypub.rocks/) 联邦协议�
 
 这是一个 Serverless 项目：整站最终打包成一个 Cloudflare Worker，部署后跑在 Cloudflare Workers 上，前后端来自同一份构建产物。数据落在 D1，长连接用 Durable Objects，异步投递用 Queues。
 
+## 截图
+
+![](./img/zh/img.png)
+
 ## 功能
 
 **联邦**

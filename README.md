@@ -11,6 +11,10 @@ LightAP is a decentralized social platform built on the [ActivityPub](https://ac
 
 It is a serverless project: the whole app is bundled into a single Cloudflare Worker, with the frontend and backend served from the same build output and backed by D1, Durable Objects and Queues.
 
+## Screenshots
+
+![](./img/en/img.png)
+
 ## Features
 
 **Federation**
