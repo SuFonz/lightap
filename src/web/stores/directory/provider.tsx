@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usersApi } from "@/web/lib/api";
+import { userKey } from "@/web/lib/user";
 import { useSession } from "@/web/stores/session-store";
 import type { User } from "@/web/types";
 import { DirectoryContext } from "./context";
@@ -10,12 +11,17 @@ import type { DirectoryValue, RememberUserInput } from "./types";
 
 export function DirectoryProvider({ children }: { children: ReactNode }) {
     const { session } = useSession();
+    // 按 `username@domain` 索引，本地 / 远程同名不互相覆盖
     const [users, setUsers] = useState<Record<string, User>>({});
     const [following, setFollowing] = useState<Set<string>>(new Set());
     const [missing, setMissing] = useState<Set<string>>(new Set());
     const requested = useRef<Set<string>>(new Set());
 
     const instance = session?.instance ?? "";
+    const keyOf = useCallback(
+        (username: string, domain?: string | null) => `${username}@${domain ?? instance}`,
+        [instance],
+    );
 
     // 切换账号时重置与登录态绑定的本地状态
     useEffect(() => {
@@ -28,35 +34,41 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
         if (items.length === 0) return;
         setUsers((prev) => {
             const next = { ...prev };
-            for (const item of items) next[item.username] = { ...prev[item.username], ...item };
+            for (const item of items) {
+                const key = userKey(item);
+                next[key] = { ...prev[key], ...item };
+            }
             return next;
         });
     }, []);
 
     const currentUser = useMemo(
-        () => (session ? users[session.username] ?? makeLocalUser(session.username, session.instance) : GUEST),
+        () => (session ? users[`${session.username}@${session.instance}`] ?? makeLocalUser(session.username, session.instance) : GUEST),
         [session, users],
     );
 
     const getUser = useCallback(
-        (username: string) => {
-            if (session && username === session.username) return currentUser;
-            return users[username];
+        (username: string, domain?: string | null) => {
+            if (session && username === session.username && (domain == null || domain === session.instance)) {
+                return currentUser;
+            }
+            return users[keyOf(username, domain)];
         },
-        [session, users, currentUser],
+        [session, users, currentUser, keyOf],
     );
 
     const rememberUser = useCallback(
         (input: RememberUserInput) => {
             const { username, domain, displayName, avatarUrl } = input;
             if (!username) return;
+            const key = keyOf(username, domain);
             setUsers((prev) => {
-                const existing = prev[username];
+                const existing = prev[key];
                 if (existing) {
                     // 只补齐展示信息，不覆盖已有资料
                     return {
                         ...prev,
-                        [username]: {
+                        [key]: {
                             ...existing,
                             displayName: displayName || existing.displayName,
                             avatarUrl: avatarUrl || existing.avatarUrl,
@@ -77,10 +89,10 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
                           instance,
                       )
                     : makeLocalUser(username, instance, { displayName: displayName || username, avatarUrl });
-                return { ...prev, [username]: user };
+                return { ...prev, [key]: user };
             });
         },
-        [instance],
+        [instance, keyOf],
     );
 
     const search = useCallback(
@@ -96,23 +108,25 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
             setFollowing((prev) => {
                 const next = new Set(prev);
                 for (const item of items) {
-                    if (item.isFollowing) next.add(item.username);
-                    else next.delete(item.username);
+                    const key = keyOf(item.username, item.domain);
+                    if (item.isFollowing) next.add(key);
+                    else next.delete(key);
                 }
                 return next;
             });
             return found;
         },
-        [session, upsert],
+        [instance, upsert, keyOf],
     );
 
     const loadProfile = useCallback(
-        async (username: string) => {
-            if (!username || requested.current.has(username)) return;
-            requested.current.add(username);
+        async (username: string, domain?: string | null) => {
+            if (!username) return;
+            const key = keyOf(username, domain);
+            if (requested.current.has(key)) return;
+            requested.current.add(key);
             try {
-                // 只查后端本地数据库里的用户资料
-                const profile = await usersApi.fetchProfile(username);
+                const profile = await usersApi.fetchProfile(username, domain ?? undefined);
                 upsert([
                     {
                         username: profile.username,
@@ -128,33 +142,38 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
                     },
                 ]);
                 // 用后端返回的 isFollowing 校准关注状态
+                const followingKey = `${profile.username}@${profile.domain ?? profile.instance}`;
                 setFollowing((prev) => {
                     const next = new Set(prev);
-                    if (profile.isFollowing) next.add(profile.username);
-                    else next.delete(profile.username);
+                    if (profile.isFollowing) next.add(followingKey);
+                    else next.delete(followingKey);
                     return next;
                 });
             } catch {
-                setMissing((prev) => new Set(prev).add(username));
+                setMissing((prev) => new Set(prev).add(key));
             }
         },
-        [session, upsert],
+        [upsert, keyOf],
     );
 
-    const isProfileMissing = useCallback((username: string) => missing.has(username), [missing]);
+    const isProfileMissing = useCallback(
+        (username: string, domain?: string | null) => missing.has(keyOf(username, domain)),
+        [missing, keyOf],
+    );
 
-    const isFollowing = useCallback((username: string) => following.has(username), [following]);
+    const isFollowing = useCallback((user: User) => following.has(userKey(user)), [following]);
 
     const toggleFollow = useCallback(
         async (user: User) => {
             if (!session) throw new Error("请先登录");
-            const wasFollowing = following.has(user.username);
+            const key = userKey(user);
+            const wasFollowing = following.has(key);
 
             // 乐观更新，失败后回滚
             setFollowing((prev) => {
                 const next = new Set(prev);
-                if (wasFollowing) next.delete(user.username);
-                else next.add(user.username);
+                if (wasFollowing) next.delete(key);
+                else next.add(key);
                 return next;
             });
 
@@ -175,8 +194,8 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
             } catch (error) {
                 setFollowing((prev) => {
                     const next = new Set(prev);
-                    if (wasFollowing) next.add(user.username);
-                    else next.delete(user.username);
+                    if (wasFollowing) next.add(key);
+                    else next.delete(key);
                     return next;
                 });
                 throw error;

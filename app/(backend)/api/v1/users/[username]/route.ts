@@ -32,12 +32,13 @@ export async function GET(
     const url = new URL(request.url);
     const username = params.username;
 
-    // 只查本地数据库（限定本站，避免命中同名远程用户）
+    // domain 省略时按本站查；带上 domain 可查远程用户（区分同名）
+    const domain = url.searchParams.get("domain") ?? url.host;
     const db = getDBClient();
     const user = (await db.select().from(users).where(
         and(
             eq(users.username, username),
-            eq(users.domain, url.host),
+            eq(users.domain, domain),
         ),
     ))[0];
     if (!user) {
@@ -75,8 +76,8 @@ export async function GET(
         avatarUrl: user.avatarUrl ?? "",
         bio: user.summary ?? "",
         actorUrl: user.actorUrl,
-        domain: null,
-        instance: url.host,
+        domain: user.domain === url.host ? null : user.domain,
+        instance: user.domain,
         postsCount: postsCount,
         followingCount: followingCount,
         followersCount: followersCount,

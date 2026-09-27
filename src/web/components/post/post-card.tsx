@@ -11,6 +11,7 @@ import { RelativeTime } from "@/web/components/ui/relative-time";
 import { cn } from "@/web/lib/cn";
 import { formatCount } from "@/web/lib/format";
 import { useI18n } from "@/web/lib/i18n";
+import { profileHref } from "@/web/lib/user";
 import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import { useTimeline } from "@/web/stores/timeline";
@@ -46,7 +47,7 @@ export function PostCard({
     const { session, isAuthenticated } = useSession();
     const { openAuth, showToast } = useUi();
     const router = useRouter();
-    const author = getUser(post.authorUsername);
+    const author = getUser(post.authorUsername, post.domain);
     const detailHref = `/post/${post.id}`;
     const isContext = variant === "context";
 
@@ -123,7 +124,7 @@ export function PostCard({
         >
             <div className="flex items-start gap-3">
                 <Link
-                    href={`/u/${author.username}`}
+                    href={profileHref(author)}
                     aria-label={t("post.authorHome", { name: author.displayName })}
                     onClick={stop}
                 >
@@ -132,7 +133,7 @@ export function PostCard({
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-x-2 gap-y-0 flex-wrap">
                         <Link
-                            href={`/u/${author.username}`}
+                            href={profileHref(author)}
                             onClick={stop}
                             className="truncate font-display text-[15px] font-extrabold text-slate-800 hover:text-brand-deep"
                         >

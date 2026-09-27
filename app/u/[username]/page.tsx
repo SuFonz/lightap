@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useCallback, useEffect } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { PostCard } from "@/web/components/post/post-card";
 import { Avatar } from "@/web/components/ui/avatar";
 import { BellIcon, CheckIcon, EditIcon, GlobeIcon, HomeIcon, SparklesIcon, UserIcon } from "@/web/components/ui/icons";
@@ -14,24 +14,26 @@ import { useDirectory } from "@/web/stores/directory";
 import { useTimeline } from "@/web/stores/timeline";
 import { useUi } from "@/web/stores/ui-store";
 
-export default function ProfilePage() {
+function ProfilePageInner() {
     const params = useParams<{ username: string }>();
+    const searchParams = useSearchParams();
     const username = typeof params?.username === "string" ? params.username : "";
+    const domain = searchParams.get("domain");
     const { getUser, currentUser, loadProfile, isProfileMissing } = useDirectory();
     const { userPosts, userPostsMeta, loadUserPosts, loadMoreUserPosts } = useTimeline();
     const { openEditProfile } = useUi();
     const { t } = useI18n();
 
-    const user = getUser(username);
-    const missing = isProfileMissing(username);
+    const user = getUser(username, domain);
+    const missing = isProfileMissing(username, domain);
     // 未加载过为 undefined，加载完成后是数组
     const list = userPosts[username];
     const meta = userPostsMeta[username];
 
     useEffect(() => {
-        void loadProfile(username);
+        void loadProfile(username, domain);
         void loadUserPosts(username);
-    }, [username, loadProfile, loadUserPosts]);
+    }, [username, domain, loadProfile, loadUserPosts]);
 
     const loadMorePosts = useCallback(() => loadMoreUserPosts(username), [loadMoreUserPosts, username]);
     const sentinelRef = useInfiniteScroll(loadMorePosts, Boolean(meta?.hasMore) && !meta?.loadingMore);
@@ -170,6 +172,14 @@ export default function ProfilePage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function ProfilePage() {
+    return (
+        <Suspense fallback={<ProfileSkeleton />}>
+            <ProfilePageInner />
+        </Suspense>
     );
 }
 

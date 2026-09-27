@@ -17,8 +17,9 @@ export function search(query: string) {
     return request<SearchResponse>(`/api/v1/search?q=${encodeURIComponent(query)}`);
 }
 
-export function fetchProfile(username: string) {
-    return request<UserProfileResponse>(`/api/v1/users/${encodeURIComponent(username)}`);
+export function fetchProfile(username: string, domain?: string) {
+    const query = domain ? `?domain=${encodeURIComponent(domain)}` : "";
+    return request<UserProfileResponse>(`/api/v1/users/${encodeURIComponent(username)}${query}`);
 }
 
 export function follow(body: FollowRequest) {

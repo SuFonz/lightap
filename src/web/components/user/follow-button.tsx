@@ -16,7 +16,7 @@ export function FollowButton({ user, size = "md", className }: FollowButtonProps
     const { isFollowing, toggleFollow, currentUser } = useDirectory();
     const { t } = useI18n();
     const [pending, setPending] = useState(false);
-    const following = isFollowing(user.username);
+    const following = isFollowing(user);
 
     if (user.username === currentUser.username) return null;
 
