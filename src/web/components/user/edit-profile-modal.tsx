@@ -17,7 +17,6 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     const { t } = useI18n();
     const [displayName, setDisplayName] = useState("");
     const [bio, setBio] = useState("");
-    const [avatarUrl, setAvatarUrl] = useState("");
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -26,7 +25,6 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
         if (!open) return;
         setDisplayName(currentUser.displayName);
         setBio(currentUser.bio);
-        setAvatarUrl(currentUser.avatarUrl ?? "");
         setSaved(false);
         setError(null);
     }, [open, currentUser]);
@@ -40,7 +38,6 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
             await updateProfile({
                 displayName: displayName.trim(),
                 bio: bio.trim(),
-                avatarUrl: avatarUrl.trim() || undefined,
             });
             setSaved(true);
             setTimeout(onClose, 700);
@@ -73,18 +70,8 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                     </button>
                 </div>
 
-                <div className="mb-5 flex items-center gap-4">
-                    <Avatar name={displayName || currentUser.username} src={avatarUrl} size={56} ring />
-                    <label className="min-w-0 flex-1 text-xs font-bold text-slate-500">
-                        {t("user.avatarUrl")}
-                        <input
-                            type="url"
-                            value={avatarUrl}
-                            onChange={(e) => setAvatarUrl(e.target.value)}
-                            placeholder="https://…"
-                            className="mt-1 w-full rounded-[10px] border border-white/70 bg-white/70 px-3 py-2 text-sm font-normal text-slate-700 focus:border-brand/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand/15"
-                        />
-                    </label>
+                <div className="mb-5 flex items-center justify-center">
+                    <Avatar name={displayName || currentUser.username} src={currentUser.avatarUrl} size={56} ring />
                 </div>
 
                 <label className="mb-4 block text-xs font-bold text-slate-500">

@@ -186,7 +186,7 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
     );
 
     const updateProfile = useCallback(
-        async (patch: Partial<Pick<User, "displayName" | "bio" | "avatarUrl">>) => {
+        async (patch: Partial<Pick<User, "displayName" | "bio">>) => {
             if (!session) throw new Error("请先登录");
             const previous = currentUser;
 
@@ -197,14 +197,12 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
                 const updated = await usersApi.updateProfile({
                     displayName: patch.displayName,
                     bio: patch.bio,
-                    avatarUrl: patch.avatarUrl,
                 });
                 // 用服务端返回值校准
                 upsert([{
                     ...currentUser,
                     displayName: updated.displayName,
                     bio: updated.bio,
-                    avatarUrl: updated.avatarUrl || undefined,
                 }]);
             } catch (error) {
                 // 失败回滚

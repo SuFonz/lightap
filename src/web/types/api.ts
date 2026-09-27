@@ -35,13 +35,11 @@ export interface SearchResponse {
 export interface UpdateProfileRequest {
     displayName?: string;
     bio?: string;
-    avatarUrl?: string;
 }
 
 export interface UpdateProfileResponse {
     displayName: string;
     bio: string;
-    avatarUrl: string;
 }
 
 // 用户资料：GET /api/v1/users/[username]

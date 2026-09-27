@@ -9,7 +9,6 @@ interface Body {
     displayName?: string;
     /** 简介（对应 users.summary） */
     bio?: string;
-    avatarUrl?: string;
 }
 
 const MAX_DISPLAY_NAME = 20;
@@ -61,18 +60,6 @@ export async function PATCH(request: Request) {
         patch.summary = bio || null;
     }
 
-    // 头像：空字符串表示清空（存 null），否则必须是 http(s) 链接
-    if (body.avatarUrl !== undefined) {
-        if (typeof body.avatarUrl !== "string") {
-            return Response.json({ error: "Invalid avatar URL." }, { status: 400 });
-        }
-        const avatarUrl = body.avatarUrl.trim();
-        if (avatarUrl && !/^https?:\/\//i.test(avatarUrl)) {
-            return Response.json({ error: "Avatar URL must start with http:// or https://." }, { status: 400 });
-        }
-        patch.avatarUrl = avatarUrl || null;
-    }
-
     if (Object.keys(patch).length === 0) {
         return Response.json({ error: "No fields to update." }, { status: 400 });
     }
@@ -86,7 +73,6 @@ export async function PATCH(request: Request) {
     return Response.json({
         displayName: patch.displayName ?? user.displayName ?? "",
         bio: patch.summary !== undefined ? (patch.summary ?? "") : (user.summary ?? ""),
-        avatarUrl: patch.avatarUrl !== undefined ? (patch.avatarUrl ?? "") : (user.avatarUrl ?? ""),
     }, {
         status: 200,
     });

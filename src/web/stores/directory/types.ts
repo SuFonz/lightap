@@ -17,5 +17,5 @@ export interface DirectoryValue {
     isProfileMissing: (username: string) => boolean;
     isFollowing: (username: string) => boolean;
     toggleFollow: (user: User) => Promise<void>;
-    updateProfile: (patch: Partial<Pick<User, "displayName" | "bio" | "avatarUrl">>) => Promise<void>;
+    updateProfile: (patch: Partial<Pick<User, "displayName" | "bio">>) => Promise<void>;
 }
