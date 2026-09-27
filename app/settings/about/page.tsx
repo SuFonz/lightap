@@ -32,7 +32,7 @@ export default function AboutPage() {
                 <div className="flex flex-col items-center gap-2">
                     <h2 className="font-display text-lg font-black text-brand-ink">LightAP</h2>
                     <p className="text-sm leading-relaxed text-slate-500">
-                        一个可爱的去中心化联邦宇宙小站，基于 ActivityPub 协议，与 Mastodon / Misskey / Pleroma 互联互通。
+                        一个去中心化联邦宇宙小站，基于 ActivityPub 协议。
                     </p>
                 </div>
             </section>

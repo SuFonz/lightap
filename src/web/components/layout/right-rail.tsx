@@ -18,7 +18,7 @@ export function RightRail() {
             {isAuthenticated ? (
                 <p className="flex items-start justify-center gap-1.5 px-2 pb-4 text-center text-[11px] leading-relaxed text-slate-400/90">
                     <GlobeIcon size={12} className="mt-0.5 shrink-0" />
-                    基于 ActivityPub 协议 · 与 Mastodon / Misskey / Pleroma 互联互通
+                    基于 ActivityPub 协议 · LightAP
                 </p>
             ) : (
                 <CommunityRules />
