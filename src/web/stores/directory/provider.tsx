@@ -187,17 +187,32 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
 
     const updateProfile = useCallback(
         async (patch: Partial<Pick<User, "displayName" | "bio" | "avatarUrl">>) => {
-            if (!session) return;
-            // 后端暂无资料编辑接口，先在本地生效
-            setUsers((prev) => ({
-                ...prev,
-                [session.username]: {
-                    ...(prev[session.username] ?? makeLocalUser(session.username, session.instance)),
-                    ...patch,
-                },
-            }));
+            if (!session) throw new Error("请先登录");
+            const previous = currentUser;
+
+            // 乐观更新
+            upsert([{ ...currentUser, ...patch }]);
+
+            try {
+                const updated = await usersApi.updateProfile({
+                    displayName: patch.displayName,
+                    bio: patch.bio,
+                    avatarUrl: patch.avatarUrl,
+                });
+                // 用服务端返回值校准
+                upsert([{
+                    ...currentUser,
+                    displayName: updated.displayName,
+                    bio: updated.bio,
+                    avatarUrl: updated.avatarUrl || undefined,
+                }]);
+            } catch (error) {
+                // 失败回滚
+                upsert([previous]);
+                throw error;
+            }
         },
-        [session],
+        [session, currentUser, upsert],
     );
 
     const value = useMemo<DirectoryValue>(

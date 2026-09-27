@@ -37,6 +37,7 @@ export async function proxy(req: NextRequest) {
             (pathname.startsWith("/api/v1/notes/") && pathname.endsWith("/like")) ||
             pathname === "/api/v1/follow" ||
             pathname === "/api/v1/unfollow" ||
+            pathname === "/api/v1/me" ||
             pathname.startsWith("/api/v1/notifications")
         );
 

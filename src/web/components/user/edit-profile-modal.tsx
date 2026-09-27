@@ -20,6 +20,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     const [avatarUrl, setAvatarUrl] = useState("");
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!open) return;
@@ -27,12 +28,14 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
         setBio(currentUser.bio);
         setAvatarUrl(currentUser.avatarUrl ?? "");
         setSaved(false);
+        setError(null);
     }, [open, currentUser]);
 
     async function handleSubmit(e: FormEvent) {
         e.preventDefault();
         if (!displayName.trim() || saving) return;
         setSaving(true);
+        setError(null);
         try {
             await updateProfile({
                 displayName: displayName.trim(),
@@ -41,6 +44,8 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
             });
             setSaved(true);
             setTimeout(onClose, 700);
+        } catch {
+            setError(t("common.updateFailed"));
         } finally {
             setSaving(false);
         }
@@ -105,6 +110,12 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                         className="mt-1 w-full resize-none rounded-[10px] border border-white/70 bg-white/70 px-3 py-2.5 text-sm font-normal leading-relaxed text-slate-700 focus:border-brand/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand/15"
                     />
                 </label>
+
+                {error && (
+                    <p role="alert" className="mb-3 rounded-lg bg-sakura/10 px-3 py-2 text-xs font-bold text-sakura-deep">
+                        {error}
+                    </p>
+                )}
 
                 <button
                     type="submit"

@@ -31,6 +31,19 @@ export interface SearchResponse {
     items: SearchUserItem[];
 }
 
+// 更新资料：PATCH /api/v1/me
+export interface UpdateProfileRequest {
+    displayName?: string;
+    bio?: string;
+    avatarUrl?: string;
+}
+
+export interface UpdateProfileResponse {
+    displayName: string;
+    bio: string;
+    avatarUrl: string;
+}
+
 // 用户资料：GET /api/v1/users/[username]
 export interface UserProfileResponse {
     username: string;
