@@ -33,6 +33,7 @@ It is a serverless project: the whole app is bundled into a single Cloudflare Wo
 - Live updates over SSE: new posts, replies, likes and notifications all land without a refresh, and the client back-fills anything missed while disconnected
 - Cross-instance user search with `@user@domain`
 - Profile pages with post, following and follower counts
+- Edit your own display name and bio; both live in the same table the Actor document is built from, so remote instances pick up the change on their next fetch
 - Guests can browse the timeline and profiles without an account
 - Interface in Chinese or English, switchable at runtime — the choice is remembered in a cookie and applied server-side, so the first paint is already in the right language
 
@@ -115,6 +116,7 @@ The app API lives under `/api/v1` and requires a session cookie unless noted:
 | `POST /follow`, `POST /unfollow` | Follow / unfollow |
 | `GET /search?q=@user@domain` | Search local users and resolve remote ones |
 | `GET /users/[username]`, `GET /users/[username]/posts` | Profile and posts (public) |
+| `PATCH /me` | Update your own display name and bio (partial update) |
 | `GET /notifications`, `POST /notifications/read` | Notification list and mark-as-read |
 | `GET /events` | SSE stream (public; sends user-only events when logged in) |
 
@@ -291,8 +293,7 @@ LightAP only implements what is needed to federate. The following are deliberate
 
 - **No public outbox**: delivery is handled by an internal API plus a Queue, so `GET /users/[username]/outbox` returns an empty collection and `POST` responds with `501`
 - **The inbox GET is a placeholder**: only the `POST` side is real, which is the only part other instances use
-- **Profile edits do not persist**: the edit dialog updates local state only, there is no backend endpoint yet, so changes are lost on reload
-- **No media upload**: avatars are set by URL
+- **No avatar upload or URL**: local accounts always render the default avatar. `avatar_url` is only ever populated for remote users, read from their Actor `icon` — and local Actor documents omit `icon` in turn, so remote instances cannot see a local avatar either
 - **No moderation or rate limiting**: this is a small personal instance, so none of that is pulled in
 - **Remote replies are not fetched**: a thread only shows replies already stored locally
 - **Mentions are not delivered**: the type is reserved, the delivery logic is not written

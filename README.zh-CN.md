@@ -33,6 +33,7 @@ LightAP 是一个基于 [ActivityPub](https://activitypub.rocks/) 联邦协议�
 - SSE 实时推送：新帖、回复、点赞、通知都无需刷新即可出现，断线重连后还会自动补齐漏掉的内容
 - 跨实例搜索用户，支持 `@user@domain`
 - 个人主页，含帖子、关注与粉丝数量
+- 可以修改自己的昵称和简介；两者与 Actor 文档来自同一张表，远端实例下次抓取时会同步更新
 - 未登录也能浏览时间线和个人主页
 - 界面支持中文与 English，可随时切换；选择存在 Cookie 里并在服务端生效，首屏就是选定的语言
 
@@ -115,6 +116,7 @@ LightAP 是一个基于 [ActivityPub](https://activitypub.rocks/) 联邦协议�
 | `POST /follow`、`POST /unfollow` | 关注 / 取关 |
 | `GET /search?q=@user@domain` | 搜索本站用户，并解析远程用户 |
 | `GET /users/[username]`、`GET /users/[username]/posts` | 个人资料与帖子（公开） |
+| `PATCH /me` | 修改自己的昵称和简介（部分更新） |
 | `GET /notifications`、`POST /notifications/read` | 通知列表与标记已读 |
 | `GET /events` | SSE 事件流（公开；登录后会收到只属于该用户的事件） |
 
@@ -291,8 +293,7 @@ LightAP 只做了跑通联邦所必需的部分，以下几项是明确排在后
 
 - **不对外暴露 outbox**：投递由内部 API 加 Queue 完成，所以 `GET /users/[username]/outbox` 返回空集合，`POST` 返回 `501`
 - **收件箱的 GET 是占位**：只有 `POST` 是真实实现，而这也正是别的实例唯一会用到的部分
-- **编辑资料不会保存**：弹窗只改本地状态，后端还没有对应接口，刷新就丢
-- **不做媒体上传**：头像通过填 URL 设置
+- **不支持头像上传，也没有填写链接的入口**：本站账号始终使用默认头像。`avatar_url` 只会为远程用户写入（从对方 Actor 的 `icon` 读取），而本站 Actor 文档同样不带 `icon`，所以远端实例也看不到本站用户的头像
 - **不做审核与限流**：定位是个人小站，暂不引入这套东西
 - **不拉取远程回复**：帖子线程只显示已经存在本地库里的回复
 - **Mention 暂不投递**：类型已经预留，投递逻辑未实现
