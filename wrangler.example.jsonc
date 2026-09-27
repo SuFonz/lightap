@@ -5,8 +5,8 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "lightap",
-	"compatibility_date": "2026-09-18",
-	"main": "vinext/server/fetch-handler",
+	"compatibility_date": "2026-09-23",
+	"main": "worker.ts",
 	"assets": {
 		"directory": "dist/client",
 		"not_found_handling": "none",
@@ -32,6 +32,20 @@
 	// 		"remote": false
 	// 	}
 	// ],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "SSE_DO",
+				"class_name": "SSEDurableObject"
+			}
+		]
+	},
+	"exports": {
+		"SSEDurableObject": {
+			"type": "durable-object",
+			"storage": "sqlite"
+		}
+	},
 	"queues": {
 		"producers": [
 		{
@@ -54,12 +68,11 @@
 			"database_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 			"migrations_dir": "drizzle",
 			"migrations_pattern": "drizzle/*/migration.sql",
-			// "remote": false
 		}
 	],
-	"vars": {
-		"JWT_SECRET": "<your secret>"
-	}
+	// The following are secrets, you should create them using wrangler:
+	//		npx wrangler secret put JWT_SECRET
+	
 
 	/**
 	 * Smart Placement
