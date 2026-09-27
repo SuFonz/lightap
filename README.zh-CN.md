@@ -40,7 +40,7 @@ LightAP 是一个基于 [ActivityPub](https://activitypub.rocks/) 联邦协议�
 **账号**
 
 - 用用户名和密码注册、登录
-- 密码用 PBKDF2-SHA256 哈希（31 万次迭代，16 字节随机盐）
+- 密码用 PBKDF2-SHA256 哈希（10 万次迭代，16 字节随机盐）
 - 会话是自实现的 HS256 JWT，放在 HttpOnly Cookie 里（`Secure`、`SameSite=Lax`），有效期 7 天
 - 远程用户和本站用户存在同一张表里，这样他们的帖子能显示昵称和头像；但远程用户无法登录
 
@@ -300,6 +300,7 @@ LightAP 只实现跑通联邦所必需的部分，以下功能尚未实现：
 - **远程回复** —— 线程页只显示已存于本地库的回复。
 - **Mention** —— 通知类型定义中存在，但没有代码会创建它。
 - **`/@username` 路由** —— WebFinger 将其声明为 profile-page 别名，实际只路由了 `/u/[username]`。
+- **PBKDF2 迭代次数** —— 10 万次，低于 OWASP 目前对 PBKDF2-HMAC-SHA256 建议的 60 万次。存储的哈希自带迭代次数，因此日后提高不会使已有密码失效。
 
 ## 开源许可
 

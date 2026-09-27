@@ -40,7 +40,7 @@ It is a serverless project: the whole app is bundled into a single Cloudflare Wo
 **Accounts**
 
 - Register and log in with a username and password
-- Passwords are hashed with PBKDF2-SHA256 (310,000 iterations, 16-byte salt)
+- Passwords are hashed with PBKDF2-SHA256 (100,000 iterations, 16-byte salt)
 - Sessions are a hand-rolled HS256 JWT in an HttpOnly cookie (`Secure`, `SameSite=Lax`), valid for 7 days
 - Remote users are stored alongside local ones so their posts render with avatars and display names, but they cannot log in
 
@@ -300,6 +300,7 @@ LightAP implements the subset of ActivityPub required to federate. The following
 - **Remote replies** — thread views list only replies already stored locally.
 - **Mentions** — `Mention` is present in the notification type union, but no code creates one.
 - **`/@username`** — WebFinger advertises it as a profile-page alias; only `/u/[username]` is routed.
+- **PBKDF2 iteration count** — 100,000, below the 600,000 OWASP currently recommends for PBKDF2-HMAC-SHA256. The stored hash records its own iteration count, so raising it later will not invalidate existing passwords.
 
 ## License
 
