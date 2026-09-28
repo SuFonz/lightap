@@ -38,7 +38,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
             <MobileDrawer />
 
             {/* 三栏：240px / 680px / 280px */}
-            <div className="mx-auto flex w-full max-w-[1248px] gap-6 px-4 pb-32 pt-[72px] sm:px-6 lg:pb-12 lg:pt-6">
+            <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1248px] gap-6 px-4 pb-32 pt-[72px] sm:px-6 lg:pb-12 lg:pt-6">
                 <Sidebar />
                 <main className="mx-auto min-w-0 w-full max-w-[680px] flex-1">{children}</main>
                 <RightRail />

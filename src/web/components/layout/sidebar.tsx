@@ -6,7 +6,7 @@ import type { ComponentType } from "react";
 import { WelcomePanel } from "@/web/components/auth/welcome-panel";
 import { LanguageSwitcher } from "@/web/components/layout/language-switcher";
 import { Avatar } from "@/web/components/ui/avatar";
-import { BellIcon, EditIcon, FeatherIcon, GearIcon, GlobeIcon, HomeIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
+import { BellIcon, EditIcon, FeatherIcon, GearIcon, GithubIcon, GlobeIcon, HomeIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
 import { useI18n } from "@/web/lib/i18n";
 import { useDirectory } from "@/web/stores/directory";
@@ -19,6 +19,9 @@ interface NavItem {
     label: string;
     icon: ComponentType<{ size?: number; className?: string }>;
 }
+
+/** 真实仓库地址 */
+const GITHUB_URL = "https://github.com/SuFonz/lightap";
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     const pathname = usePathname();
@@ -39,7 +42,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
     return (
-        <div className="flex flex-col gap-5">
+        <div className="flex h-full flex-col gap-5">
             <div className="flex items-center gap-2.5 px-1 pt-1">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
                     <FeatherIcon size={17} />
@@ -149,8 +152,19 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 <WelcomePanel />
             )}
 
-            {/* 底部：语言切换（左下方） */}
-            <LanguageSwitcher />
+            {/* 底部：语言切换 + GitHub（mt-auto 钉到底部） */}
+            <div className="mt-auto flex flex-col gap-2">
+                <LanguageSwitcher />
+                <a
+                    href={GITHUB_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="GitHub"
+                    className="flex items-center justify-center gap-1.5 py-1 text-[11px] font-semibold text-slate-400 transition hover:text-brand-deep"
+                >
+                    <GithubIcon size={14} /> GitHub
+                </a>
+            </div>
         </div>
     );
 }
@@ -160,7 +174,7 @@ export function Sidebar() {
 
     return (
         <aside
-            className="sticky top-6 z-20 hidden max-h-[calc(100dvh-3rem)] w-[240px] shrink-0 self-start overflow-y-auto scrollbar-none lg:block"
+            className="sticky top-6 z-20 hidden max-h-[calc(100dvh-3rem)] w-[240px] shrink-0 overflow-y-auto scrollbar-none lg:block"
             aria-label={t("nav.sidebar")}
         >
             <SidebarContent />
