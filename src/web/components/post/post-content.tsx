@@ -17,15 +17,9 @@ export function PostContent({
     return (
         <>
             {parts.map((part, i): ReactNode => {
+                // 话题目前没有落地页（搜索接口只查用户），不做成链接，避免跳进空结果页
                 if (/^#[^\s#]+/.test(part)) {
-                    return (
-                        <TagPill
-                            key={i}
-                            label={part}
-                            href={`/search?q=${encodeURIComponent(part.slice(1))}`}
-                            onClick={onTagClick}
-                        />
-                    );
+                    return <TagPill key={i} label={part} />;
                 }
                 if (/^@[^\s@]+/.test(part)) {
                     return (

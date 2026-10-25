@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { cn } from "@/web/lib/cn";
 
-/* 蓝 / 紫 / 粉 三色胶囊：蓝色为主，紫粉点缀 */
+/* 蓝 / 紫 / 粉 三色胶囊：蓝色为主，紫粉点缀。
+   hover 单独一段，只有可点击的胶囊才加，避免静态胶囊看起来像链接。 */
 export const toneClasses = {
-    blue: "bg-brand/15 text-brand-ink hover:bg-brand/25",
-    purple: "bg-magic/15 text-magic-deep hover:bg-magic/25",
-    pink: "bg-sakura/20 text-sakura-deep hover:bg-sakura/30",
+    blue: "bg-brand/15 text-brand-ink",
+    purple: "bg-magic/15 text-magic-deep",
+    pink: "bg-sakura/20 text-sakura-deep",
+} as const;
+
+const toneHoverClasses = {
+    blue: "hover:bg-brand/25",
+    purple: "hover:bg-magic/25",
+    pink: "hover:bg-sakura/30",
 } as const;
 
 export type PillTone = keyof typeof toneClasses;
@@ -29,16 +36,17 @@ export interface TagPillProps {
 }
 
 export function TagPill({ label, href, tone, className, onClick }: TagPillProps) {
+    const resolvedTone = tone ?? toneFor(label);
     const cls = cn(
         "inline-flex max-w-full items-center truncate rounded-full px-2 py-0.5 text-[13px] font-bold leading-5 transition-colors",
-        toneClasses[tone ?? toneFor(label)],
+        toneClasses[resolvedTone],
         className,
     );
     if (!href) {
         return <span className={cls}>{label}</span>;
     }
     return (
-        <Link href={href} onClick={onClick} className={cls}>
+        <Link href={href} onClick={onClick} className={cn(cls, toneHoverClasses[resolvedTone])}>
             {label}
         </Link>
     );

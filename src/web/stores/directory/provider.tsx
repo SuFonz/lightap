@@ -17,7 +17,10 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
     const [missing, setMissing] = useState<Set<string>>(new Set());
     const requested = useRef<Set<string>>(new Set());
 
-    const instance = session?.instance ?? "";
+    // 访客没有 session，用当前浏览器 host 兜底。
+    // 否则实例为空串，keyOf 会算出 `haru@`，而后端返回的 userKey 是 `haru@localhost:3000`，
+    // 两边永远对不上，访客的资料页就会一直卡在骨架屏。
+    const instance = session?.instance || (typeof window === "undefined" ? "" : window.location.host);
     const keyOf = useCallback(
         (username: string, domain?: string | null) => `${username}@${domain ?? instance}`,
         [instance],

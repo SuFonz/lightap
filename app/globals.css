@@ -48,12 +48,17 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-a {
-    color: inherit;
-}
+/* 必须放在 base 层里：无层样式优先级高于所有 @layer，
+   否则 `a { color: inherit }` 会盖掉链接上的 text-* / hover:text-* 工具类，
+   导致全站链接颜色失效（例如 btn-solid 的白字变成正文色）。 */
+@layer base {
+    a {
+        color: inherit;
+    }
 
-h1, h2, h3, h4 {
-    font-family: var(--font-display);
+    h1, h2, h3, h4 {
+        font-family: var(--font-display);
+    }
 }
 
 ::selection {

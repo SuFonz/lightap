@@ -5,7 +5,7 @@ import { Suspense, useCallback, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { PostCard } from "@/web/components/post/post-card";
 import { Avatar } from "@/web/components/ui/avatar";
-import { BellIcon, CheckIcon, EditIcon, GlobeIcon, HomeIcon, SparklesIcon, UserIcon } from "@/web/components/ui/icons";
+import { EditIcon, GlobeIcon, HomeIcon, SparklesIcon, UserIcon } from "@/web/components/ui/icons";
 import { FollowButton } from "@/web/components/user/follow-button";
 import { formatCount } from "@/web/lib/format";
 import { useI18n } from "@/web/lib/i18n";
@@ -88,28 +88,13 @@ function ProfilePageInner() {
                                     <EditIcon size={15} /> {t("profile.edit")}
                                 </button>
                             ) : (
-                                <>
-                                    <button
-                                        type="button"
-                                        aria-label={t("profile.subscribe")}
-                                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] border border-white/80 bg-white/60 text-brand-deep transition hover:bg-white/90 active:scale-90"
-                                    >
-                                        <BellIcon size={17} />
-                                    </button>
-                                    <FollowButton user={user} />
-                                </>
+                                <FollowButton user={user} />
                             )}
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <h1 className="font-display text-xl font-black text-slate-800">{user.displayName}</h1>
-                        <span
-                            className="inline-flex items-center gap-1 rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-extrabold text-brand-ink ring-1 ring-brand/20"
-                            title={t("profile.verifiedTitle")}
-                        >
-                            <CheckIcon size={11} strokeWidth={3} /> {t("profile.verified")}
-                        </span>
                     </div>
                     <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-400">
                         @{user.username}@{user.instance}
@@ -122,7 +107,9 @@ function ProfilePageInner() {
                     <dl className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         {(
                             [
-                                [t("profile.posts"), list?.length ?? 0],
+                                // 用后端统计的总数，而不是当前已加载的列表长度
+                                // （列表分页，超过一页时长度会停在页大小上）
+                                [t("profile.posts"), user.postsCount],
                                 [t("profile.following"), user.followingCount],
                                 [t("profile.followers"), user.followersCount],
                             ] as const
@@ -142,7 +129,7 @@ function ProfilePageInner() {
             </section>
 
             <h2 className="glass-card px-5 py-3 font-display text-sm font-extrabold text-slate-700">
-                {isMe ? t("profile.myPosts") : t("profile.postsOf", { name: user.displayName })} · {list?.length ?? 0}
+                {isMe ? t("profile.myPosts") : t("profile.postsOf", { name: user.displayName })} · {user.postsCount}
             </h2>
 
             {list === undefined ? (
