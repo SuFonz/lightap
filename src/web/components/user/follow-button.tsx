@@ -18,7 +18,8 @@ export function FollowButton({ user, size = "md", className }: FollowButtonProps
     const [pending, setPending] = useState(false);
     const following = isFollowing(user);
 
-    if (user.username === currentUser.username) return null;
+    // 只隐藏「自己的」按钮：远程同名用户（如别家实例的 admin）不是自己，要能关注
+    if (user.username === currentUser.username && user.instance === currentUser.instance) return null;
 
     async function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
         e.preventDefault();

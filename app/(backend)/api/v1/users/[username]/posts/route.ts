@@ -37,12 +37,15 @@ export async function GET(
     const limit = Math.min(Number(url.searchParams.get("limit")) || MAX_LIMIT, MAX_LIMIT);
     const maxId = Number(url.searchParams.get("maxId")) || undefined;
 
-    // 只查本地数据库里的用户（限定本站，避免命中同名远程用户）
+    // domain 省略时按本站查；带上 domain 可查远程用户，避免同名用户串到本地那位身上
+    const domain = url.searchParams.get("domain") ?? url.host;
+
+    // 按 username + domain 定位用户（本地 / 远程同名互不干扰）
     const db = getDBClient();
     const user = (await db.select().from(users).where(
         and(
             eq(users.username, params.username),
-            eq(users.domain, url.host),
+            eq(users.domain, domain),
         ),
     ))[0];
     if (!user) {

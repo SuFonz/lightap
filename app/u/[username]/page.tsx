@@ -8,6 +8,7 @@ import { Avatar } from "@/web/components/ui/avatar";
 import { EditIcon, GlobeIcon, HomeIcon, UserIcon } from "@/web/components/ui/icons";
 import { FollowButton } from "@/web/components/user/follow-button";
 import { formatCount } from "@/web/lib/format";
+import { postsKey } from "@/web/lib/user";
 import { useI18n } from "@/web/lib/i18n";
 import { useInfiniteScroll } from "@/web/hooks/use-infinite-scroll";
 import { useDirectory } from "@/web/stores/directory";
@@ -27,15 +28,19 @@ function ProfilePageInner() {
     const user = getUser(username, domain);
     const missing = isProfileMissing(username, domain);
     // 未加载过为 undefined，加载完成后是数组
-    const list = userPosts[username];
-    const meta = userPostsMeta[username];
+    // 缓存键带 domain：远程 admin 与本地 admin 是两个人，帖子列表不能互相顶掉
+    const list = userPosts[postsKey(username, domain)];
+    const meta = userPostsMeta[postsKey(username, domain)];
 
     useEffect(() => {
         void loadProfile(username, domain);
-        void loadUserPosts(username);
+        void loadUserPosts(username, domain);
     }, [username, domain, loadProfile, loadUserPosts]);
 
-    const loadMorePosts = useCallback(() => loadMoreUserPosts(username), [loadMoreUserPosts, username]);
+    const loadMorePosts = useCallback(
+        () => loadMoreUserPosts(username, domain),
+        [loadMoreUserPosts, username, domain],
+    );
     const sentinelRef = useInfiniteScroll(loadMorePosts, Boolean(meta?.hasMore) && !meta?.loadingMore);
 
     if (!user) {
@@ -57,7 +62,8 @@ function ProfilePageInner() {
         );
     }
 
-    const isMe = user.username === currentUser.username;
+    // 同名不代表是自己：远程 admin 和本地 admin 是两个人，必须连实例一起比
+    const isMe = user.username === currentUser.username && user.instance === currentUser.instance;
 
     return (
         <div className="flex flex-col">

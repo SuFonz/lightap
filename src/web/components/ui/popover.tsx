@@ -55,6 +55,9 @@ export function Popover({
     const mounted = useMounted();
     const [rect, setRect] = useState<DOMRect | null>(null);
     const [panelRef, setPanelRef] = useState<HTMLDivElement | null>(null);
+    // `direction="right"` 要按浮层自身高度做垂直居中，首帧量不到高度，
+    // 量到后重渲染一次把位置定准（只影响 right，其它方向不依赖它）
+    const [menuHeight, setMenuHeight] = useState(0);
 
     // 跟随锚点定位
     useEffect(() => {
@@ -71,6 +74,16 @@ export function Popover({
             window.removeEventListener("scroll", update, true);
         };
     }, [open, anchorRef]);
+
+    // 量浮层高度（仅 right 方向需要）
+    useEffect(() => {
+        if (!open || direction !== "right" || !panelRef) {
+            setMenuHeight(0);
+            return;
+        }
+        const height = panelRef.getBoundingClientRect().height;
+        setMenuHeight((prev) => (Math.abs(prev - height) < 0.5 ? prev : height));
+    }, [open, direction, panelRef]);
 
     // 点击外部 / Esc 关闭
     useEffect(() => {
@@ -102,15 +115,21 @@ export function Popover({
     if (!mounted || !open || !rect) return null;
 
     const menuWidth = width ?? rect.width;
+    // right 方向首帧还量不到高度：先不显示，避免在错误位置闪一下
+    const ready = direction !== "right" || menuHeight > 0;
 
     // 三种方向的定位
+    //
+    // `right` 需要垂直居中于锚点，但居中是靠 transform 做的，而入场动画
+    // `pop-in` 的关键帧同样在改 transform：动画期间 transform 被关键帧覆盖，
+    // 浮层先落在锚点顶部、动画结束才跳回居中位置（视觉上"跳一下"）。
+    // 所以这里把居中换算成绝对 top，不再依赖 transform，定位与动画互不干扰。
     const position =
         direction === "right"
             ? {
-                  // 从锚点右侧展开，垂直居中于锚点
+                  // 从锚点右侧展开，垂直居中于锚点（用 top 直接算，避免 transform 冲突）
                   left: rect.right + offset,
-                  top: rect.top + rect.height / 2,
-                  transform: "translateY(-50%)",
+                  top: rect.top + rect.height / 2 - menuHeight / 2,
               }
             : direction === "up"
               ? {
@@ -129,6 +148,8 @@ export function Popover({
             style={{
                 ...position,
                 width: menuWidth,
+                // 首帧只用来量高度：不可见、也不拦截指针
+                visibility: ready ? undefined : "hidden",
                 zIndex: zLayers.overlay,
                 animation: "pop-in 0.16s cubic-bezier(0.22, 0.61, 0.36, 1)",
             }}

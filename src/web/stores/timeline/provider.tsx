@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { postsApi } from "@/web/lib/api";
+import { postsKey } from "@/web/lib/user";
 import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import type { FeedTab, Post, PostListItem } from "@/web/types";
@@ -246,9 +247,11 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
 
             // 自己的主页列表（若已加载）
             setUserPosts((prev) => {
-                const list = prev[currentUser.username];
+                // 自己的列表按本地用户缓存（key 不带 domain）
+                const key = postsKey(currentUser.username, null);
+                const list = prev[key];
                 if (!list) return prev;
-                return { ...prev, [currentUser.username]: appendUnique([post], list) };
+                return { ...prev, [key]: appendUnique([post], list) };
             });
             // 自己的新帖：all / local / following 都算
             setRealtime((prev) => upsertRealtime(prev, post, ["all", "local", "following"]));
@@ -283,48 +286,51 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     );
 
     const loadUserPosts = useCallback(
-        async (username: string) => {
+        async (username: string, domain?: string | null) => {
             if (!username) return;
+            // 缓存键带上 domain：远程 admin 和本地 admin 是两个人，列表不能互相覆盖
+            const key = postsKey(username, domain);
             try {
-                const { items } = await postsApi.fetchUserPosts(username, { limit: FEED_LIMIT });
+                const { items } = await postsApi.fetchUserPosts(username, { limit: FEED_LIMIT, domain });
                 rememberAuthors(items, rememberUser);
                 const page = items.map(fromListItem);
-                setUserPosts((prev) => ({ ...prev, [username]: page }));
+                setUserPosts((prev) => ({ ...prev, [key]: page }));
                 setUserPostsMeta((prev) => ({
                     ...prev,
-                    [username]: { hasMore: page.length === FEED_LIMIT, loadingMore: false },
+                    [key]: { hasMore: page.length === FEED_LIMIT, loadingMore: false },
                 }));
             } catch {
-                setUserPosts((prev) => ({ ...prev, [username]: [] }));
-                setUserPostsMeta((prev) => ({ ...prev, [username]: { hasMore: false, loadingMore: false } }));
+                setUserPosts((prev) => ({ ...prev, [key]: [] }));
+                setUserPostsMeta((prev) => ({ ...prev, [key]: { hasMore: false, loadingMore: false } }));
             }
         },
         [rememberUser],
     );
 
     const loadMoreUserPosts = useCallback(
-        async (username: string) => {
-            const list = userPosts[username];
-            const meta = userPostsMeta[username];
+        async (username: string, domain?: string | null) => {
+            const key = postsKey(username, domain);
+            const list = userPosts[key];
+            const meta = userPostsMeta[key];
             if (!list || !meta?.hasMore || meta.loadingMore) return;
             const last = list[list.length - 1];
             if (!last?.cursorId) return;
 
-            setUserPostsMeta((prev) => ({ ...prev, [username]: { ...prev[username], loadingMore: true } }));
+            setUserPostsMeta((prev) => ({ ...prev, [key]: { ...prev[key], loadingMore: true } }));
             try {
                 const { items } = await postsApi.fetchUserPosts(
                     username,
-                    { limit: FEED_LIMIT, maxId: last.cursorId },
+                    { limit: FEED_LIMIT, maxId: last.cursorId, domain },
                 );
                 rememberAuthors(items, rememberUser);
                 const page = items.map(fromListItem);
-                setUserPosts((prev) => ({ ...prev, [username]: appendUnique(prev[username] ?? [], page) }));
+                setUserPosts((prev) => ({ ...prev, [key]: appendUnique(prev[key] ?? [], page) }));
                 setUserPostsMeta((prev) => ({
                     ...prev,
-                    [username]: { hasMore: page.length === FEED_LIMIT, loadingMore: false },
+                    [key]: { hasMore: page.length === FEED_LIMIT, loadingMore: false },
                 }));
             } catch {
-                setUserPostsMeta((prev) => ({ ...prev, [username]: { ...prev[username], loadingMore: false } }));
+                setUserPostsMeta((prev) => ({ ...prev, [key]: { ...prev[key], loadingMore: false } }));
             }
         },
         [userPosts, userPostsMeta, rememberUser],

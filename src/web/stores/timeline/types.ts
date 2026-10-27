@@ -20,11 +20,11 @@ export interface TimelineValue {
     compose: (content: string) => Promise<void>;
     /** 回复某个帖子 */
     reply: (post: Post, content: string) => Promise<void>;
-    /** 某个用户的帖子（个人主页用），未加载过为 undefined */
+    /** 某个用户的帖子（个人主页用），未加载过为 undefined；key 见 postsKey(username, domain) */
     userPosts: Record<string, Post[]>;
     userPostsMeta: Record<string, Pagination>;
-    loadUserPosts: (username: string) => Promise<void>;
-    loadMoreUserPosts: (username: string) => Promise<void>;
+    loadUserPosts: (username: string, domain?: string | null) => Promise<void>;
+    loadMoreUserPosts: (username: string, domain?: string | null) => Promise<void>;
     getPost: (id: string) => Post | undefined;
     /** 返回 [顶层, ..., 当前帖]，未加载过则为 undefined */
     getThread: (id: string) => Post[] | undefined;

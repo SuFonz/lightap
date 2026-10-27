@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Avatar } from "@/web/components/ui/avatar";
 import { FollowButton } from "@/web/components/user/follow-button";
 import { useI18n } from "@/web/lib/i18n";
-import { profileHref } from "@/web/lib/user";
+import { profileHref, userKey } from "@/web/lib/user";
 import type { User } from "@/web/types";
 
 export function UserResultList({ users }: { users: User[] }) {
@@ -14,7 +14,7 @@ export function UserResultList({ users }: { users: User[] }) {
         <ul className="row-quiet rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("search.results")}>
             {users.map((user) => (
                 <li
-                    key={user.username}
+                    key={userKey(user)}
                     className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-overlay-weak sm:px-5"
                 >
                     <Link href={profileHref(user)} aria-label={user.displayName}>

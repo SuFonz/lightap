@@ -16,11 +16,16 @@ export function fetchFeed(type: FeedTab, params: { limit?: number; maxId?: numbe
     return request<PostListResponse>(`/api/v1/feed?${query}`);
 }
 
-/** 某个用户的帖子：GET /api/v1/users/[username]/posts */
-export function fetchUserPosts(username: string, params: { limit?: number; maxId?: number } = {}) {
+/** 某个用户的帖子：GET /api/v1/users/[username]/posts（远程用户带 domain，避免命中本地同名） */
+export function fetchUserPosts(
+    username: string,
+    params: { limit?: number; maxId?: number; domain?: string | null } = {},
+) {
     const query = new URLSearchParams();
     if (params.limit !== undefined) query.set("limit", String(params.limit));
     if (params.maxId !== undefined) query.set("maxId", String(params.maxId));
+    // 本地用户 domain 为 null，不带参数即按本站查
+    if (params.domain) query.set("domain", params.domain);
     const suffix = query.toString() ? `?${query}` : "";
     return request<PostListResponse>(`/api/v1/users/${encodeURIComponent(username)}/posts${suffix}`);
 }

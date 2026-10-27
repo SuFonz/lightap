@@ -13,6 +13,9 @@ interface SearchHistoryListProps {
 /**
  * 搜索历史下拉内容。定位与层级由外层 `Popover` 负责（portal 到 body），
  * 这里只渲染内容，避免被祖先的 overflow / 层叠上下文裁剪。
+ *
+ * 必须用 `surface-raised`：它带实底与模糊，浮层才不会把背后的正文透上来。
+ * （`row-quiet` 只负责 hover 反馈，没有背景色，单独用它会让内容"透视"。）
  */
 export function SearchHistoryList({ history, onPick, onRemove, onClear }: SearchHistoryListProps) {
     const { t } = useI18n();
@@ -21,7 +24,7 @@ export function SearchHistoryList({ history, onPick, onRemove, onClear }: Search
 
     return (
         <div
-            className="row-quiet w-full overflow-hidden rounded-2xl p-2 shadow-xl shadow-brand/20"
+            className="surface-raised w-full overflow-hidden p-2"
             role="listbox"
             aria-label={t("search.history")}
         >

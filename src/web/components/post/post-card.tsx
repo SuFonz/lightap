@@ -54,9 +54,40 @@ export function PostCard({
     const [menuOpen, setMenuOpen] = useState(false);
     const moreRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+    // 按下时的坐标：用来区分「点击」与「按住拖选文字」
+    const pressRef = useRef<{ x: number; y: number } | null>(null);
 
     const openDetail = useCallback(() => router.push(detailHref), [router, detailHref]);
     const stop = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
+
+    /**
+     * 只有「点击」才进帖子详情。
+     *
+     * 与 Twitter 一致：用户在正文里拖选文字（想复制）时不应该被判成点击跳转。
+     * 两种信号任一成立就跳过跳转：
+     * 1. 指针从按下到松开移动超过阈值（拖选 / 滑动）
+     * 2. 当前存在非空的文本选区（双击选词、三击选段等没有位移的情况）
+     */
+    const handleCardClick = useCallback(
+        (e: React.MouseEvent) => {
+            const press = pressRef.current;
+            pressRef.current = null;
+
+            // 拖拽过就算拖选，不跳转
+            if (press) {
+                const dx = e.clientX - press.x;
+                const dy = e.clientY - press.y;
+                if (dx * dx + dy * dy > 16) return;
+            }
+
+            // 有选区也不跳转（双击选词时指针几乎没动）
+            const selection = window.getSelection();
+            if (selection && selection.toString().length > 0) return;
+
+            openDetail();
+        },
+        [openDetail],
+    );
 
     // 点击菜单外部时关闭
     useEffect(() => {
@@ -100,7 +131,11 @@ export function PostCard({
 
     return (
         <article
-            onClick={openDetail}
+            onPointerDown={(e) => {
+                // 只记左键 / 触摸，右键和菜单键不参与「点击」判定
+                pressRef.current = e.button === 0 ? { x: e.clientX, y: e.clientY } : null;
+            }}
+            onClick={handleCardClick}
             onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
