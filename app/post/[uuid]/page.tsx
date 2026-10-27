@@ -124,7 +124,12 @@ export default function PostDetailPage() {
                     <p className="mt-1 text-sm text-fg-mute">{t("post.beFirst")}</p>
                 </div>
             ) : (
-                <section className="row-quiet rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("post.replyList")}>
+                // key 带上回复数：新增回复时整块重播入场，用户能察觉「有新的了」
+                <section
+                    key={replies.length}
+                    className="row-quiet rise-in divide-y divide-sky-200/50 overflow-hidden"
+                    aria-label={t("post.replyList")}
+                >
                     {replies.map((reply) => (
                         <PostCard key={reply.id} post={reply} bare />
                     ))}

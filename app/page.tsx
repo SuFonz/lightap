@@ -7,6 +7,7 @@ import { ImageIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
 import { useI18n } from "@/web/lib/i18n";
 import { useInfiniteScroll } from "@/web/hooks/use-infinite-scroll";
+import { useNewItems } from "@/web/hooks/use-new-items";
 import { useSession } from "@/web/stores/session-store";
 import { useTimeline } from "@/web/stores/timeline";
 import type { FeedTab } from "@/web/types";
@@ -16,6 +17,8 @@ export default function HomePage() {
  const { t } = useI18n();
  const { posts, liveCount, loading, hasMore, loadingMore, loadFeed, loadMore, compose } = useTimeline();
  const [tab, setTab] = useState<FeedTab>("all");
+ // 只有新插入的帖子播入场动画（翻页的历史帖不动，避免滚动闪动）
+ const isNew = useNewItems(posts.map((post) => post.id));
 
  // 访客只能看「全部 / 本地」；未登录时把「关注」回退到「全部」
  const feedTab: FeedTab = !isAuthenticated && tab ==="following" ?"all" : tab;
@@ -83,7 +86,11 @@ export default function HomePage() {
  <span className="h-px flex-1 bg-line" />
  </div>
  )}
+ {/* 只有本次新插入的帖子才播入场动画：翻页加载的历史帖保持静止，
+     否则滚动时整列会闪动 */}
+ <div className={cn(isNew(post.id) && "rise-in")}>
  <PostCard post={post} bare />
+ </div>
  </Fragment>
  ))}
 

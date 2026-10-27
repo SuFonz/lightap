@@ -101,9 +101,24 @@
 
     --scrollbar-thumb: hsl(var(--accent-hue) 70% 72%);
 
-    /* 缓动 */
+    /* ── 动效节奏 ──────────────────────────────────────────
+       统一在这里调，组件只引用变量，保证全站节奏一致：
+       - fast   : 按压、hover 等即时反馈
+       - base   : 元素进入/退出、浮层出现
+       - slow   : 面板级过渡（抽屉、页面区块）
+       ease-spring 有轻微回弹，只用于「操作反馈」；
+       ease-out 无回弹，用于「位移/淡入」，避免整体弹跳感。
+       ──────────────────────────────────────────────────── */
+    --dur-fast: 0.15s;
+    --dur-base: 0.24s;
+    --dur-slow: 0.34s;
+
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+    /* 标准入场：先快后慢，收尾柔和 */
+    --ease-enter: cubic-bezier(0.16, 0.84, 0.44, 1);
+    /* 退场：先慢后快，让元素「干脆地离开」 */
+    --ease-exit: cubic-bezier(0.4, 0, 0.9, 0.5);
 }
 
 /* ── 深色：深底 + 极少量蓝紫氛围 ────────────────────────── */
@@ -403,39 +418,46 @@ body {
 
 /* ════════════════════════════════════════════════════════════
    动效：只服务于操作反馈
+   ────────────────────────────────────────────────────────────
+   三条原则：
+   1. 只用 transform / opacity：不触发布局重排，滚动与低端设备不受影响
+   2. 有进有出：出现和消失都要有交代，避免元素「突然消失」
+   3. 复用下面的工具类，不在组件里随手写 animation 字符串
    ════════════════════════════════════════════════════════════ */
 
+/* ── 按压反馈 ─────────────────────────────────────────────── */
+
+/* 大块可点区域（整行、卡片） */
 @utility press {
     transition:
-        transform 0.18s var(--ease-spring),
-        background-color 0.18s var(--ease-out);
+        transform var(--dur-fast) var(--ease-spring),
+        background-color var(--dur-fast) var(--ease-out);
 
     &:active {
         transform: scale(0.99);
     }
 }
 
+/* 小图标按钮 */
 @utility press-sm {
     transition:
-        transform 0.16s var(--ease-spring),
-        background-color 0.16s var(--ease-out),
-        color 0.16s var(--ease-out);
+        transform var(--dur-base) var(--ease-spring),
+        background-color var(--dur-fast) var(--ease-out),
+        color var(--dur-fast) var(--ease-out);
 
     &:active {
         transform: scale(0.93);
     }
 }
 
-/* 点赞成功的「心跳」反馈 */
+/* ── 关键帧 ───────────────────────────────────────────────── */
+
+/* 点赞成功的「心跳」：只在「从未赞变已赞」时播放 */
 @keyframes heart-pop {
     0% { transform: scale(1); }
     38% { transform: scale(1.38); }
     68% { transform: scale(0.94); }
     100% { transform: scale(1); }
-}
-
-.heart-pop {
-    animation: heart-pop 0.42s var(--ease-spring);
 }
 
 /* 时间线切换：内容淡入 + 轻微上移，表示「换了一批内容」 */
@@ -444,18 +466,16 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-.swap-in {
-    animation: swap-in 0.26s var(--ease-out);
-}
-
-/* 展开/收起回复 */
+/* 展开（回复、详情等自上而下铺开的内容） */
 @keyframes unfold {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.unfold {
-    animation: unfold 0.24s var(--ease-out);
+/* 新内容插入：从下方轻微升起并淡入（新帖、新通知） */
+@keyframes rise-in {
+    from { opacity: 0; transform: translateY(-8px) scale(0.99); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* 浮层入场 */
@@ -467,6 +487,59 @@ body {
 @keyframes drop-in {
     from { opacity: 0; transform: translateY(-10px) scale(0.985); }
     to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── 退场 ─────────────────────────────────────────────────
+   退场比入场快：用户已经决定离开，不该再等。 */
+@keyframes pop-out {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+
+@keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* ── 语义化动画类 ───────────────────────────────────────────
+   组件直接用这些类名，不写具体时长/缓动，方便整体调节奏。 */
+.heart-pop {
+    animation: heart-pop 0.42s var(--ease-spring);
+}
+
+.swap-in {
+    animation: swap-in var(--dur-base) var(--ease-enter);
+}
+
+.unfold {
+    animation: unfold var(--dur-base) var(--ease-enter);
+}
+
+.rise-in {
+    animation: rise-in var(--dur-base) var(--ease-enter);
+}
+
+.anim-pop-in {
+    animation: pop-in var(--dur-fast) var(--ease-enter);
+}
+
+.anim-pop-out {
+    animation: pop-out var(--dur-fast) var(--ease-exit) forwards;
+}
+
+.anim-fade-out {
+    animation: fade-out var(--dur-fast) var(--ease-exit) forwards;
+}
+
+/* 数字变化时轻轻弹一下（未读数、点赞数） */
+@keyframes count-bump {
+    0% { transform: scale(1); }
+    42% { transform: scale(1.24); }
+    100% { transform: scale(1); }
+}
+
+.count-bump {
+    animation: count-bump 0.34s var(--ease-spring);
 }
 
 @media (prefers-reduced-motion: reduce) {

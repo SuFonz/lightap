@@ -7,6 +7,7 @@ import { WelcomePanel } from "@/web/components/auth/welcome-panel";
 import { LanguageSwitcher } from "@/web/components/layout/language-switcher";
 import { ThemeSwitcher } from "@/web/components/layout/theme-switcher";
 import { Avatar } from "@/web/components/ui/avatar";
+import { CountBadge } from "@/web/components/ui/count-badge";
 import { BellIcon, EditIcon, FeatherIcon, GearIcon, GithubIcon, HomeIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
 import { useI18n } from "@/web/lib/i18n";
@@ -121,10 +122,8 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                                                 )}
                                             />
                                             {label}
-                                            {href === "/notifications" && unreadCount > 0 && (
-                                                <span className="ml-auto rounded-full bg-brand-deep px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
-                                                    {unreadCount > 99 ? "99+" : unreadCount}
-                                                </span>
+                                            {href === "/notifications" && (
+                                                <CountBadge count={unreadCount} className="ml-auto px-1.5 py-0.5" />
                                             )}
                                         </Link>
                                     </li>

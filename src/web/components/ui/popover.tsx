@@ -151,7 +151,8 @@ export function Popover({
                 // 首帧只用来量高度：不可见、也不拦截指针
                 visibility: ready ? undefined : "hidden",
                 zIndex: zLayers.overlay,
-                animation: "pop-in 0.16s cubic-bezier(0.22, 0.61, 0.36, 1)",
+                // 类名统一在 globals.css 维护，组件不写死时长/缓动
+                animation: "pop-in var(--dur-fast) var(--ease-enter)",
             }}
         >
             {children}

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import { SidebarContent } from "@/web/components/layout/sidebar";
 import { Avatar } from "@/web/components/ui/avatar";
+import { CountBadge } from "@/web/components/ui/count-badge";
 import { BellIcon, FeatherIcon, GearIcon, HomeIcon, MenuIcon, SearchIcon, UserIcon } from "@/web/components/ui/icons";
 import { cn } from "@/web/lib/cn";
 import { useI18n } from "@/web/lib/i18n";
@@ -53,11 +54,10 @@ export function MobileTopBar() {
                         className="press-sm relative flex h-10 w-10 items-center justify-center rounded-full text-fg-weak transition-colors hover:bg-overlay"
                     >
                         <BellIcon size={20} />
-                        {unreadCount > 0 && (
-                            <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-deep px-1 text-[9px] font-bold tabular-nums text-white">
-                                {unreadCount > 99 ? "99+" : unreadCount}
-                            </span>
-                        )}
+                        <CountBadge
+                            count={unreadCount}
+                            className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center px-1 text-[9px]"
+                        />
                     </Link>
                 )}
                 {isAuthenticated && (
@@ -89,11 +89,10 @@ function BottomNavLink({ item, active, badge = 0 }: { item: BottomNavItem; activ
         >
             <span className={cn("relative rounded-full p-1 transition-colors", active && "bg-brand/12")}>
                 <IconCmp size={20} />
-                {badge > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-deep px-1 text-[9px] font-bold tabular-nums text-white">
-                        {badge > 99 ? "99+" : badge}
-                    </span>
-                )}
+                <CountBadge
+                    count={badge}
+                    className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center px-1 text-[9px]"
+                />
             </span>
             {item.label}
         </Link>
@@ -186,7 +185,8 @@ export function MobileDrawer() {
                 onClick={() => setDrawerOpen(false)}
             />
 
-            {/* 抽屉：需要独立层级，用实体表面 */}
+            {/* 抽屉：需要独立层级，用实体表面。
+                只在 transform 上做过渡，不碰 left/width，避免抽屉滑动时重排。 */}
             <div
                 className={cn(
                     "surface-raised absolute bottom-0 left-0 top-0 w-[286px] max-w-[84vw] overflow-y-auto rounded-l-none rounded-r-2xl border-y-0 border-l-0 p-5 pr-6 pt-[max(env(safe-area-inset-top),20px)]",

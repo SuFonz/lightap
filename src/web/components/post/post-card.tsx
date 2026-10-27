@@ -12,6 +12,7 @@ import { cn } from "@/web/lib/cn";
 import { formatCount } from "@/web/lib/format";
 import { useI18n } from "@/web/lib/i18n";
 import { profileHref } from "@/web/lib/user";
+import { usePulseOnChange } from "@/web/hooks/use-pulse-on-change";
 import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import { useTimeline } from "@/web/stores/timeline";
@@ -56,6 +57,8 @@ export function PostCard({
     const menuRef = useRef<HTMLDivElement>(null);
     // 按下时的坐标：用来区分「点击」与「按住拖选文字」
     const pressRef = useRef<{ x: number; y: number } | null>(null);
+    // 点赞从「未赞」变「已赞」时自增，驱动心跳动画重播
+    const likePulseKey = usePulseOnChange(post.likedByMe);
 
     const openDetail = useCallback(() => router.push(detailHref), [router, detailHref]);
     const stop = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
@@ -162,7 +165,7 @@ export function PostCard({
                     aria-label={t("post.authorHome", { name: author.displayName })}
                     onClick={stop}
                 >
-                    <Avatar name={author.displayName} src={author.avatarUrl} size={46} />
+                    <Avatar name={author.displayName} src={author.avatarUrl} size={46} interactive />
                 </Link>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-x-2 gap-y-0 flex-wrap">
@@ -210,7 +213,7 @@ export function PostCard({
                                 e.stopPropagation();
                                 openDetail();
                             }}
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold text-fg-mute transition-colors duration-150 hover:text-brand-deep [&:hover_.bubble]:bg-brand/15"
+                            className="press-sm inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold text-fg-mute transition-colors duration-150 hover:text-brand-deep [&:hover_.bubble]:bg-brand/15"
                         >
                             <span className="bubble rounded-full p-1.5 transition-colors">
                                 <ReplyIcon size={17} />
@@ -233,7 +236,7 @@ export function PostCard({
                                 });
                             }}
                             className={cn(
-                                "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold transition-colors duration-150 [&:hover_.bubble]:bg-sakura/15",
+                                "press-sm inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold transition-colors duration-150 [&:hover_.bubble]:bg-sakura/15",
                                 post.likedByMe ? "text-sakura-deep" : "text-fg-mute hover:text-sakura-deep",
                             )}
                         >
@@ -243,9 +246,17 @@ export function PostCard({
                                     post.likedByMe && "bg-sakura/15",
                                 )}
                             >
-                                <HeartIcon size={17} fill={post.likedByMe ? "currentColor" : "none"} />
+                                {/* 心跳只在「点上去」时播一次，取消点赞不动 */}
+                                <span
+                                    key={likePulseKey}
+                                    className={cn("inline-flex", likePulseKey > 0 && "heart-pop")}
+                                >
+                                    <HeartIcon size={17} fill={post.likedByMe ? "currentColor" : "none"} />
+                                </span>
                             </span>
-                            {formatCount(post.likes)}
+                            <span key={likePulseKey} className={cn(likePulseKey > 0 && "count-bump")}>
+                                {formatCount(post.likes)}
+                            </span>
                         </button>
                     </div>
                 </div>

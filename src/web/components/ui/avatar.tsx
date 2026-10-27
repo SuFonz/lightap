@@ -26,9 +26,11 @@ export interface AvatarProps {
     size?: number;
     ring?: boolean;
     className?: string;
+    /** 外层可点击时传 true：hover 轻微放大，给出「这里能点」的反馈 */
+    interactive?: boolean;
 }
 
-export function Avatar({ name, src, size = 44, ring = false, className }: AvatarProps) {
+export function Avatar({ name, src, size = 44, ring = false, className, interactive = false }: AvatarProps) {
     const [failed, setFailed] = useState(false);
     const showImage = src && !failed;
     const initial = name.slice(0, 1).toUpperCase();
@@ -37,6 +39,11 @@ export function Avatar({ name, src, size = 44, ring = false, className }: Avatar
         <span
             className={cn(
                 "relative inline-flex shrink-0 select-none",
+                // 只动 transform：不触发布局，时间线里大量头像也不会拖慢滚动。
+                // 包在 hover 媒体查询里：触屏设备没有真正的 hover，
+                // 否则点一下会残留放大状态。
+                interactive &&
+                    "transition-transform duration-200 ease-[var(--ease-spring)] [@media(hover:hover)]:hover:scale-105",
                 ring && "rounded-full ring-2 ring-white/90 outline outline-2 outline-brand/25",
                 className,
             )}
