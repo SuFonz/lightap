@@ -21,16 +21,16 @@ export function SearchHistoryList({ history, onPick, onRemove, onClear }: Search
 
     return (
         <div
-            className="glass-card w-full overflow-hidden rounded-2xl p-2 shadow-xl shadow-brand/20"
+            className="row-quiet w-full overflow-hidden rounded-2xl p-2 shadow-xl shadow-brand/20"
             role="listbox"
             aria-label={t("search.history")}
         >
             <div className="flex items-center justify-between px-2 py-1">
-                <span className="text-xs font-bold text-slate-400">{t("search.recent")}</span>
+                <span className="text-xs font-bold text-fg-mute">{t("search.recent")}</span>
                 <button
                     type="button"
                     onClick={onClear}
-                    className="cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-bold text-slate-400 transition hover:bg-white/70 hover:text-sakura-deep"
+                    className="cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-bold text-fg-mute transition hover:bg-overlay hover:text-sakura-deep"
                 >
                     {t("search.clearHistory")}
                 </button>
@@ -43,16 +43,16 @@ export function SearchHistoryList({ history, onPick, onRemove, onClear }: Search
                             role="option"
                             aria-selected="false"
                             onClick={() => onPick(term)}
-                            className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] font-semibold text-slate-600 transition hover:bg-white/60 hover:text-brand-deep"
+                            className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] font-semibold text-fg-weak transition hover:bg-overlay hover:text-brand-deep"
                         >
-                            <HistoryIcon size={15} className="shrink-0 text-slate-400" />
+                            <HistoryIcon size={15} className="shrink-0 text-fg-mute" />
                             <span className="truncate">{term}</span>
                         </button>
                         <button
                             type="button"
                             aria-label={t("search.removeHistory", { term })}
                             onClick={() => onRemove(term)}
-                            className="mr-1 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-brand/10 hover:text-brand-deep"
+                            className="mr-1 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-fg-mute transition hover:bg-brand/10 hover:text-brand-deep"
                         >
                             <CloseIcon size={14} />
                         </button>

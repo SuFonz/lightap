@@ -14,8 +14,8 @@ export function CommunityRules() {
     const { t } = useI18n();
 
     return (
-        <section className="glass-card p-5" aria-label={t("rules.title")}>
-            <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm font-extrabold text-slate-700">
+        <section className="row-quiet p-5" aria-label={t("rules.title")}>
+            <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm font-extrabold text-fg">
                 <GlobeIcon size={15} className="text-brand-deep" /> {t("rules.title")}
             </h2>
             <ul className="flex flex-col gap-3">
@@ -25,8 +25,8 @@ export function CommunityRules() {
                             <CheckIcon size={12} />
                         </span>
                         <div className="min-w-0">
-                            <p className="font-display text-[13px] font-bold text-slate-700">{t(rule.title)}</p>
-                            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{t(rule.text)}</p>
+                            <p className="font-display text-[13px] font-bold text-fg">{t(rule.title)}</p>
+                            <p className="mt-0.5 text-xs leading-relaxed text-fg-weak">{t(rule.text)}</p>
                         </div>
                     </li>
                 ))}

@@ -1,33 +1,151 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Nunito:wght@600;700;800;900&display=swap");
 @import "tailwindcss";
 
-@theme {
+/* ════════════════════════════════════════════════════════════
+   设计系统
+   ────────────────────────────────────────────────────────────
+   核心原则：页面主体是「平面」，不是卡片墙。
+
+   - 内容直接铺在页面背景上，靠留白与 hairline 分隔
+   - 只有真正需要脱离文档流的元素（发布框、弹窗、浮层、FAB）
+     才有独立的表面与投影
+   - 动效只服务于操作反馈：hover / 点赞 / 切换 / 展开
+   - 强调色只用于链接、选中态、交互反馈，不做大面积装饰
+
+   配色只有一个入口：--accent-hue。
+   ════════════════════════════════════════════════════════════ */
+
+@theme inline {
     --font-display: "Nunito", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", ui-rounded, system-ui, sans-serif;
     --font-body: "DM Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
 
-    /* 主色：天空蓝（70%） */
-    --color-brand: #3ba7ff;
-    --color-brand-deep: #1f8fee;
-    --color-brand-ink: #0f6dcf;
+    /* 前景：三档层级 */
+    --color-fg: var(--fg);
+    --color-fg-weak: var(--fg-weak);
+    --color-fg-mute: var(--fg-mute);
 
-    /* 背景：浅天蓝 → 雾蓝 → 淡紫蓝 */
-    --color-sky-bg: #ddf3ff;
-    --color-sky-mist: #d3e7f8;
-    --color-lilac: #e2e3fa;
+    /* 强调色 */
+    --color-brand: var(--accent);
+    --color-brand-deep: var(--accent-deep);
+    --color-brand-ink: var(--accent-ink);
 
-    /* 点缀：魔法紫 & 少女粉（10%） */
-    --color-magic: #9b8cff;
-    --color-magic-deep: #7a6af0;
-    --color-sakura: #ff9bd8;
-    --color-sakura-deep: #e879b8;
+    /* 辅助色（派生自强调色相邻色相） */
+    --color-magic: var(--magic);
+    --color-magic-deep: var(--magic-deep);
+    --color-sakura: var(--sakura);
+    --color-sakura-deep: var(--sakura-deep);
 
-    /* 蓝色柔光阴影：像漂浮玻璃 */
-    --shadow-glow: 0 10px 34px -8px rgba(59, 167, 255, 0.26), 0 3px 12px -3px rgba(59, 167, 255, 0.12);
-    --shadow-float: 0 16px 44px -14px rgba(59, 167, 255, 0.35);
+    /* 覆盖层：hover、按下等交互反馈 */
+    --color-overlay: var(--overlay);
+    --color-overlay-weak: var(--overlay-weak);
+    --color-overlay-strong: var(--overlay-strong);
+
+    /* 分隔线 */
+    --color-line: var(--line);
+
+    --shadow-glow: var(--glow-shadow);
+    --shadow-float: var(--float-shadow);
 }
 
+/* ── 浅色：接近极浅的冷蓝 ──────────────────────────────── */
 :root {
     color-scheme: light;
+
+    --accent-hue: 210;
+    --accent: hsl(var(--accent-hue) 92% 52%);
+    --accent-deep: hsl(var(--accent-hue) 90% 44%);
+    --accent-ink: hsl(var(--accent-hue) 88% 34%);
+
+    /* 辅助色相由 ThemeProvider 计算后写入 */
+    --magic-hue: 182;
+    --magic-hue-deep: 188;
+    --sakura-hue: 242;
+    --cool-hue: 196;
+
+    --magic: hsl(var(--magic-hue) 70% 66%);
+    --magic-deep: hsl(var(--magic-hue-deep) 62% 56%);
+    --sakura: hsl(var(--sakura-hue) 85% 74%);
+    --sakura-deep: hsl(var(--sakura-hue) 66% 60%);
+
+    /* 背景：极浅冷蓝，几乎没有渐变 */
+    --bg: #eef5fc;
+    --bg-tint-1: hsla(calc(var(--accent-hue) * 1deg), 85%, 88%, 0.38);
+    --bg-tint-2: hsla(calc(var(--magic-hue) * 1deg), 70%, 90%, 0.2);
+
+    /* 文字层级 */
+    --fg: #1e2f42;
+    --fg-weak: #52667d;
+    --fg-mute: #7b8ea3;
+
+    /* 交互覆盖层 */
+    --overlay: rgba(30, 47, 66, 0.045);
+    --overlay-weak: rgba(30, 47, 66, 0.028);
+    --overlay-strong: rgba(30, 47, 66, 0.075);
+    --line: rgba(30, 47, 66, 0.1);
+    /* 分区 hairline：比边框更淡，避免表格感 */
+    --hairline: rgba(30, 47, 66, 0.075);
+
+    /* ── 表面：只有弹出层和发布框使用 ── */
+    --surface-bg: rgba(255, 255, 255, 0.9);
+    --surface-blur: 24px;
+    --surface-border: rgba(30, 47, 66, 0.08);
+    --surface-sheen: rgba(255, 255, 255, 0.6);
+
+    /* 投影：克制的深蓝灰，只在浮层用 */
+    --shadow-contact: 0 1px 2px rgba(23, 60, 102, 0.06);
+    --shadow-mid: 0 6px 16px -6px rgba(23, 60, 102, 0.12);
+    --shadow-ambient: 0 16px 40px -16px rgba(23, 60, 102, 0.16);
+    --shadow-overlay: 0 20px 56px -20px rgba(23, 60, 102, 0.22);
+    --glow-shadow: 0 8px 22px -8px rgba(23, 60, 102, 0.16);
+    --float-shadow: 0 12px 32px -12px rgba(23, 60, 102, 0.2);
+
+    --scrollbar-thumb: hsl(var(--accent-hue) 70% 72%);
+
+    /* 缓动 */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ── 深色：深底 + 极少量蓝紫氛围 ────────────────────────── */
+[data-theme="dark"] {
+    color-scheme: dark;
+
+    --accent: hsl(var(--accent-hue) 85% 62%);
+    --accent-deep: hsl(var(--accent-hue) 82% 54%);
+    --accent-ink: hsl(var(--accent-hue) 88% 74%);
+
+    --magic: hsl(var(--magic-hue) 60% 58%);
+    --magic-deep: hsl(var(--magic-hue-deep) 55% 52%);
+    --sakura: hsl(var(--sakura-hue) 65% 64%);
+    --sakura-deep: hsl(var(--sakura-hue) 55% 56%);
+
+    --bg: #0f1420;
+    /* 深色下氛围压到几乎不可见：只有一点点色温，没有可见渐变 */
+    --bg-tint-1: hsla(calc(var(--accent-hue) * 1deg), 45%, 26%, 0.18);
+    --bg-tint-2: hsla(calc(var(--magic-hue) * 1deg), 35%, 28%, 0.1);
+
+    --fg: #e3eaf4;
+    --fg-weak: #9dabbd;
+    --fg-mute: #6f7f93;
+
+    --overlay: rgba(255, 255, 255, 0.055);
+    --overlay-weak: rgba(255, 255, 255, 0.032);
+    --overlay-strong: rgba(255, 255, 255, 0.085);
+    --line: rgba(255, 255, 255, 0.09);
+    --hairline: rgba(255, 255, 255, 0.07);
+
+    --surface-bg: rgba(26, 33, 47, 0.92);
+    --surface-border: rgba(255, 255, 255, 0.1);
+    --surface-sheen: rgba(255, 255, 255, 0.05);
+
+    --shadow-contact: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-mid: 0 6px 16px -6px rgba(0, 0, 0, 0.45);
+    --shadow-ambient: 0 16px 40px -16px rgba(0, 0, 0, 0.5);
+    --shadow-overlay: 0 20px 56px -20px rgba(0, 0, 0, 0.65);
+    --glow-shadow: 0 8px 22px -8px rgba(0, 0, 0, 0.5);
+    --float-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.55);
+
+    --scrollbar-thumb: hsl(var(--accent-hue) 45% 45%);
 }
 
 html {
@@ -37,20 +155,15 @@ html {
 body {
     margin: 0;
     font-family: var(--font-body);
-    color: #3d5a78;
-    background-color: #ddf3ff;
-    background-image:
-        radial-gradient(ellipse 60% 42% at 14% -6%, rgba(255, 255, 255, 0.9), transparent 58%),
-        radial-gradient(ellipse 48% 40% at 88% 2%, rgba(255, 255, 255, 0.6), transparent 56%),
-        radial-gradient(ellipse 70% 46% at 50% 110%, rgba(155, 140, 255, 0.2), transparent 62%),
-        linear-gradient(180deg, #ddf3ff 0%, #dcedfb 36%, #d9e6fa 64%, #e5e4fb 100%);
-    background-attachment: fixed;
+    color: var(--fg);
+    background-color: var(--bg);
     -webkit-font-smoothing: antialiased;
+    /* 主题切换时颜色平滑过渡，避免闪 */
+    transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out);
 }
 
-/* 必须放在 base 层里：无层样式优先级高于所有 @layer，
-   否则 `a { color: inherit }` 会盖掉链接上的 text-* / hover:text-* 工具类，
-   导致全站链接颜色失效（例如 btn-solid 的白字变成正文色）。 */
+/* base 层：无层样式优先级高于所有 @layer，
+   不放进 layer 会盖掉链接上的 text-* / hover:text-* 工具类 */
 @layer base {
     a {
         color: inherit;
@@ -62,14 +175,14 @@ body {
 }
 
 ::selection {
-    background: rgba(59, 167, 255, 0.32);
+    background: hsl(var(--accent-hue) 92% 52% / 0.24);
 }
 
 ::-webkit-scrollbar {
     width: 10px;
 }
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(59, 167, 255, 0.75), rgba(155, 140, 255, 0.7));
+    background: var(--scrollbar-thumb);
     border-radius: 999px;
     border: 3px solid transparent;
     background-clip: padding-box;
@@ -78,135 +191,283 @@ body {
     background: transparent;
 }
 
-/* ── 第二层：半透明白色玻璃面板 ─────────────────────────── */
-@utility glass-card {
+/* ════════════════════════════════════════════════════════════
+   页面背景
+   ────────────────────────────────────────────────────────────
+   只有两团极淡的氛围色，不是满屏渐变。
+   深色下进一步压暗，强调色只负责链接与交互。
+   ════════════════════════════════════════════════════════════ */
+@utility page-bg {
+    background-color: var(--bg);
+    background-image:
+        radial-gradient(1200px 800px at 12% -20%, var(--bg-tint-1) 0%, transparent 62%),
+        radial-gradient(1000px 700px at 96% 108%, var(--bg-tint-2) 0%, transparent 60%);
+}
+
+/* ════════════════════════════════════════════════════════════
+   表面：仅用于需要脱离文档流的元素
+   ────────────────────────────────────────────────────────────
+   发布框、弹窗、下拉、抽屉、FAB 之外的任何东西都不该用它。
+   ════════════════════════════════════════════════════════════ */
+@utility surface {
+    position: relative;
+    border-radius: 1rem;
+    border: 1px solid var(--surface-border);
+    background-color: var(--surface-bg);
+    background-image: linear-gradient(
+        170deg,
+        var(--surface-sheen) 0%,
+        rgba(255, 255, 255, 0) 46%
+    );
+    backdrop-filter: blur(var(--surface-blur)) saturate(140%);
+    -webkit-backdrop-filter: blur(var(--surface-blur)) saturate(140%);
+    box-shadow:
+        inset 0 1px 0 var(--surface-sheen),
+        var(--shadow-contact),
+        var(--shadow-mid),
+        var(--shadow-ambient);
+}
+
+/* 弹窗/浮层用的更实一档，保证可读性 */
+@utility surface-raised {
     position: relative;
     border-radius: 1.25rem;
-    border: 1px solid rgba(255, 255, 255, 0.68);
-    background:
-        linear-gradient(155deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.44) 45%, rgba(224, 243, 255, 0.38) 100%);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid var(--surface-border);
+    background-color: var(--surface-bg);
+    backdrop-filter: blur(32px) saturate(150%);
+    -webkit-backdrop-filter: blur(32px) saturate(150%);
     box-shadow:
-        0 10px 34px -12px rgba(59, 167, 255, 0.22),
-        0 2px 10px -4px rgba(59, 167, 255, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        inset 0 1px 0 var(--surface-sheen),
+        var(--shadow-overlay);
 }
 
-/* 弹窗用的更实玻璃：白色负责可读性 */
-@utility glass-strong {
-    border-radius: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.85);
-    background:
-        linear-gradient(160deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 249, 255, 0.92) 60%, rgba(226, 240, 255, 0.9) 100%);
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    box-shadow:
-        0 24px 64px -16px rgba(43, 108, 176, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 1);
+/* 顶栏 / 底栏：只在有滚动内容经过时才需要模糊 */
+@utility bar-surface {
+    background-color: var(--surface-bg);
+    backdrop-filter: blur(var(--surface-blur)) saturate(140%);
+    -webkit-backdrop-filter: blur(var(--surface-blur)) saturate(140%);
+    border-color: var(--line);
 }
 
-/* 导航条玻璃 */
-@utility glass-bar {
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(238, 248, 255, 0.55) 100%);
-    backdrop-filter: blur(24px) saturate(170%);
-    -webkit-backdrop-filter: blur(24px) saturate(170%);
-    box-shadow:
-        0 6px 24px -10px rgba(59, 167, 255, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+/* ════════════════════════════════════════════════════════════
+   平面内容的组织方式（无卡片）
+   ════════════════════════════════════════════════════════════ */
+
+/* 分区之间画一道两端渐隐的 hairline */
+@utility divided {
+    & > * + * {
+        position: relative;
+    }
+
+    & > * + *::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            var(--hairline) 6%,
+            var(--hairline) 94%,
+            transparent 100%
+        );
+        pointer-events: none;
+        z-index: 1;
+    }
 }
 
-/* ── 第三层：实体功能按钮（不透明亮蓝） ─────────────────── */
+/* 可点击行：hover 只提亮一点点，不做位移和发光 */
+@utility row {
+    position: relative;
+    transition: background-color 0.16s var(--ease-out);
+
+    &:hover {
+        background-color: var(--overlay-weak);
+    }
+}
+
+/* 内容行：hover 更轻 */
+@utility row-quiet {
+    position: relative;
+    transition: background-color 0.18s var(--ease-out);
+
+    &:hover {
+        background-color: var(--overlay-weak);
+    }
+}
+
+/* 吸顶标签栏：滚动时贴在顶部，背景用页面底色而非实心玻璃 */
+@utility sticky-head {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: color-mix(in srgb, var(--bg) 84%, transparent);
+    backdrop-filter: blur(16px) saturate(130%);
+    -webkit-backdrop-filter: blur(16px) saturate(130%);
+}
+
+/* ════════════════════════════════════════════════════════════
+   实体按钮
+   ════════════════════════════════════════════════════════════ */
 @utility btn-solid {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
+    gap: 0.35rem;
     cursor: pointer;
     user-select: none;
-    border-radius: 0.65rem;
+    border-radius: 0.6rem;
     color: #fff;
-    background: linear-gradient(180deg, #59b5ff 0%, #3ba7ff 52%, #2e97f4 100%);
-    box-shadow:
-        0 8px 20px -6px rgba(59, 167, 255, 0.55),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+    background: var(--accent-deep);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition:
+        background-color 0.16s var(--ease-out),
+        transform 0.16s var(--ease-spring),
+        box-shadow 0.16s var(--ease-out);
 
     &:hover:not(:disabled) {
-        transform: translateY(-1px);
-        filter: saturate(1.08) brightness(1.03);
+        background: var(--accent);
         box-shadow:
-            0 12px 26px -6px rgba(59, 167, 255, 0.6),
-            inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            inset 0 1px 0 rgba(255, 255, 255, 0.2),
+            0 4px 12px -4px hsl(var(--accent-hue) 90% 44% / 0.42);
     }
 
     &:active:not(:disabled) {
-        transform: translateY(0) scale(0.97);
-        box-shadow:
-            0 4px 12px -4px rgba(59, 167, 255, 0.55),
-            inset 0 2px 4px rgba(14, 90, 165, 0.18);
+        transform: scale(0.97);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.16);
     }
 
     &:disabled {
         cursor: not-allowed;
-        opacity: 0.55;
-        box-shadow: 0 4px 12px -6px rgba(59, 167, 255, 0.4);
+        opacity: 0.5;
+        box-shadow: none;
     }
 }
 
-/* ── 第一层：环境光斑与星光 ─────────────────────────────── */
-.blob {
-    border-radius: 44% 56% 58% 42% / 52% 44% 56% 48%;
-    filter: blur(70px);
-    animation: blob-float 16s ease-in-out infinite;
+/* 幽灵按钮：次要操作，无底色 */
+@utility btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 0.6rem;
+    color: var(--fg-weak);
+    transition:
+        background-color 0.16s var(--ease-out),
+        color 0.16s var(--ease-out),
+        transform 0.16s var(--ease-spring);
+
+    &:hover {
+        background-color: var(--overlay);
+        color: var(--accent-deep);
+    }
+
+    &:active {
+        transform: scale(0.96);
+    }
 }
 
-.sparkle {
-    position: absolute;
-    display: block;
+/* 移动端发帖 FAB：页面上唯一允许有强投影的元素 */
+@utility fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
     border-radius: 9999px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.35) 45%, transparent 72%);
-    box-shadow: 0 0 18px 4px rgba(255, 255, 255, 0.35);
-    animation: twinkle 5s ease-in-out infinite;
-    pointer-events: none;
+    color: #fff;
+    background: var(--accent-deep);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.22),
+        0 6px 18px -6px hsl(var(--accent-hue) 90% 44% / 0.5);
+    transition:
+        background-color 0.18s var(--ease-out),
+        transform 0.18s var(--ease-spring),
+        box-shadow 0.18s var(--ease-out);
+
+    &:hover:not(:disabled) {
+        background: var(--accent);
+        transform: translateY(-1px);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.24),
+            0 10px 24px -8px hsl(var(--accent-hue) 90% 44% / 0.55);
+    }
+
+    &:active:not(:disabled) {
+        transform: scale(0.94);
+    }
 }
 
-@keyframes twinkle {
-    0%, 100% { opacity: 0.15; transform: scale(0.75); }
-    50% { opacity: 0.95; transform: scale(1.15); }
+/* ════════════════════════════════════════════════════════════
+   动效：只服务于操作反馈
+   ════════════════════════════════════════════════════════════ */
+
+@utility press {
+    transition:
+        transform 0.18s var(--ease-spring),
+        background-color 0.18s var(--ease-out);
+
+    &:active {
+        transform: scale(0.99);
+    }
 }
 
-@keyframes blob-float {
-    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-    33% { transform: translate(24px, -30px) rotate(8deg) scale(1.06); }
-    66% { transform: translate(-18px, 20px) rotate(-6deg) scale(0.97); }
+@utility press-sm {
+    transition:
+        transform 0.16s var(--ease-spring),
+        background-color 0.16s var(--ease-out),
+        color 0.16s var(--ease-out);
+
+    &:active {
+        transform: scale(0.93);
+    }
 }
 
+/* 点赞成功的「心跳」反馈 */
+@keyframes heart-pop {
+    0% { transform: scale(1); }
+    38% { transform: scale(1.38); }
+    68% { transform: scale(0.94); }
+    100% { transform: scale(1); }
+}
+
+.heart-pop {
+    animation: heart-pop 0.42s var(--ease-spring);
+}
+
+/* 时间线切换：内容淡入 + 轻微上移，表示「换了一批内容」 */
+@keyframes swap-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.swap-in {
+    animation: swap-in 0.26s var(--ease-out);
+}
+
+/* 展开/收起回复 */
+@keyframes unfold {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.unfold {
+    animation: unfold 0.24s var(--ease-out);
+}
+
+/* 浮层入场 */
 @keyframes pop-in {
-    from { opacity: 0; transform: translateY(16px) scale(0.96); }
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes drop-in {
-    from { opacity: 0; transform: translateY(-18px) scale(0.97); }
+    from { opacity: 0; transform: translateY(-10px) scale(0.985); }
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
-
-@keyframes rise-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.rise-in > * {
-    animation: rise-in 0.4s ease-out backwards;
-}
-.rise-in > *:nth-child(1) { animation-delay: 0s; }
-.rise-in > *:nth-child(2) { animation-delay: 0.05s; }
-.rise-in > *:nth-child(3) { animation-delay: 0.1s; }
-.rise-in > *:nth-child(4) { animation-delay: 0.15s; }
-.rise-in > *:nth-child(5) { animation-delay: 0.2s; }
-.rise-in > *:nth-child(6) { animation-delay: 0.25s; }
 
 @media (prefers-reduced-motion: reduce) {
     *,
@@ -221,17 +482,26 @@ body {
     }
 }
 
+/* 降低透明度偏好：表面退化为实色 */
 @media (prefers-reduced-transparency: reduce) {
-    .glass-card,
-    .glass-bar {
-        background: #f4f9ff;
+    .surface,
+    .surface-raised,
+    .bar-surface,
+    .sticky-head {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
-    .glass-strong {
-        background: #ffffff;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
+    .surface {
+        background-color: #ffffff;
+    }
+    .surface-raised {
+        background-color: #ffffff;
+    }
+    [data-theme="dark"] .surface {
+        background-color: #1a2130;
+    }
+    [data-theme="dark"] .surface-raised {
+        background-color: #1a2130;
     }
 }
 
@@ -243,12 +513,11 @@ body {
 }
 
 :focus-visible {
-    outline: 2px solid #1f8fee;
+    outline: 2px solid var(--accent-deep);
     outline-offset: 2px;
     border-radius: 4px;
 }
 
-/* 输入类元素的聚焦反馈由外层容器的 focus-within 边框提供，避免双层边框嵌套 */
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {

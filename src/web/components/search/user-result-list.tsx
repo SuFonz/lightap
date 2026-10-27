@@ -11,11 +11,11 @@ export function UserResultList({ users }: { users: User[] }) {
     const { t } = useI18n();
 
     return (
-        <ul className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("search.results")}>
+        <ul className="row-quiet rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("search.results")}>
             {users.map((user) => (
                 <li
                     key={user.username}
-                    className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/45 sm:px-5"
+                    className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-overlay-weak sm:px-5"
                 >
                     <Link href={profileHref(user)} aria-label={user.displayName}>
                         <Avatar name={user.displayName} src={user.avatarUrl} size={44} />
@@ -23,14 +23,14 @@ export function UserResultList({ users }: { users: User[] }) {
                     <div className="min-w-0 flex-1">
                         <Link
                             href={profileHref(user)}
-                            className="block truncate font-display text-[15px] font-extrabold text-slate-800 transition-colors hover:text-brand-deep"
+                            className="block truncate font-display text-[15px] font-extrabold text-fg transition-colors hover:text-brand-deep"
                         >
                             {user.displayName}
                         </Link>
-                        <p className="truncate text-xs text-slate-400">
+                        <p className="truncate text-xs text-fg-mute">
                             @{user.username}@{user.instance}
                         </p>
-                        {user.bio && <p className="mt-0.5 truncate text-xs text-slate-500">{user.bio}</p>}
+                        {user.bio && <p className="mt-0.5 truncate text-xs text-fg-weak">{user.bio}</p>}
                     </div>
                     <FollowButton user={user} />
                 </li>

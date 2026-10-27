@@ -54,17 +54,17 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
             onClose={onClose}
             label={t("user.editProfile")}
             alignClassName="items-end justify-center sm:items-center sm:p-4"
-            panelClassName="glass-strong w-full max-w-md rounded-t-3xl p-6 sm:rounded-3xl"
+            panelClassName="surface-raised w-full max-w-md rounded-t-3xl p-6 sm:rounded-3xl"
             animation="pop-in .28s cubic-bezier(.34,1.4,.64,1)"
         >
             <form onSubmit={handleSubmit}>
                 <div className="mb-4 flex items-center justify-between">
-                    <h2 className="font-display text-lg font-extrabold text-slate-800">{t("user.editProfile")}</h2>
+                    <h2 className="font-display text-lg font-extrabold text-fg">{t("user.editProfile")}</h2>
                     <button
                         type="button"
                         aria-label={t("common.close")}
                         onClick={onClose}
-                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-slate-400 transition hover:bg-white/80 hover:text-brand-deep active:scale-90"
+                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-fg-mute transition hover:bg-overlay-strong hover:text-brand-deep active:scale-90"
                     >
                         <CloseIcon size={18} />
                     </button>
@@ -74,7 +74,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                     <Avatar name={displayName || currentUser.username} src={currentUser.avatarUrl} size={56} ring />
                 </div>
 
-                <label className="mb-4 block text-xs font-bold text-slate-500">
+                <label className="mb-4 block text-xs font-bold text-fg-weak">
                     {t("user.displayName")}
                     <input
                         type="text"
@@ -82,11 +82,11 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                         maxLength={20}
-                        className="mt-1 w-full rounded-[10px] border border-white/70 bg-white/70 px-3 py-2.5 text-sm font-normal text-slate-700 focus:border-brand/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand/15"
+                        className="mt-1 w-full rounded-[10px] border border-line bg-overlay px-3 py-2.5 text-sm font-normal text-fg focus:border-brand/40 focus:bg-overlay focus:outline-none focus:ring-4 focus:ring-brand/15"
                     />
                 </label>
 
-                <label className="mb-6 block text-xs font-bold text-slate-500">
+                <label className="mb-6 block text-xs font-bold text-fg-weak">
                     {t("user.bio")}
                     <textarea
                         value={bio}
@@ -94,7 +94,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                         rows={3}
                         maxLength={160}
                         placeholder={t("user.bioPlaceholder")}
-                        className="mt-1 w-full resize-none rounded-[10px] border border-white/70 bg-white/70 px-3 py-2.5 text-sm font-normal leading-relaxed text-slate-700 focus:border-brand/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand/15"
+                        className="mt-1 w-full resize-none rounded-[10px] border border-line bg-overlay px-3 py-2.5 text-sm font-normal leading-relaxed text-fg focus:border-brand/40 focus:bg-overlay focus:outline-none focus:ring-4 focus:ring-brand/15"
                     />
                 </label>
 

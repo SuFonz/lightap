@@ -32,25 +32,25 @@ export default function NotificationsPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <h1 className="glass-card px-5 py-3 font-display text-lg font-black text-slate-800">{t("notifications.title")}</h1>
+            <h1 className="row-quiet px-5 py-3 font-display text-lg font-black text-fg">{t("notifications.title")}</h1>
 
             {!isAuthenticated ? (
                 <LoginRequiredPanel />
             ) : loading && items.length === 0 ? (
-                <div className="glass-card flex items-center justify-center gap-2 px-6 py-14 text-slate-400">
+                <div className="row-quiet flex items-center justify-center gap-2 px-6 py-14 text-fg-mute">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
                     <span className="text-sm font-semibold">{t("notifications.loading")}</span>
                 </div>
             ) : items.length === 0 ? (
-                <div className="glass-card flex flex-col items-center gap-2 px-6 py-14 text-center">
+                <div className="row-quiet flex flex-col items-center gap-2 px-6 py-14 text-center">
                     <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand/15 text-brand">
                         <BellIcon size={24} />
                     </span>
-                    <p className="font-display font-extrabold text-slate-700">{t("notifications.empty")}</p>
-                    <p className="text-sm text-slate-400">{t("notifications.emptyHint")}</p>
+                    <p className="font-display font-extrabold text-fg">{t("notifications.empty")}</p>
+                    <p className="text-sm text-fg-mute">{t("notifications.emptyHint")}</p>
                 </div>
             ) : (
-                <ul className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("notifications.title")}>
+                <ul className="row-quiet rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("notifications.title")}>
                     {items.map((item) => {
                         const name = item.user.displayName || item.user.username;
                         // Follow 跳到对方主页，Like/Reply 跳到相关帖子
@@ -62,20 +62,20 @@ export default function NotificationsPage() {
                             <li key={item.id}>
                                 <Link
                                     href={href}
-                                    className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-white/45 sm:px-5"
+                                    className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-overlay-weak sm:px-5"
                                 >
                                     <Avatar name={name} src={item.user.avatarUrl || undefined} size={42} />
                                     <div className="min-w-0 flex-1">
-                                        <p className="text-[15px] leading-relaxed text-slate-600">
-                                            <span className="font-display font-extrabold text-slate-800">{name}</span>
+                                        <p className="text-[15px] leading-relaxed text-fg-weak">
+                                            <span className="font-display font-extrabold text-fg">{name}</span>
                                             <span> {t(TYPE_KEY[item.type])}</span>
                                         </p>
                                         {item.note && (
-                                            <p className="mt-0.5 truncate text-xs text-slate-500">
+                                            <p className="mt-0.5 truncate text-xs text-fg-weak">
                                                 {normalizeNoteContent(item.note.content)}
                                             </p>
                                         )}
-                                        <p className="mt-0.5 text-xs text-slate-400">
+                                        <p className="mt-0.5 text-xs text-fg-mute">
                                             <RelativeTime iso={new Date(item.createdAt * 1000).toISOString()} />
                                         </p>
                                     </div>

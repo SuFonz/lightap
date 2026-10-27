@@ -24,7 +24,7 @@ export function ToastViewport() {
                 role="status"
                 aria-live="polite"
                 onClick={dismissToast}
-                className="glass-strong pointer-events-auto max-w-[90vw] cursor-pointer px-4 py-2.5 text-sm font-bold text-slate-700"
+                className="surface-raised pointer-events-auto max-w-[90vw] cursor-pointer px-4 py-2.5 text-sm font-bold text-fg"
                 style={{ animation: "pop-in .24s ease-out" }}
             >
                 {toast}

@@ -78,15 +78,15 @@ export function ComposerModal({
             onClose={onClose}
             label={titleText}
             alignClassName="items-start justify-center p-3 pt-[72px] sm:items-center sm:p-4"
-            panelClassName="glass-strong w-full max-w-xl p-5"
+            panelClassName="surface-raised w-full max-w-xl p-5"
         >
             <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-display text-lg font-extrabold text-slate-800">{titleText}</h2>
+                <h2 className="font-display text-lg font-extrabold text-fg">{titleText}</h2>
                 <button
                     type="button"
                     aria-label={t("common.close")}
                     onClick={onClose}
-                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-slate-400 transition hover:bg-white/80 hover:text-brand-deep active:scale-90"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-fg-mute transition hover:bg-overlay-strong hover:text-brand-deep active:scale-90"
                 >
                     <CloseIcon size={18} />
                 </button>
@@ -102,7 +102,7 @@ export function ComposerModal({
                     maxLength={maxLength + 50}
                     placeholder={placeholderText}
                     aria-label={placeholderText}
-                    className="w-full resize-none rounded-xl border border-transparent bg-white/55 px-4 py-3 text-[15px] leading-relaxed text-slate-700 placeholder:text-slate-400 transition focus:border-brand/40 focus:bg-white/85 focus:outline-none focus:ring-4 focus:ring-brand/15"
+                    className="w-full resize-none rounded-xl border border-transparent bg-overlay-weak px-4 py-3 text-[14px] leading-relaxed text-fg placeholder:text-fg-mute transition focus:border-brand/40 focus:bg-overlay focus:outline-none focus:ring-2 focus:ring-brand/15"
                 />
             </div>
 
@@ -112,11 +112,11 @@ export function ComposerModal({
                 </p>
             )}
 
-            <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-white/80 pt-3 pl-14">
+            <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-line pt-3 pl-14">
                 <span
                     className={cn(
                         "ml-auto text-xs font-bold tabular-nums",
-                        overLimit ? "text-red-500" : remaining <= 50 ? "text-amber-500" : "text-slate-400",
+                        overLimit ? "text-red-500" : remaining <= 50 ? "text-amber-500" : "text-fg-mute",
                     )}
                     aria-live="polite"
                 >

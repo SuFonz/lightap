@@ -87,14 +87,14 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
             onClose={onClose}
             label={t(isLogin ? "common.login" : "common.register")}
             alignClassName="items-center justify-center p-3 sm:p-4"
-            panelClassName="glass-strong w-full max-w-sm p-6 sm:p-7"
+            panelClassName="surface-raised w-full max-w-sm p-6 sm:p-7"
         >
             <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
                         <FeatherIcon size={17} />
                     </span>
-                    <h2 className="font-display text-lg font-black text-slate-800">
+                    <h2 className="font-display text-lg font-black text-fg">
                         {t(isLogin ? "auth.loginTitle" : "auth.registerTitle")}
                     </h2>
                 </div>
@@ -102,18 +102,18 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                     type="button"
                     aria-label={t("common.close")}
                     onClick={onClose}
-                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-slate-400 transition hover:bg-white/80 hover:text-brand-deep active:scale-90"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-fg-mute transition hover:bg-overlay-strong hover:text-brand-deep active:scale-90"
                 >
                     <CloseIcon size={18} />
                 </button>
             </div>
 
-            <p className="mb-5 text-sm leading-relaxed text-slate-500">
+            <p className="mb-5 text-sm leading-relaxed text-fg-weak">
                 {t(isLogin ? "auth.loginHint" : "auth.registerHint")}
             </p>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-3.5" noValidate>
-                <label className="flex items-center gap-2.5 rounded-xl border border-white/70 bg-white/70 px-3.5 py-2.5 transition focus-within:border-brand/40 focus-within:bg-white">
+                <label className="flex items-center gap-2.5 rounded-xl border border-line bg-overlay px-3.5 py-2.5 transition focus-within:border-brand/40 focus-within:bg-overlay">
                     <UserIcon size={17} className="shrink-0 text-brand" />
                     <input
                         type="text"
@@ -123,11 +123,11 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                         aria-label={t("auth.username")}
                         autoFocus
                         autoComplete="username"
-                        className="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                        className="w-full bg-transparent text-sm font-medium text-fg placeholder:text-fg-mute focus:outline-none"
                     />
                 </label>
 
-                <label className="flex items-center gap-2.5 rounded-xl border border-white/70 bg-white/70 px-3.5 py-2.5 transition focus-within:border-brand/40 focus-within:bg-white">
+                <label className="flex items-center gap-2.5 rounded-xl border border-line bg-overlay px-3.5 py-2.5 transition focus-within:border-brand/40 focus-within:bg-overlay">
                     <LockIcon size={17} className="shrink-0 text-brand" />
                     <input
                         type="password"
@@ -136,12 +136,12 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                         placeholder={t("auth.password")}
                         aria-label={t("auth.password")}
                         autoComplete={isLogin ? "current-password" : "new-password"}
-                        className="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                        className="w-full bg-transparent text-sm font-medium text-fg placeholder:text-fg-mute focus:outline-none"
                     />
                 </label>
 
                 {!isLogin && (
-                    <label className="flex items-center gap-2.5 rounded-xl border border-white/70 bg-white/70 px-3.5 py-2.5 transition focus-within:border-brand/40 focus-within:bg-white">
+                    <label className="flex items-center gap-2.5 rounded-xl border border-line bg-overlay px-3.5 py-2.5 transition focus-within:border-brand/40 focus-within:bg-overlay">
                         <LockIcon size={17} className="shrink-0 text-brand" />
                         <input
                             type="password"
@@ -150,7 +150,7 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                             placeholder={t("auth.confirmPassword")}
                             aria-label={t("auth.confirmPassword")}
                             autoComplete="new-password"
-                            className="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                            className="w-full bg-transparent text-sm font-medium text-fg placeholder:text-fg-mute focus:outline-none"
                         />
                     </label>
                 )}
@@ -170,7 +170,7 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                 </button>
             </form>
 
-            <p className="mt-4 text-center text-sm text-slate-500">
+            <p className="mt-4 text-center text-sm text-fg-weak">
                 {t(isLogin ? "auth.noAccount" : "auth.hasAccount")}
                 <button
                     type="button"

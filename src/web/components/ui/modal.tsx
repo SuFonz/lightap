@@ -57,7 +57,7 @@ export function Modal({
 
     return createPortal(
         <div
-            className={cn("fixed inset-0 flex bg-brand-ink/20 backdrop-blur-sm", alignClassName)}
+            className={cn("fixed inset-0 flex bg-black/25 backdrop-blur-[2px]", alignClassName)}
             style={{ zIndex: zLayers.overlay }}
             onPointerDown={(e) => {
                 // 只认左键，且必须直接按在遮罩上

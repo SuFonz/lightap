@@ -40,7 +40,7 @@ export default function PostDetailPage() {
 
     if (loading) {
         return (
-            <div className="glass-card flex items-center justify-center gap-2 px-6 py-14 text-slate-400">
+            <div className="row-quiet flex items-center justify-center gap-2 px-6 py-14 text-fg-mute">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
                 <span className="text-sm font-semibold">{t("post.loadingThread")}</span>
             </div>
@@ -49,12 +49,12 @@ export default function PostDetailPage() {
 
     if (thread.length === 0) {
         return (
-            <div className="glass-card mx-auto mt-10 max-w-md px-6 py-16 text-center">
+            <div className="row-quiet mx-auto mt-10 max-w-md px-6 py-16 text-center">
                 <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 text-brand">
                     <ReplyIcon size={26} />
                 </span>
-                <h1 className="font-display text-lg font-black text-slate-800">{t("post.notFound")}</h1>
-                <p className="mt-1 text-sm text-slate-400">{t("post.notFoundHint")}</p>
+                <h1 className="font-display text-lg font-black text-fg">{t("post.notFound")}</h1>
+                <p className="mt-1 text-sm text-fg-mute">{t("post.notFoundHint")}</p>
                 <Link href="/" className="btn-solid mt-6 inline-flex px-5 py-2.5 font-display text-sm font-bold">
                     <HomeIcon size={15} /> {t("post.backHome")}
                 </Link>
@@ -77,19 +77,19 @@ export default function PostDetailPage() {
 
     return (
         <div className="flex flex-col gap-3">
-            <section className="glass-card flex items-center gap-3 px-5 py-4">
+            <section className="row-quiet flex items-center gap-3 px-5 py-4">
                 <button
                     type="button"
                     onClick={handleBack}
                     aria-label={t("common.back")}
-                    className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-[10px] text-slate-500 transition hover:bg-white/80 hover:text-brand-deep active:scale-90"
+                    className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-[10px] text-fg-weak transition hover:bg-overlay-strong hover:text-brand-deep active:scale-90"
                 >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="m12 19-7-7 7-7" />
                         <path d="M19 12H5" />
                     </svg>
                 </button>
-                <h1 className="font-display text-lg font-black text-slate-800">
+                <h1 className="font-display text-lg font-black text-fg">
                     {t(isThread ? "post.threadDetail" : "post.detail")}
                 </h1>
                 {isThread && (
@@ -99,7 +99,7 @@ export default function PostDetailPage() {
                 )}
             </section>
 
-            <section className="glass-card divide-y divide-sky-200/50 overflow-hidden" aria-label={t("post.thread")}>
+            <section className="row-quiet divide-y divide-sky-200/50 overflow-hidden" aria-label={t("post.thread")}>
                 {thread.map((item, idx) => (
                     <PostCard
                         key={item.id}
@@ -112,17 +112,17 @@ export default function PostDetailPage() {
 
             <ReplyComposer post={post} />
 
-            <h2 className="glass-card px-5 py-3 font-display text-sm font-extrabold text-slate-700">
+            <h2 className="row-quiet px-5 py-3 font-display text-sm font-extrabold text-fg">
                 {t("post.replies", { count: post.replies.length })}
             </h2>
 
             {replies.length === 0 ? (
-                <div className="glass-card px-6 py-12 text-center">
-                    <p className="font-display font-extrabold text-slate-700">{t("post.noReplies")}</p>
-                    <p className="mt-1 text-sm text-slate-400">{t("post.beFirst")}</p>
+                <div className="row-quiet px-6 py-12 text-center">
+                    <p className="font-display font-extrabold text-fg">{t("post.noReplies")}</p>
+                    <p className="mt-1 text-sm text-fg-mute">{t("post.beFirst")}</p>
                 </div>
             ) : (
-                <section className="glass-card rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("post.replyList")}>
+                <section className="row-quiet rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("post.replyList")}>
                     {replies.map((reply) => (
                         <PostCard key={reply.id} post={reply} bare />
                     ))}

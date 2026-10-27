@@ -8,24 +8,24 @@ export function WelcomePanel() {
     const { t } = useI18n();
 
     return (
-        <div className="flex flex-col gap-4 px-1">
+        <div className="flex flex-col gap-4">
             <div>
-                <h2 className="font-display text-xl font-black leading-snug text-brand-ink">{t("welcome.title")}</h2>
-                <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{t("welcome.text")}</p>
+                <h2 className="font-display text-[17px] font-extrabold leading-snug text-fg">{t("welcome.title")}</h2>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-fg-weak">{t("welcome.text")}</p>
             </div>
 
-            <div className="mt-1 flex flex-col gap-2.5">
+            <div className="mt-1 flex flex-col gap-2">
                 <button
                     type="button"
                     onClick={() => openAuth("register")}
-                    className="btn-solid w-full py-2.5 font-display text-sm font-extrabold tracking-wide"
+                    className="btn-solid w-full py-2.5 font-display text-[13px] font-bold"
                 >
                     {t("common.register")}
                 </button>
                 <button
                     type="button"
                     onClick={() => openAuth("login")}
-                    className="w-full cursor-pointer rounded-xl border border-brand/40 bg-white/50 py-2.5 font-display text-sm font-extrabold text-brand-deep transition hover:bg-white/80 hover:shadow-glow active:scale-95"
+                    className="btn-ghost w-full border border-line py-2.5 font-display text-[13px] font-bold text-brand-ink"
                 >
                     {t("common.login")}
                 </button>

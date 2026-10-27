@@ -44,7 +44,7 @@ export function FollowButton({ user, size = "md", className }: FollowButtonProps
                 "inline-flex cursor-pointer items-center justify-center gap-1.5 font-display font-bold transition-all duration-200 active:scale-95 disabled:opacity-60",
                 size === "sm" ? "h-8 px-3.5 text-xs" : "h-9 px-4 text-sm",
                 following
-                    ? "rounded-[10px] border border-white/80 bg-white/60 text-brand-deep hover:bg-white/90"
+                    ? "rounded-[10px] border border-line bg-overlay text-brand-deep hover:bg-overlay-strong"
                     : "btn-solid",
                 className,
             )}

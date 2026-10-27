@@ -19,16 +19,19 @@ export function ReplyComposer({ post }: { post: Post }) {
 
     if (!isAuthenticated) {
         return (
-            <section className="glass-card flex items-center justify-between gap-3 p-4" aria-label={t("reply.title")}>
-                <p className="text-sm font-semibold text-slate-500">{t("reply.loginRequired")}</p>
+            <div
+                className="flex items-center justify-between gap-3 border-b border-line py-3"
+                aria-label={t("reply.title")}
+            >
+                <p className="text-[13px] font-semibold text-fg-weak">{t("reply.loginRequired")}</p>
                 <button
                     type="button"
                     onClick={() => openAuth("login")}
-                    className="btn-solid px-4 py-2 font-display text-sm font-bold"
+                    className="btn-solid press-sm px-3.5 py-1.5 font-display text-[12px] font-bold"
                 >
                     {t("common.login")}
                 </button>
-            </section>
+            </div>
         );
     }
 

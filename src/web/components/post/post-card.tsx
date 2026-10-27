@@ -19,7 +19,7 @@ import { useUi } from "@/web/stores/ui-store";
 import type { Post, PostVariant } from "@/web/types";
 
 const MENU_ITEM_CLASS =
-    "flex w-full cursor-pointer items-center rounded-[10px] px-3 py-2 text-left text-sm font-semibold text-slate-600 transition-colors hover:bg-white/80 hover:text-brand-deep";
+    "flex w-full cursor-pointer items-center rounded-lg px-2.5 py-1.5 text-left text-[13px] font-semibold text-fg-weak transition-colors hover:bg-overlay hover:text-brand-deep";
 
 /** 帖子的 uri host 与本站不一致 → 认为是非本站（远程）的帖子 */
 function isRemoteUri(uri: string, localHost: string): boolean {
@@ -113,12 +113,11 @@ export function PostCard({
             className={cn(
                 "group relative cursor-pointer transition-colors duration-150",
                 bare
-                    ? cn("px-4 py-4 hover:bg-white/45 sm:px-5", isContext && "opacity-90")
+                    ? // 流内的一行：hover 只把底色提亮一点点
+                      cn("row-quiet px-3 py-3.5 sm:px-4", isContext && "opacity-85")
                     : cn(
-                          "glass-card p-5 transition-all duration-200",
-                          isContext
-                              ? "!shadow-none opacity-95 hover:!bg-white/50"
-                              : "hover:-translate-y-0.5 hover:shadow-glow",
+                          "surface p-4 transition-colors duration-150",
+                          isContext && "shadow-none opacity-90",
                       ),
             )}
         >
@@ -135,14 +134,14 @@ export function PostCard({
                         <Link
                             href={profileHref(author)}
                             onClick={stop}
-                            className="truncate font-display text-[15px] font-extrabold text-slate-800 hover:text-brand-deep"
+                            className="truncate font-display text-[15px] font-extrabold text-fg hover:text-brand-deep"
                         >
                             {author.displayName}
                         </Link>
-                        <span className="truncate text-xs text-slate-400">
+                        <span className="truncate text-xs text-fg-mute">
                             @{author.username}@{author.instance}
                         </span>
-                        <span className="ml-auto whitespace-nowrap text-xs text-slate-400">
+                        <span className="ml-auto whitespace-nowrap text-xs text-fg-mute">
                             <RelativeTime iso={post.createdAt} />
                         </span>
                         <button
@@ -156,7 +155,7 @@ export function PostCard({
                                 setMenuOpen((prev) => !prev);
                             }}
                             className={cn(
-                                "ml-1 hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-400 opacity-0 transition hover:bg-white/80 hover:text-brand-deep focus-visible:opacity-100 group-hover:opacity-100 sm:inline-flex",
+                                "ml-1 hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-fg-mute opacity-0 transition-colors hover:bg-overlay hover:text-brand-deep focus-visible:opacity-100 group-hover:opacity-100 sm:inline-flex",
                                 menuOpen && "opacity-100",
                             )}
                         >
@@ -164,11 +163,11 @@ export function PostCard({
                         </button>
                     </div>
 
-                    <p className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-slate-700">
+                    <p className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-fg">
                         <PostContent content={post.content} onTagClick={stop} />
                     </p>
 
-                    <div className="mt-2.5 flex max-w-sm items-center gap-2 sm:max-w-md">
+                    <div className="mt-2.5 flex max-w-sm items-center gap-1 sm:max-w-md">
                         <button
                             type="button"
                             aria-label={t("post.replyCount", { count: replyCount })}
@@ -176,7 +175,7 @@ export function PostCard({
                                 e.stopPropagation();
                                 openDetail();
                             }}
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold text-slate-400 transition-colors duration-150 hover:text-brand-deep [&:hover_.bubble]:bg-brand/15"
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold text-fg-mute transition-colors duration-150 hover:text-brand-deep [&:hover_.bubble]:bg-brand/15"
                         >
                             <span className="bubble rounded-full p-1.5 transition-colors">
                                 <ReplyIcon size={17} />
@@ -200,7 +199,7 @@ export function PostCard({
                             }}
                             className={cn(
                                 "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold transition-colors duration-150 [&:hover_.bubble]:bg-sakura/15",
-                                post.likedByMe ? "text-sakura-deep" : "text-slate-400 hover:text-sakura-deep",
+                                post.likedByMe ? "text-sakura-deep" : "text-fg-mute hover:text-sakura-deep",
                             )}
                         >
                             <span
@@ -222,7 +221,7 @@ export function PostCard({
                 anchorRef={moreRef}
                 width={168}
                 align="right"
-                className="glass-strong overflow-hidden p-1.5"
+                className="surface-raised overflow-hidden p-1.5"
             >
                 {/* portal 到 body，但 React 事件仍会冒泡到 article，这里阻止掉 */}
                 <div ref={menuRef} role="menu" onClick={(e) => e.stopPropagation()} className="flex flex-col">

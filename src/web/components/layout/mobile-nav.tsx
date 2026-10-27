@@ -21,40 +21,40 @@ export function MobileTopBar() {
     const { t } = useI18n();
 
     return (
-        <header className="glass-bar fixed inset-x-0 top-0 z-40 flex items-center gap-2 px-4 py-2.5 lg:hidden">
+        <header className="bar-surface fixed inset-x-0 top-0 z-40 flex items-center gap-2 border-b px-4 py-2.5 lg:hidden">
             <button
                 type="button"
                 aria-label={t("nav.openMenu")}
                 onClick={() => setDrawerOpen(true)}
-                className="-ml-1 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-slate-600 transition active:scale-90"
+                className="press-sm -ml-1 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-fg-weak transition-colors hover:bg-overlay"
             >
-                <MenuIcon size={22} />
+                <MenuIcon size={21} />
             </button>
 
             <Link href="/" className="flex items-center gap-1.5" aria-label={t("app.name")}>
-                <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
+                <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-brand-deep text-white">
                     <FeatherIcon size={16} />
                 </span>
-                <span className="font-display text-lg font-black tracking-tight text-brand-ink">LightAP</span>
+                <span className="font-display text-[17px] font-extrabold tracking-tight text-fg">LightAP</span>
             </Link>
 
             <div className="ml-auto flex items-center gap-0.5">
                 <Link
                     href="/search"
                     aria-label={t("nav.search")}
-                    className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/80 hover:text-brand-deep"
+                    className="press-sm flex h-10 w-10 items-center justify-center rounded-full text-fg-weak transition-colors hover:bg-overlay"
                 >
-                    <SearchIcon size={21} />
+                    <SearchIcon size={20} />
                 </Link>
                 {isAuthenticated && (
                     <Link
                         href="/notifications"
                         aria-label={t("nav.notifications")}
-                        className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/80 hover:text-brand-deep"
+                        className="press-sm relative flex h-10 w-10 items-center justify-center rounded-full text-fg-weak transition-colors hover:bg-overlay"
                     >
-                        <BellIcon size={21} />
+                        <BellIcon size={20} />
                         {unreadCount > 0 && (
-                            <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sakura-deep px-1 text-[9px] font-extrabold tabular-nums text-white">
+                            <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-deep px-1 text-[9px] font-bold tabular-nums text-white">
                                 {unreadCount > 99 ? "99+" : unreadCount}
                             </span>
                         )}
@@ -62,7 +62,7 @@ export function MobileTopBar() {
                 )}
                 {isAuthenticated && (
                     <Link href={`/u/${currentUser.username}`} aria-label={t("nav.profile")} className="ml-1">
-                        <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={34} />
+                        <Avatar name={currentUser.displayName} src={currentUser.avatarUrl} size={32} />
                     </Link>
                 )}
             </div>
@@ -83,14 +83,14 @@ function BottomNavLink({ item, active, badge = 0 }: { item: BottomNavItem; activ
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-                "flex min-h-12 min-w-16 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1 text-[10px] font-bold transition-colors",
-                active ? "text-brand-deep" : "text-slate-400",
+                "press-sm flex min-h-12 min-w-16 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1 text-[10px] font-bold transition-colors duration-150",
+                active ? "text-brand-ink" : "text-fg-mute",
             )}
         >
-            <span className={cn("relative rounded-full p-1", active && "bg-brand/15")}>
-                <IconCmp size={21} />
+            <span className={cn("relative rounded-full p-1 transition-colors", active && "bg-brand/12")}>
+                <IconCmp size={20} />
                 {badge > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-sakura-deep px-1 text-[9px] font-extrabold tabular-nums text-white">
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-deep px-1 text-[9px] font-bold tabular-nums text-white">
                         {badge > 99 ? "99+" : badge}
                     </span>
                 )}
@@ -124,7 +124,7 @@ export function MobileBottomNav() {
 
     return (
         <nav
-            className="glass-bar fixed inset-x-0 bottom-0 z-40 flex items-end justify-around px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 lg:hidden"
+            className="bar-surface fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 lg:hidden"
             aria-label={t("nav.bottomNav")}
         >
             {items.slice(0, 2).map((item) => (
@@ -138,13 +138,14 @@ export function MobileBottomNav() {
 
             {isAuthenticated && (
                 <div className="flex w-16 justify-center">
+                    {/* FAB：页面上唯一有强投影的元素 */}
                     <button
                         type="button"
                         onClick={openComposer}
                         aria-label={t("nav.publish")}
-                        className="-mt-7 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-xl shadow-brand/50 ring-4 ring-white/70 transition-all duration-200 hover:-translate-y-1 active:scale-90"
+                        className="fab -mt-6 h-13 w-13 h-[52px] w-[52px]"
                     >
-                        <FeatherIcon size={23} />
+                        <FeatherIcon size={22} />
                     </button>
                 </div>
             )}
@@ -176,16 +177,19 @@ export function MobileDrawer() {
             aria-label={t("nav.mainMenu")}
             aria-hidden={!drawerOpen}
         >
+            {/* 遮罩 */}
             <div
                 className={cn(
-                    "absolute inset-0 bg-brand-ink/25 backdrop-blur-sm transition-opacity duration-200",
+                    "absolute inset-0 bg-black/25 transition-opacity duration-200",
                     drawerOpen ? "opacity-100" : "opacity-0",
                 )}
                 onClick={() => setDrawerOpen(false)}
             />
+
+            {/* 抽屉：需要独立层级，用实体表面 */}
             <div
                 className={cn(
-                    "absolute bottom-0 left-0 top-0 w-[290px] max-w-[85vw] overflow-y-auto rounded-r-3xl border-r border-white/60 bg-gradient-to-br from-white via-[#f2f9ff] to-[#e0edfd] p-5 pr-6 pt-[max(env(safe-area-inset-top),20px)] shadow-2xl shadow-brand/25 backdrop-blur-2xl",
+                    "surface-raised absolute bottom-0 left-0 top-0 w-[286px] max-w-[84vw] overflow-y-auto rounded-l-none rounded-r-2xl border-y-0 border-l-0 p-5 pr-6 pt-[max(env(safe-area-inset-top),20px)]",
                     "transition-transform duration-300 ease-[cubic-bezier(.32,.72,.35,1)]",
                     drawerOpen ? "translate-x-0" : "-translate-x-full",
                 )}
