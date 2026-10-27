@@ -63,20 +63,38 @@ export async function GET(request: Request) {
         ),
     ).orderBy(desc(notifications.id)).limit(body.limit ?? MAX_LIMIT);
 
-    // 批量取触发者，避免 N+1
+    // 触发者与相关 note 互不依赖，合成一次往返；都只取展示需要的列
     const actorIds = [...new Set(rows.map(row => row.actorId))];
-    const actors = actorIds.length > 0
-        ? await db.select().from(users).where(inArray(users.id, actorIds))
-        : [];
-    const userById = new Map(actors.map(actor => [actor.id, actor]));
-
-    // 批量取相关 note（Follow 类型没有 note）
     const noteIds = [...new Set(
         rows.map(row => row.noteId).filter((id): id is number => id != null),
     )];
-    const noteRows = noteIds.length > 0
-        ? await db.select().from(notes).where(inArray(notes.id, noteIds))
-        : [];
+
+    const [actors, noteRows] = await db.batch([
+        // private_key / password_hash 等大字段不取
+        actorIds.length > 0
+            ? db.select({
+                id: users.id,
+                username: users.username,
+                domain: users.domain,
+                displayName: users.displayName,
+                avatarUrl: users.avatarUrl,
+            }).from(users).where(inArray(users.id, actorIds))
+            : db.select({
+                id: users.id,
+                username: users.username,
+                domain: users.domain,
+                displayName: users.displayName,
+                avatarUrl: users.avatarUrl,
+            }).from(users).where(eq(users.id, -1)),
+        // 通知卡片只需要 uuid + 正文
+        noteIds.length > 0
+            ? db.select({ id: notes.id, uuid: notes.uuid, content: notes.content })
+                .from(notes).where(inArray(notes.id, noteIds))
+            : db.select({ id: notes.id, uuid: notes.uuid, content: notes.content })
+                .from(notes).where(eq(notes.id, -1)),
+    ]);
+
+    const userById = new Map(actors.map(actor => [actor.id, actor]));
     const noteById = new Map(noteRows.map(note => [note.id, note]));
 
     // 组装返回

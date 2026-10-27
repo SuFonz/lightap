@@ -33,12 +33,24 @@ export function makePost(
     };
 }
 
+/**
+ * 把后端返回的「Unix 秒」转成 ISO 字符串。
+ *
+ * `new Date(NaN).toISOString()` 会抛 RangeError，一旦后端某个字段缺失
+ * 就会让整个列表组装失败（表现为整页「帖子不存在」），所以这里兜底到当前时间。
+ */
+function toIso(seconds: number | null | undefined): string {
+    const ms = typeof seconds === "number" && Number.isFinite(seconds) ? seconds * 1000 : Date.now();
+    const date = new Date(ms);
+    return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
+
 export function fromListItem(item: PostListItem): Post {
     const post = makePost(
         item.uuid,
         item.username,
         normalizeNoteContent(item.content),
-        new Date(item.createdAt * 1000).toISOString(),
+        toIso(item.createdAt),
         item.inReplyTo ?? undefined,
     );
     post.cursorId = item.id;
@@ -55,7 +67,7 @@ export function fromNoteItem(item: NoteItem): Post {
         item.uuid,
         item.username,
         normalizeNoteContent(item.content),
-        new Date(item.createdAt * 1000).toISOString(),
+        toIso(item.createdAt),
         item.inReplyTo ?? undefined,
     );
     post.repliesCount = item.repliesCount;

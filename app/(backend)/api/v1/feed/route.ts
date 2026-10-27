@@ -2,7 +2,7 @@ import { follows, notes, users } from "@/src/db/schema";
 import { getDBClient } from "@/src/db";
 import { resolveRequestUser } from "@/src/lib/auth";
 import { toNoteListItems } from "@/src/lib/notes";
-import { and, desc, eq, gt, inArray, isNull, lt } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, lt, sql, type SQL } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -47,13 +47,18 @@ export async function GET(request: Request) {
     // 当前登录用户（可选）：关注流需要它，liked 状态也需要它
     const viewer = await resolveRequestUser(request);
 
-    // 根据类型确定作者范围：all = 数据库全部，local = 本站用户，following = 当前用户关注的人
-    let actors: string[] | null = null;
+    // 作者范围用「子查询」表达，而不是把作者列表拉回来再 inArray。
+    //
+    // 原因：D1 单条 SQL 的绑定参数上限是 100 个。本地用户数 / 关注数超过这个量级时，
+    // 原来的 `inArray(notes.actor, actors)` 会直接报错（不是变慢，是失败）。
+    // 用子查询后绑定参数恒定，且作者集合的过滤在库内完成，不需要把名单传回 Worker。
+    let authorScope: SQL | undefined;
     if (type === "local") {
-        // 只取本站用户，数据库以后会插入远程用户，不能直接全表取
-        actors = (await db.select().from(users).where(
-            eq(users.domain, url.host),
-        )).map(user => user.actorUrl);
+        // 本站用户：数据库里有远程用户，不能全表取
+        authorScope = inArray(
+            notes.actor,
+            db.select({ actorUrl: users.actorUrl }).from(users).where(eq(users.domain, url.host)),
+        );
     } else if (type === "following") {
         // 关注流需要登录
         if (!viewer) {
@@ -63,18 +68,12 @@ export async function GET(request: Request) {
                 status: 403,
             });
         }
-        // 关注流包含自己发的帖
-        actors = (await db.select().from(follows).where(eq(follows.follower, viewer.actorUrl))).map(f => f.following);
-        actors.push(viewer.actorUrl);
-    }
-
-    // 没有可查询的作者直接返回空
-    if (actors && actors.length === 0) {
-        return Response.json({
-            items: [],
-        }, {
-            status: 200,
-        });
+        // 关注流包含自己发的帖：子查询里用 union 把自己并进作者集合，
+        // 这样绑定参数只有 actorUrl 一个，不随关注数增长。
+        authorScope = inArray(
+            notes.actor,
+            sql`(select ${follows.following} from ${follows} where ${follows.follower} = ${viewer.actorUrl} union select ${viewer.actorUrl})`,
+        );
     }
 
     // 根据类型查询帖子，查询没有 inReplyTo 的帖子
@@ -84,7 +83,7 @@ export async function GET(request: Request) {
             isNull(notes.inReplyTo),
             body.maxId ? lt(notes.id, body.maxId) : undefined,
             body.sinceId ? gt(notes.id, body.sinceId) : undefined,
-            actors ? inArray(notes.actor, actors) : undefined,
+            authorScope,
         ),
     ).orderBy(desc(notes.id)).limit(body.limit ?? MAX_LIMIT);
 

@@ -3,7 +3,7 @@ import { getDBClient } from "@/src/db";
 import { dispatchActivity } from "@/src/lib/activity";
 import { resolveRequestUser } from "@/src/lib/auth";
 import { toNoteListItems } from "@/src/lib/notes";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 
 interface Params {
     uuid: string,
@@ -32,15 +32,45 @@ export async function GET(
     request: Request,
     { params }: { params: Params },
 ) {
-    // 根据当前 uuid 查询数据库
     const db = getDBClient();
-    const note = (await db.select().from(notes).where(
-        and(
-            eq(notes.uuid, params.uuid),
-            isNull(notes.deletedAt),
-        ),
-    ))[0];
-    if (!note) {
+
+    // 向上追溯父 note，得到 [顶层, ..., 当前] 的线程。
+    //
+    // 用递归 CTE 一次查完整条父链：原来是一层一次往返（O(深度) 次），
+    // 深度越大越慢，生产环境每次往返还要加上 D1 的网络开销。
+    // 不存在（或已删除）时返回空数组。
+    //
+    // 注意：db.all() 走的是原始 SQL，不经过 drizzle 的列名映射，返回的就是
+    // 查询里的列名。所以要显式 `as "createdAt"` 把 snake_case 别名回驼峰，
+    // 否则下游 `row.createdAt` 取不到值（表现为详情页时间字段为空）。
+    const chain = await db.all<typeof notes.$inferSelect>(sql`
+        with recursive chain(
+            id, uuid, uri, actor, content, inReplyTo, created_at, deleted_at, depth
+        ) as (
+            select id, uuid, uri, actor, content, inReplyTo, created_at, deleted_at, 0
+            from ${notes}
+            where uuid = ${params.uuid} and deleted_at is null
+            union all
+            select n.id, n.uuid, n.uri, n.actor, n.content, n.inReplyTo,
+                   n.created_at, n.deleted_at, chain.depth + 1
+            from ${notes} n
+            join chain on n.uri = chain.inReplyTo
+            where n.deleted_at is null
+        )
+        select
+            id,
+            uuid,
+            uri,
+            actor,
+            content,
+            inReplyTo,
+            created_at as "createdAt",
+            deleted_at as "deletedAt"
+        from chain
+        order by depth desc
+    `);
+
+    if (chain.length === 0) {
         return Response.json({
             error: "Note not found.",
         }, {
@@ -48,27 +78,14 @@ export async function GET(
         });
     }
 
-    // 向上追溯父 note，得到 [顶层, ..., 当前] 的线程
-    const chain = [note];
-    let cursor = note;
-    while (cursor.inReplyTo) {
-        const parent = (await db.select().from(notes).where(
-            and(
-                eq(notes.uri, cursor.inReplyTo),
-                isNull(notes.deletedAt),
-            ),
-        ))[0];
-        if (!parent) {
-            break;
-        }
-        chain.unshift(parent);
-        cursor = parent;
-    }
+    // 当前帖：链的最后一环（顶层在前）。用 uri 查直接回复，
+    // 不用 params.uuid 直接拼，是为了让 replies 与链上的对象保持同一份数据。
+    const current = chain[chain.length - 1];
 
     // 查询哪个 note 引用了当前 note
     const replies = await db.select().from(notes).where(
         and(
-            eq(notes.inReplyTo, note.uri),
+            eq(notes.inReplyTo, current.uri),
             isNull(notes.deletedAt),
         ),
     );

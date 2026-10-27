@@ -3,12 +3,14 @@ import { getDBClient } from "@/src/db";
 import { follows, notes, users } from "@/src/db/schema";
 import { dispatchActivity } from "@/src/lib/activity";
 import { resolveRequestUser } from "@/src/lib/auth";
-import { toNoteListItems } from "@/src/lib/notes";
 import { createNotification } from "@/src/lib/notify";
 import { publishEvent } from "@/src/realtime/sse";
 import { and, eq, inArray } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
+
+/** D1 单条 SQL 的绑定参数上限是 100，批量查询时按这个粒度分批 */
+const BOUND_PARAMS_PER_QUERY = 90;
 
 interface Item {
     id: number,
@@ -102,23 +104,52 @@ export async function POST(request: Request) {
         // 顶层帖才广播到时间线（回复只走上面的 reply.created，不进时间线）
         if (!body.inReplyTo) {
             try {
-                const [item] = await toNoteListItems([dbNote], user.id);
-                if (item) {
-                    // 「全部 / 本地」：广播给所有人（含访客）
-                    await publishEvent({ type: "note.created", data: item }, { type: "all" });
+                // 刚插入的帖子：作者就是当前用户，回复数 / 点赞数必然为 0，
+                // 直接组装即可，不用再走 toNoteListItems 的 4 条批量查询。
+                const item: Item & {
+                    uuid: string,
+                    username: string,
+                    displayName: string,
+                    avatarUrl: string,
+                    domain: string,
+                    inReplyTo: string | null,
+                    repliesCount: number,
+                    createdAt: number,
+                } = {
+                    id: dbNote.id,
+                    uuid: dbNote.uuid,
+                    uri: dbNote.uri,
+                    username: user.username,
+                    displayName: user.displayName ?? "",
+                    avatarUrl: user.avatarUrl ?? "",
+                    domain: user.domain,
+                    content: dbNote.content,
+                    inReplyTo: dbNote.inReplyTo,
+                    liked: false,
+                    likeCount: 0,
+                    repliesCount: 0,
+                    createdAt: dbNote.createdAt,
+                };
 
-                    // 「已关注」：定向推给关注了作者的本站用户
-                    if (followerActorUrls.length > 0) {
-                        const localFollowers = await db.select().from(users).where(
+                // 「全部 / 本地」：广播给所有人（含访客）
+                await publishEvent({ type: "note.created", data: item }, { type: "all" });
+
+                // 「已关注」：定向推给关注了作者的本站用户
+                if (followerActorUrls.length > 0) {
+                    // D1 单条查询最多 100 个绑定参数，粉丝多时要分批查
+                    const localFollowerIds: number[] = [];
+                    for (let i = 0; i < followerActorUrls.length; i += BOUND_PARAMS_PER_QUERY) {
+                        const chunk = followerActorUrls.slice(i, i + BOUND_PARAMS_PER_QUERY);
+                        const localFollowers = await db.select({ id: users.id }).from(users).where(
                             and(
-                                inArray(users.actorUrl, followerActorUrls),
+                                inArray(users.actorUrl, chunk),
                                 eq(users.domain, url.host),
                             ),
                         );
-                        const userIds = localFollowers.map(u => u.id);
-                        if (userIds.length > 0) {
-                            await publishEvent({ type: "following.note", data: item }, { type: "users", userIds });
-                        }
+                        localFollowerIds.push(...localFollowers.map(u => u.id));
+                    }
+                    if (localFollowerIds.length > 0) {
+                        await publishEvent({ type: "following.note", data: item }, { type: "users", userIds: localFollowerIds });
                     }
                 }
             } catch {

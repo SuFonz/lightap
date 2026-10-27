@@ -12,6 +12,9 @@ import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
 
+/** D1 单条 SQL 的绑定参数上限是 100，批量查询时按这个粒度分批 */
+const BOUND_PARAMS_PER_QUERY = 90;
+
 interface Params {
     username: string,
 }
@@ -153,18 +156,23 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                         await publishEvent({ type: "note.created", data: item }, { type: "all" });
 
                         if (remoteUser) {
-                            const followerActorUrls = (await db.select().from(follows).where(eq(follows.following, remoteUser.actorUrl))).map(f => f.follower);
-                            if (followerActorUrls.length > 0) {
-                                const localFollowers = await db.select().from(users).where(
+                            const followerActorUrls = (await db.select({ follower: follows.follower })
+                                .from(follows).where(eq(follows.following, remoteUser.actorUrl)))
+                                .map(f => f.follower);
+                            // D1 单条查询最多 100 个绑定参数，粉丝多时分批查本站用户
+                            const userIds: number[] = [];
+                            for (let i = 0; i < followerActorUrls.length; i += BOUND_PARAMS_PER_QUERY) {
+                                const chunk = followerActorUrls.slice(i, i + BOUND_PARAMS_PER_QUERY);
+                                const localFollowers = await db.select({ id: users.id }).from(users).where(
                                     and(
-                                        inArray(users.actorUrl, followerActorUrls),
+                                        inArray(users.actorUrl, chunk),
                                         eq(users.domain, url.host),
                                     ),
                                 );
-                                const userIds = localFollowers.map(u => u.id);
-                                if (userIds.length > 0) {
-                                    await publishEvent({ type: "following.note", data: item }, { type: "users", userIds });
-                                }
+                                userIds.push(...localFollowers.map(u => u.id));
+                            }
+                            if (userIds.length > 0) {
+                                await publishEvent({ type: "following.note", data: item }, { type: "users", userIds });
                             }
                         }
                     }

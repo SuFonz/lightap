@@ -52,22 +52,22 @@ export async function GET(
     // 当前登录用户（可选），用于判断是否已关注
     const viewer = await resolveRequestUser(request);
 
-    // 统计帖子数、关注数、粉丝数
-    const postsCount = (await db.select({ value: count() }).from(notes).where(eq(notes.actor, user.actorUrl)))[0].value;
-    const followingCount = (await db.select({ value: count() }).from(follows).where(eq(follows.follower, user.actorUrl)))[0].value;
-    const followersCount = (await db.select({ value: count() }).from(follows).where(eq(follows.following, user.actorUrl)))[0].value;
-
-    // 当前登录用户是否关注了 TA
-    let isFollowing = false;
-    if (viewer) {
-        const followed = (await db.select().from(follows).where(
-            and(
-                eq(follows.follower, viewer.actorUrl),
-                eq(follows.following, user.actorUrl),
-            ),
-        ))[0];
-        isFollowing = !!followed;
-    }
+    // 统计帖子数、关注数、粉丝数，以及当前登录用户是否已关注
+    // 四条查询互不依赖，合并成一次往返（原来要 3~4 次）
+    const [postsCount, followingCount, followersCount, followed] = await db.batch([
+        db.select({ value: count() }).from(notes).where(eq(notes.actor, user.actorUrl)),
+        db.select({ value: count() }).from(follows).where(eq(follows.follower, user.actorUrl)),
+        db.select({ value: count() }).from(follows).where(eq(follows.following, user.actorUrl)),
+        // 未登录时用恒空条件占位，保持 batch 形状稳定
+        viewer
+            ? db.select({ id: follows.id }).from(follows).where(
+                and(
+                    eq(follows.follower, viewer.actorUrl),
+                    eq(follows.following, user.actorUrl),
+                ),
+            )
+            : db.select({ id: follows.id }).from(follows).where(eq(follows.id, -1)),
+    ]);
 
     // 返回
     const data: Profile = {
@@ -78,10 +78,10 @@ export async function GET(
         actorUrl: user.actorUrl,
         domain: user.domain === url.host ? null : user.domain,
         instance: user.domain,
-        postsCount: postsCount,
-        followingCount: followingCount,
-        followersCount: followersCount,
-        isFollowing: isFollowing,
+        postsCount: postsCount[0].value,
+        followingCount: followingCount[0].value,
+        followersCount: followersCount[0].value,
+        isFollowing: followed.length > 0,
         createdAt: user.createdAt,
     };
 
