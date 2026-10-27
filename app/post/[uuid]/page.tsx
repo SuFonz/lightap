@@ -49,7 +49,9 @@ export default function PostDetailPage() {
 
     if (thread.length === 0) {
         return (
-            <div className="row-quiet mx-auto mt-10 max-w-md px-6 py-16 text-center">
+            // 不用 row-quiet：这里是整页的空状态，不是可点击的列表行，
+            // 悬停不该整块变色
+            <div className="mx-auto mt-10 max-w-md px-6 py-16 text-center">
                 <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 text-brand">
                     <ReplyIcon size={26} />
                 </span>
