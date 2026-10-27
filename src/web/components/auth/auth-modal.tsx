@@ -6,8 +6,17 @@ import { Modal } from "@/web/components/ui/modal";
 import { ApiError } from "@/web/lib/api";
 import { cn } from "@/web/lib/cn";
 import { useI18n } from "@/web/lib/i18n";
+import type { TranslationKey } from "@/web/lib/i18n";
+import { checkPasswordStrength } from "@/web/lib/password-strength";
 import { useSession } from "@/web/stores/session-store";
 import type { AuthMode } from "@/web/types";
+
+/** 强度检查的失败原因 → 提示文案 key */
+const PASSWORD_REASON_KEY: Record<"format" | "tooWeak" | "repetitive", TranslationKey> = {
+    format: "auth.passwordRule",
+    tooWeak: "auth.passwordTooWeak",
+    repetitive: "auth.passwordRepetitive",
+};
 
 interface AuthModalProps {
     open: boolean;
@@ -41,8 +50,13 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
         if (u.length < 2) return t("auth.usernameMin");
         if (!/^[a-zA-Z0-9_]+$/.test(u)) return t("auth.usernameCharset");
         if (!password) return t("auth.passwordRequired");
-        if (password.length < 6) return t("auth.passwordMin");
+        // 登录只要求非空（历史账号可能是旧规则创建的短密码），
+        // 注册才做强度校验，避免老用户被新规则锁在门外
         if (!isLogin) {
+            const strength = checkPasswordStrength(password);
+            if (!strength.ok) {
+                return t(PASSWORD_REASON_KEY[strength.reason]);
+            }
             if (!confirmPassword) return t("auth.confirmRequired");
             if (confirmPassword !== password) return t("auth.confirmMismatch");
         }
