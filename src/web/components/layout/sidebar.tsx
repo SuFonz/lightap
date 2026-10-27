@@ -98,10 +98,15 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
                     <nav aria-label={t("nav.mainMenu")}>
                         <ul className="flex flex-col gap-1">
-                            {navItems.map(({ href, label, icon: IconCmp }) => {
+                            {navItems.map(({ href, label, icon: IconCmp }, index) => {
                                 const active = isActive(href);
                                 return (
-                                    <li key={href}>
+                                    <li
+                                        key={href}
+                                        // 依次入场：每项晚 35ms，最多错 6 项，避免长菜单等太久
+                                        className="stagger-in"
+                                        style={{ "--stagger": `${Math.min(index, 6) * 35}ms` } as React.CSSProperties}
+                                    >
                                         <Link
                                             href={href}
                                             onClick={onNavigate}

@@ -51,7 +51,7 @@ export default function NotificationsPage() {
                 </div>
             ) : (
                 <ul className="row-quiet rise-in divide-y divide-sky-200/50 overflow-hidden" aria-label={t("notifications.title")}>
-                    {items.map((item) => {
+                    {items.map((item, index) => {
                         const name = item.user.displayName || item.user.username;
                         // Follow 跳到对方主页，Like/Reply 跳到相关帖子
                         const href = item.note
@@ -59,7 +59,12 @@ export default function NotificationsPage() {
                             : profileHref({ username: item.user.username, domain: item.user.domain });
 
                         return (
-                            <li key={item.id}>
+                            <li
+                                key={item.id}
+                                // 依次入场：每项晚 40ms，最多错 8 项（更长的列表等下去会不耐烦）
+                                className="stagger-in"
+                                style={{ "--stagger": `${Math.min(index, 8) * 40}ms` } as React.CSSProperties}
+                            >
                                 <Link
                                     href={href}
                                     className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-overlay-weak sm:px-5"

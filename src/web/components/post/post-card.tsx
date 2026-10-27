@@ -242,14 +242,22 @@ export function PostCard({
                         >
                             <span
                                 className={cn(
-                                    "bubble rounded-full p-1.5 transition-colors",
+                                    "bubble relative rounded-full p-1.5 transition-colors",
                                     post.likedByMe && "bg-sakura/15",
                                 )}
                             >
+                                {/* 点赞时向外扩散一圈涟漪，比单纯缩放更显眼 */}
+                                {likePulseKey > 0 && (
+                                    <span
+                                        key={`burst-${likePulseKey}`}
+                                        aria-hidden="true"
+                                        className="like-burst pointer-events-none absolute inset-0 rounded-full bg-sakura/45"
+                                    />
+                                )}
                                 {/* 心跳只在「点上去」时播一次，取消点赞不动 */}
                                 <span
                                     key={likePulseKey}
-                                    className={cn("inline-flex", likePulseKey > 0 && "heart-pop")}
+                                    className={cn("relative inline-flex", likePulseKey > 0 && "heart-pop")}
                                 >
                                     <HeartIcon size={17} fill={post.likedByMe ? "currentColor" : "none"} />
                                 </span>

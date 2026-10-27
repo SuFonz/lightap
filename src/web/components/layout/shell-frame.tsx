@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { AuthModal } from "@/web/components/auth/auth-modal";
 import { ComposerModal } from "@/web/components/composer/composer-modal";
 import { Background } from "@/web/components/layout/background";
@@ -24,6 +25,8 @@ export function ShellFrame({ children }: { children: ReactNode }) {
  editProfileOpen,
  closeEditProfile,
  } = useUi();
+ // 路由变化时给中栏换一个 key，触发页面切换的入场过渡
+ const pathname = usePathname();
 
  // 记录进入应用时的历史长度，供「返回键」判断应用内是否有跳转
  useEffect(() => {
@@ -41,8 +44,16 @@ export function ShellFrame({ children }: { children: ReactNode }) {
  <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1180px] items-start gap-8 px-4 pb-32 pt-[72px] sm:px-6 lg:gap-10 lg:pb-20 lg:pt-8">
  <Sidebar />
 
- {/* 中栏：时间线直接融入页面，没有外层卡片 */}
- <main className="mx-auto min-w-0 w-full max-w-[640px] flex-1">{children}</main>
+ {/* 中栏：时间线直接融入页面，没有外层卡片。
+     key=pathname + page-enter：切路由时整块轻微上浮淡入，
+     让「换了一页」有交代，不再是硬切。
+     只动 opacity/transform，不改变布局与滚动位置。 */}
+ <main
+ key={pathname}
+ className="page-enter mx-auto min-w-0 w-full max-w-[640px] flex-1"
+ >
+ {children}
+ </main>
 
  <RightRail />
  </div>
