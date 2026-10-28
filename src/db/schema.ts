@@ -56,6 +56,12 @@ export const notes = sqliteTable("notes", {
     actor: text().notNull(),
     content: text().notNull(),
     inReplyTo: text(),
+    /**
+     * 远程帖子的附件（图片/视频/音频/文件），JSON 数组字符串。
+     * 只有联邦进来的帖子会有值，本站发帖不产生附件（上传功能不在范围内）。
+     * 结构见 src/lib/attachments.ts 的 NoteAttachment。
+     */
+    attachment: text(),
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
     deletedAt: integer("deleted_at"),
 }, (table) => [

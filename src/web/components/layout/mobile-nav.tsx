@@ -73,22 +73,37 @@ export function MobileTopBar() {
 interface BottomNavItem {
     href: string;
     label: string;
-    icon: ComponentType<{ size?: number }>;
+    /** className 用于激活态动画（nav-pop） */
+    icon: ComponentType<{ size?: number; className?: string }>;
 }
 
-function BottomNavLink({ item, active, badge = 0 }: { item: BottomNavItem; active: boolean; badge?: number }) {
+function BottomNavLink({
+    item,
+    active,
+    badge = 0,
+    pathname,
+}: {
+    item: BottomNavItem;
+    active: boolean;
+    badge?: number;
+    /** 当前路由，用于让激活项的图标重播弹动 */
+    pathname: string;
+}) {
     const IconCmp = item.icon;
     return (
         <Link
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-                "press-sm flex min-h-12 min-w-16 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1 text-[10px] font-bold transition-colors duration-150",
+                // 不再用 transition-colors：它会覆盖 nav-press 里的 transform 过渡，
+                // 导致按下是瞬间跳变（看起来像只有两帧）。颜色过渡由 nav-press 统一声明。
+                "nav-press flex min-h-12 min-w-16 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1 text-[10px] font-bold",
                 active ? "text-brand-ink" : "text-fg-mute",
             )}
         >
             <span className={cn("relative rounded-full p-1 transition-colors", active && "bg-brand/12")}>
-                <IconCmp size={20} />
+                {/* key 带上 pathname：路由一变，激活项图标重播 nav-pop */}
+                <IconCmp key={active ? `active-${pathname}` : "idle"} size={20} className={cn(active && "nav-pop")} />
                 <CountBadge
                     count={badge}
                     className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center px-1 text-[9px]"
@@ -132,6 +147,7 @@ export function MobileBottomNav() {
                     item={item}
                     active={isActive(item.href)}
                     badge={item.href === "/notifications" ? unreadCount : 0}
+                    pathname={pathname}
                 />
             ))}
 
@@ -155,6 +171,7 @@ export function MobileBottomNav() {
                     item={item}
                     active={isActive(item.href)}
                     badge={item.href === "/notifications" ? unreadCount : 0}
+                    pathname={pathname}
                 />
             ))}
         </nav>

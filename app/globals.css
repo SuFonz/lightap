@@ -427,27 +427,31 @@ body {
 
 /* ── 按压反馈 ─────────────────────────────────────────────── */
 
-/* 大块可点区域（整行、卡片） */
-@utility press {
+/* 大块可点区域（整行、卡片）
+   用普通类 + !important：组件上常同时有 Tailwind 的 `transition-colors`，
+   它会把 transition 整个覆盖掉，导致 transform 没有过渡、按下是瞬间跳变。 */
+.press {
     transition:
-        transform var(--dur-fast) var(--ease-spring),
-        background-color var(--dur-fast) var(--ease-out);
+        transform var(--dur-base) var(--ease-spring),
+        background-color var(--dur-fast) var(--ease-out) !important;
+}
 
-    &:active {
-        transform: scale(0.99);
-    }
+.press:active {
+    transform: scale(0.99);
 }
 
 /* 小图标按钮 */
-@utility press-sm {
+.press-sm {
     transition:
         transform var(--dur-base) var(--ease-spring),
         background-color var(--dur-fast) var(--ease-out),
-        color var(--dur-fast) var(--ease-out);
+        color var(--dur-fast) var(--ease-out) !important;
+}
 
-    &:active {
-        transform: scale(0.93);
-    }
+.press-sm:active {
+    transform: scale(0.93);
+    /* 按下要「跟手」：比回弹快 */
+    transition-duration: 0.09s;
 }
 
 /* ── 关键帧 ───────────────────────────────────────────────── */
@@ -575,6 +579,71 @@ body {
 
 .count-bump {
     animation: count-bump 0.34s var(--ease-spring);
+}
+
+/* ── 图片灯箱左右切换 ───────────────────────────────────────
+   带上方向感：往右翻时新图从右侧滑入，往左翻时从左侧滑入。
+   只有位移和透明度，不缩放（大图上缩放容易糊）。 */
+@keyframes slide-from-right {
+    from { opacity: 0; transform: translateX(28px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-from-left {
+    from { opacity: 0; transform: translateX(-28px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.slide-from-right {
+    animation: slide-from-right 0.24s var(--ease-enter);
+}
+
+.slide-from-left {
+    animation: slide-from-left 0.24s var(--ease-enter);
+}
+
+/* 侧栏导航项点击：按下时轻微内推，松开回弹。
+   ────────────────────────────────────────────────────────────
+   注意：这里必须用普通类而不是 @utility，并且显式写全 transition。
+   原因：组件上同时有 Tailwind 的 `transition-colors`，它会把 transition
+   属性整个覆盖掉（只留 color / background-color 等），导致 transform
+   没有过渡 —— 按下瞬间跳到 scale(0.965)、松开瞬间跳回，看起来就是
+   「只有两帧」的生硬切换。用更具体的选择器 + !important 保证优先级。 */
+.nav-press {
+    transition:
+        transform var(--dur-base) var(--ease-spring),
+        background-color var(--dur-fast) var(--ease-out),
+        color var(--dur-fast) var(--ease-out) !important;
+}
+
+/* 只在交互期间提升图层：常驻 will-change 会为每个菜单项常占一层显存 */
+.nav-press:hover,
+.nav-press:active {
+    will-change: transform;
+}
+
+.nav-press:active {
+    transform: scale(0.965);
+    transition-duration: 0.09s;
+}
+
+/* 松开时回弹慢一点，形成「按下去快、弹回来慢」的手感 */
+.nav-press:not(:active) {
+    transition:
+        transform 0.34s var(--ease-spring),
+        background-color var(--dur-fast) var(--ease-out),
+        color var(--dur-fast) var(--ease-out) !important;
+}
+
+/* 导航项被选中时，图标轻轻弹一下作为「已切换」的确认 */
+@keyframes nav-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.16); }
+    100% { transform: scale(1); }
+}
+
+.nav-pop {
+    animation: nav-pop 0.3s var(--ease-spring);
 }
 
 @media (prefers-reduced-motion: reduce) {

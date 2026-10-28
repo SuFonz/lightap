@@ -192,6 +192,7 @@ export function buildNote(options: {
         name: "Light AP Note",
         content: content,
         inReplyTo: inReplyTo,
+        attachment: [],
         to: to ?? ["https://www.w3.org/ns/activitystreams#Public"],
         cc: cc ?? []
     };
@@ -215,6 +216,7 @@ export function buildNoteWithUri(options: {
         name: "Light AP Note",
         content: content,
         inReplyTo: inReplyTo,
+        attachment: [],
         to: to ?? ["https://www.w3.org/ns/activitystreams#Public"],
         cc: cc ?? []
     };

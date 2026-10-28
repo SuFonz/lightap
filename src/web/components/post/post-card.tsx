@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PostAttachments } from "@/web/components/post/post-attachments";
 import { PostContent } from "@/web/components/post/post-content";
 import { Avatar } from "@/web/components/ui/avatar";
 import { HeartIcon, MoreIcon, ReplyIcon } from "@/web/components/ui/icons";
@@ -204,6 +205,11 @@ export function PostCard({
                     <p className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-fg">
                         <PostContent content={post.content} onTagClick={stop} />
                     </p>
+
+                    {/* 远程帖子的附件（图片/视频/音频/文件）；本站帖子没有附件，不渲染 */}
+                    {post.attachment && post.attachment.length > 0 && (
+                        <PostAttachments attachments={post.attachment} onInteract={stop} />
+                    )}
 
                     <div className="mt-2.5 flex max-w-sm items-center gap-1 sm:max-w-md">
                         <button

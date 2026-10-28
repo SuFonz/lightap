@@ -58,6 +58,20 @@ export interface UserProfileResponse {
     createdAt: number;
 }
 
+/** 远程帖子的附件（本站发帖不产生附件，恒为空数组） */
+export interface NoteAttachmentItem {
+    /** 资源类型，决定用 img / video / audio / 链接 渲染 */
+    kind: "image" | "video" | "audio" | "document";
+    /** 实际可加载的地址 */
+    url: string;
+    /** MIME 类型（远程数据可能缺失） */
+    mediaType?: string;
+    /** alt 文本 / 文件名 */
+    name?: string;
+    width?: number;
+    height?: number;
+}
+
 // 帖子列表：GET /api/v1/feed?type=... 与 GET /api/v1/users/[username]/posts 共用
 export interface PostListItem {
     /** notes.uuid，帖子稳定标识（用于 /post/<uuid> 与详情查询） */
@@ -71,6 +85,8 @@ export interface PostListItem {
     domain: string;
     content: string;
     inReplyTo: string | null;
+    /** 远程帖子的附件；本站帖子为空数组 */
+    attachment: NoteAttachmentItem[];
     /** 当前登录用户是否已点赞 */
     liked: boolean;
     likeCount: number;
@@ -113,6 +129,8 @@ export interface NoteItem {
     domain: string;
     content: string;
     inReplyTo: string | null;
+    /** 远程帖子的附件；本站帖子为空数组 */
+    attachment: NoteAttachmentItem[];
     /** 当前登录用户是否已点赞 */
     liked: boolean;
     likeCount: number;

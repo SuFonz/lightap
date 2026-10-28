@@ -45,13 +45,13 @@ export async function GET(
     // 否则下游 `row.createdAt` 取不到值（表现为详情页时间字段为空）。
     const chain = await db.all<typeof notes.$inferSelect>(sql`
         with recursive chain(
-            id, uuid, uri, actor, content, inReplyTo, created_at, deleted_at, depth
+            id, uuid, uri, actor, content, inReplyTo, attachment, created_at, deleted_at, depth
         ) as (
-            select id, uuid, uri, actor, content, inReplyTo, created_at, deleted_at, 0
+            select id, uuid, uri, actor, content, inReplyTo, attachment, created_at, deleted_at, 0
             from ${notes}
             where uuid = ${params.uuid} and deleted_at is null
             union all
-            select n.id, n.uuid, n.uri, n.actor, n.content, n.inReplyTo,
+            select n.id, n.uuid, n.uri, n.actor, n.content, n.inReplyTo, n.attachment,
                    n.created_at, n.deleted_at, chain.depth + 1
             from ${notes} n
             join chain on n.uri = chain.inReplyTo
@@ -64,6 +64,7 @@ export async function GET(
             actor,
             content,
             inReplyTo,
+            attachment,
             created_at as "createdAt",
             deleted_at as "deletedAt"
         from chain

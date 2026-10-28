@@ -23,6 +23,17 @@ export interface User {
     followersCount: number;
 }
 
+/** 帖子附件（远程帖子的图片/视频/音频/文件） */
+export interface PostAttachment {
+    kind: "image" | "video" | "audio" | "document";
+    url: string;
+    mediaType?: string;
+    /** alt 文本 / 文件名 */
+    name?: string;
+    width?: number;
+    height?: number;
+}
+
 export interface Post {
     id: string;
     /** ActivityPub 规范地址（回复时作为 inReplyTo 传回后端） */
@@ -38,6 +49,8 @@ export interface Post {
     createdAt: string;
     /** 被回复帖子的 id，非回复时省略 */
     inReplyTo?: string;
+    /** 远程帖子的附件；本站帖子为空 */
+    attachment?: PostAttachment[];
     replies: Post[];
     repliesCount: number;
     likes: number;

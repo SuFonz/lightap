@@ -1,6 +1,7 @@
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 import { likes, notes, users } from "@/src/db/schema";
+import { deserializeAttachments } from "@/src/lib/attachments";
 
 type NoteRow = typeof notes.$inferSelect;
 
@@ -80,6 +81,8 @@ export async function toNoteListItems(rows: NoteRow[], viewerId?: number) {
             domain: new URL(row.actor).host,
             content: row.content,
             inReplyTo: row.inReplyTo,
+            // 远程帖子的附件（图片/视频/音频/文件）；本站帖子恒为空数组
+            attachment: deserializeAttachments(row.attachment),
             liked: likedNoteIds.has(row.id),
             likeCount: likeCountByNote.get(row.id) ?? 0,
             repliesCount: countByUri.get(row.uri) ?? 0,

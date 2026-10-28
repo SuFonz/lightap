@@ -16,6 +16,11 @@ export type APObjectType = "Note" |
                             "Tombstone" |
                             APActivityType
 
+export type APDocumentType = "Document" |
+                                "Audio" |
+                                "Video" |
+                                "Image";
+
 // Core Types
 
 export interface APWebfinger {
@@ -92,11 +97,30 @@ export interface APLike extends APActivity {
 
 // Resources Types
 
+export interface APDocument extends APObject {
+    type: APDocumentType,
+    name: string,
+    url: string,
+}
+
+export interface APAudio extends APDocument {
+    type: "Audio",
+}
+
+export interface APImage extends APDocument {
+    type: "Image",
+}
+
+export interface APVideo extends APDocument {
+    type: "Video",
+}
+
 export interface APNote extends APObject {
     type: "Note",
     name: string,
     content: string,
     inReplyTo?: string,
+    attachment: APDocument[],
     /** 原始发布时间（ISO 8601），用于保留远端帖子的真实时间 */
     published?: string,
 }

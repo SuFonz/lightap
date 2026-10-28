@@ -3,6 +3,7 @@ import { getActor, postInbox } from "@/src/activitypub/network";
 import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
 import { activities, follows, likes, notes, users } from "@/src/db/schema";
 import { storeRemoteActor } from "@/src/lib/actor";
+import { parseAttachments, serializeAttachments } from "@/src/lib/attachments";
 import { toNoteListItems } from "@/src/lib/notes";
 import { createNotification } from "@/src/lib/notify";
 import { publishEvent } from "@/src/realtime/sse";
@@ -68,9 +69,6 @@ async function handleActivity(request: Request, params: Params, activity: APActi
             case "Accept": {
                 const { user, actor } = await resolveRemoteActor(request, activity, username);
 
-                console.log(user);
-                console.log(actor);
-
                 // 提取对象：Accept 的 object 是之前发出去的 Follow 活动
                 const obj = await extractObject(activity) as APActivity;
 
@@ -94,11 +92,15 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                 break;
             }
             case "Create": {
+                console.log(activity);
+
                 // 先拉取远程 Actor、验证签名并落库（feed 才能显示作者信息）
                 const { remoteUser } = await resolveRemoteActor(request, activity, username);
 
                 // 提取对象
                 const obj = await extractObject(activity) as APNote;
+
+                console.log(obj.attachment);
 
                 // 已经收过这条 Note 就跳过（ActivityPub 会重投同一条活动）
                 const existing = (await db.select().from(notes).where(eq(notes.uri, obj.id)))[0];
@@ -113,12 +115,16 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                     : Math.floor(Date.now() / 1000);
 
                 // 存入数据库
+                // 远程帖子的附件（图片/视频/音频/文件）单独解析后存成 JSON，
+                // 解析失败或没有附件时存 null，不影响帖子本身入库
+                const attachments = parseAttachments(obj.attachment);
                 const newNote = (await db.insert(notes).values({
                     uri: obj.id,
                     uuid: crypto.randomUUID(),
                     actor: activity.actor,
                     content: obj.content,
                     inReplyTo: obj.inReplyTo ?? null,
+                    attachment: serializeAttachments(attachments),
                     createdAt,
                 }).returning())[0];
 

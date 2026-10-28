@@ -59,6 +59,7 @@ export function fromListItem(item: PostListItem): Post {
     post.domain = item.domain;
     post.likedByMe = item.liked;
     post.likes = item.likeCount;
+    post.attachment = item.attachment ?? [];
     return post;
 }
 
@@ -75,6 +76,7 @@ export function fromNoteItem(item: NoteItem): Post {
     post.domain = item.domain;
     post.likedByMe = item.liked;
     post.likes = item.likeCount;
+    post.attachment = item.attachment ?? [];
     return post;
 }
 

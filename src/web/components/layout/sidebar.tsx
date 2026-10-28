@@ -112,18 +112,33 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                                             onClick={onNavigate}
                                             aria-current={active ? "page" : undefined}
                                             className={cn(
-                                                "press-sm group relative flex items-center gap-3 rounded-xl px-3 py-2.5 font-display text-[14px] font-bold transition-colors duration-150",
+                                                // 不用 transition-colors：它会覆盖 nav-press 的 transform 过渡，
+                                                // 让按下变成瞬间跳变。颜色过渡统一由 nav-press 声明。
+                                                "nav-press group relative flex items-center gap-3 rounded-xl px-3 py-2.5 font-display text-[14px] font-bold",
                                                 active
                                                     ? // 选中态：只用强调色底色与文字，不加投影
                                                       "bg-brand/10 text-brand-ink"
                                                     : "text-fg-weak hover:bg-overlay hover:text-fg",
                                             )}
                                         >
+                                            {/* 左侧激活指示条：只在当前项出现，随路由切换淡入 */}
+                                            <span
+                                                aria-hidden="true"
+                                                className={cn(
+                                                    "absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-brand transition-all duration-200",
+                                                    active ? "opacity-100" : "opacity-0",
+                                                )}
+                                            />
+                                            {/*
+                                              key 带上 pathname：路由一变，激活项图标就重新挂载并重播 nav-pop，
+                                              给出「已经切到这里了」的即时确认。
+                                            */}
                                             <IconCmp
+                                                key={active ? `active-${pathname}` : "idle"}
                                                 size={18}
                                                 className={cn(
                                                     "transition-colors duration-150",
-                                                    active ? "text-brand" : "text-fg-mute group-hover:text-fg-weak",
+                                                    active ? "nav-pop text-brand" : "text-fg-mute group-hover:text-fg-weak",
                                                 )}
                                             />
                                             {label}
