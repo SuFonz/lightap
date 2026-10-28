@@ -6,8 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PostAttachments } from "@/web/components/post/post-attachments";
 import { PostContent } from "@/web/components/post/post-content";
 import { Avatar } from "@/web/components/ui/avatar";
-import { HeartIcon, MoreIcon, ReplyIcon } from "@/web/components/ui/icons";
-import { Popover } from "@/web/components/ui/popover";
+import { BoostIcon, HeartIcon, MoreIcon, ReplyIcon } from "@/web/components/ui/icons";import { Popover } from "@/web/components/ui/popover";
 import { RelativeTime } from "@/web/components/ui/relative-time";
 import { cn } from "@/web/lib/cn";
 import { formatCount } from "@/web/lib/format";
@@ -45,7 +44,7 @@ export function PostCard({
 }) {
     const { getUser } = useDirectory();
     const { t } = useI18n();
-    const { toggleLike, deletePost } = useTimeline();
+    const { toggleLike, toggleBoost, deletePost } = useTimeline();
     const { session, isAuthenticated } = useSession();
     const { openAuth, showToast } = useUi();
     const router = useRouter();
@@ -60,6 +59,8 @@ export function PostCard({
     const pressRef = useRef<{ x: number; y: number } | null>(null);
     // 点赞从「未赞」变「已赞」时自增，驱动心跳动画重播
     const likePulseKey = usePulseOnChange(post.likedByMe);
+    // 转发从「未转」变「已转」时自增
+    const boostPulseKey = usePulseOnChange(post.boostedByMe);
 
     const openDetail = useCallback(() => router.push(detailHref), [router, detailHref]);
     const stop = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
@@ -160,6 +161,16 @@ export function PostCard({
                       ),
             )}
         >
+            {/* 这条是「某人转发了它」：在卡片顶部标一行，说明来源 */}
+            {post.announcer && (
+                <div className="mb-1.5 flex items-center gap-1.5 pl-1 text-[12px] font-semibold text-fg-mute">
+                    <BoostIcon size={13} className="shrink-0 text-magic-deep" />
+                    <span className="truncate">
+                        {t("post.announcedBy", { name: post.announcer.displayName })}
+                    </span>
+                </div>
+            )}
+
             <div className="flex items-start gap-3">
                 <Link
                     href={profileHref(author)}
@@ -225,6 +236,46 @@ export function PostCard({
                                 <ReplyIcon size={17} />
                             </span>
                             {formatCount(replyCount)}
+                        </button>
+
+                        {/* 转发：走真实接口，成功后按钮变色 + 计数 +1。
+                            顺序与主流时间线一致：回复 → 转发 → 点赞 */}
+                        <button
+                            type="button"
+                            aria-label={t(post.boostedByMe ? "post.unannounce" : "post.announce", { count: post.boosts })}
+                            aria-pressed={post.boostedByMe}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isAuthenticated) {
+                                    openAuth("login");
+                                    return;
+                                }
+                                void toggleBoost(post).catch(() => {
+                                    showToast(t(post.boostedByMe ? "common.unannounceFailed" : "common.announceFailed"));
+                                });
+                            }}
+                            className={cn(
+                                "press-sm inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold transition-colors duration-150 [&:hover_.bubble]:bg-magic/15",
+                                post.boostedByMe ? "text-magic-deep" : "text-fg-mute hover:text-magic-deep",
+                            )}
+                        >
+                            <span
+                                className={cn(
+                                    "bubble relative rounded-full p-1.5 transition-colors",
+                                    post.boostedByMe && "bg-magic/15",
+                                )}
+                            >
+                                {/* 转发成功时图标轻弹一下 */}
+                                <span
+                                    key={boostPulseKey}
+                                    className={cn("relative inline-flex", boostPulseKey > 0 && "count-bump")}
+                                >
+                                    <BoostIcon size={17} />
+                                </span>
+                            </span>
+                            <span key={boostPulseKey} className={cn(boostPulseKey > 0 && "count-bump")}>
+                                {formatCount(post.boosts)}
+                            </span>
                         </button>
 
                         <button

@@ -1,4 +1,4 @@
-import { follows, likes, notes } from "@/src/db/schema";
+import { follows, notes } from "@/src/db/schema";
 import { getDBClient } from "@/src/db";
 import { dispatchActivity } from "@/src/lib/activity";
 import { resolveRequestUser } from "@/src/lib/auth";
@@ -151,8 +151,16 @@ export async function DELETE(
             });
         }
 
-        // 先删点赞（likes.note_id 外键指向 notes，必须先清）
-        await db.delete(likes).where(eq(likes.noteId, note.id));
+        // 软删除：只打 deletedAt 标记，保留点赞与转发记录。
+        //
+        // 语义说明：软删除意味着「这条帖子不再展示」，而不是「数据被抹掉」。
+        // 所以这里**不**清理 likes / announces：
+        // - 展示层（feed、线程、转发合并）都带 `deletedAt is null` 过滤，
+        //   帖子删了以后，它的点赞和转发自然都不会出现
+        // - 保留记录让「恢复帖子」成为可能（数据还在，只是不展示）
+        // - 也不会因为外键而报错：软删除不执行 DELETE，外键根本不触发
+        //
+        // 真正的数据清除（GDPR 之类）应该走独立的硬删除流程，不混在软删除里。
 
         // 递送目标：关注者 + 被回复者（本地实例跳过，他们走本地数据库）
         const inboxes = new Set(

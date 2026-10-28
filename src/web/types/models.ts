@@ -34,6 +34,15 @@ export interface PostAttachment {
     height?: number;
 }
 
+/** 时间线里「这条帖子是谁转发的」 */
+export interface PostAnnouncer {
+    username: string;
+    displayName: string;
+    avatarUrl: string;
+    /** 转发者所在实例 */
+    domain: string;
+}
+
 export interface Post {
     id: string;
     /** ActivityPub 规范地址（回复时作为 inReplyTo 传回后端） */
@@ -51,6 +60,8 @@ export interface Post {
     inReplyTo?: string;
     /** 远程帖子的附件；本站帖子为空 */
     attachment?: PostAttachment[];
+    /** 非空表示这条在时间线里是「某人转发了它」 */
+    announcer?: PostAnnouncer;
     replies: Post[];
     repliesCount: number;
     likes: number;

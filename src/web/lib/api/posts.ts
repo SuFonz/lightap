@@ -52,3 +52,18 @@ export function unlikeNote(uuid: string) {
 export function fetchThread(uuid: string) {
     return request<NoteThreadResponse>(`/api/v1/notes/${encodeURIComponent(uuid)}`);
 }
+
+export interface AnnounceResponse {
+    announced: boolean;
+    announceUri?: string;
+}
+
+/** 转发（Announce）：POST /api/v1/notes/[uuid]/announce */
+export function announceNote(uuid: string) {
+    return request<AnnounceResponse>(`/api/v1/notes/${encodeURIComponent(uuid)}/announce`, { method: "POST" });
+}
+
+/** 取消转发：DELETE /api/v1/notes/[uuid]/announce */
+export function unannounceNote(uuid: string) {
+    return request<AnnounceResponse>(`/api/v1/notes/${encodeURIComponent(uuid)}/announce`, { method: "DELETE" });
+}

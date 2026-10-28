@@ -1,4 +1,4 @@
-import { AP_CONTEXT, APActivity, APActivityType, APActor, APLike, APNote, APObject, APObjectType, APTombstone, APWebfinger } from "./ap";
+import { AP_CONTEXT, APActivity, APActivityType, APAnnounce, APActor, APLike, APNote, APObject, APObjectType, APTombstone, APWebfinger } from "./ap";
 
 export function parseResource(
     resource: string
@@ -287,4 +287,33 @@ export function buildLikeWithUri(options: {
     };
 
     return like;
+}
+
+/**
+ * Announce（转发）：`object` 用**被转发帖子的地址**，不内嵌整条内容。
+ *
+ * 这与 Mastodon 的 boost / Misskey 的 renote 一致，接收方据此引用原帖。
+ */
+export function buildAnnounce(options: {
+    url: URL,
+    uuid: string,
+    actor: string,
+    /** 被转发帖子的 uri */
+    object: string,
+    to?: string[],
+    cc?: string[],
+}) {
+    const { url, uuid, actor, object, to, cc } = options;
+
+    const announce: APAnnounce = {
+        "@context": AP_CONTEXT,
+        id: buildObjecrUri({ url, uuid, type: "Announce" }),
+        type: "Announce",
+        actor,
+        object,
+        to: to ?? ["https://www.w3.org/ns/activitystreams#Public"],
+        cc: cc ?? []
+    };
+
+    return announce;
 }

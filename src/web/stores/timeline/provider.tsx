@@ -427,14 +427,40 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         [session, mutate],
     );
 
+    /**
+     * 转发 / 取消转发（乐观更新，失败自动回滚）。
+     *
+     * 与点赞不同的是：转发会改变「这条帖子是否出现在时间线上」的形态，
+     * 但本地只更新按钮状态与计数——真正的列表刷新由服务端 SSE
+     * （announce.created / announce.removed）驱动，避免自己重复插入。
+     */
     const toggleBoost = useCallback(
-        (id: string) =>
-            mutate(id, (post) => ({
-                ...post,
-                boostedByMe: !post.boostedByMe,
-                boosts: post.boosts + (post.boostedByMe ? -1 : 1),
-            })),
-        [mutate],
+        async (post: Post) => {
+            if (!session) throw new Error("请先登录");
+
+            const willBoost = !post.boostedByMe;
+            const id = post.id;
+
+            mutate(id, (item) => ({
+                ...item,
+                boostedByMe: willBoost,
+                boosts: item.boosts + (willBoost ? 1 : -1),
+            }));
+
+            try {
+                if (willBoost) await postsApi.announceNote(id);
+                else await postsApi.unannounceNote(id);
+            } catch (error) {
+                // 失败回滚
+                mutate(id, (item) => ({
+                    ...item,
+                    boostedByMe: !willBoost,
+                    boosts: item.boosts + (willBoost ? -1 : 1),
+                }));
+                throw error;
+            }
+        },
+        [session, mutate],
     );
 
     const applyRemoteNote = useCallback(
@@ -474,6 +500,62 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     const applyRemoteLike = useCallback(
         (payload: { noteUuid: string }) => {
             mutate(payload.noteUuid, (post) => ({ ...post, likes: post.likes + 1 }));
+        },
+        [mutate],
+    );
+
+    /**
+     * 收到实时转发（SSE announce.created）。
+     *
+     * 与 note.created 的区别：帖子本身可能早就在时间线里了，
+     * 这里不是「插入新帖」，而是「给已有帖打上转发标记」。
+     * 如果帖子不在当前列表（属于别的页或更早的历史），就把它作为新条目插到顶部——
+     * 用户刚转发的东西出现在自己眼前更符合预期。
+     */
+    const applyRemoteAnnounce = useCallback(
+        (item: PostListItem) => {
+            rememberAuthors([item], rememberUser);
+            const post = fromListItem(item);
+            if (!post.announcer) return;
+
+            const existing = findPost(
+                [...realtime, ...Object.values(history).flatMap((state) => state.posts)],
+                post.id,
+            );
+
+            if (existing) {
+                // 已有这条帖子：只补上转发标记，并把它提到列表最前
+                mutate(post.id, (p) => ({ ...p, announcer: post.announcer }));
+                setRealtime((prev) => {
+                    const without = prev.filter((p) => p.id !== post.id);
+                    return [post, ...without];
+                });
+                return;
+            }
+
+            // 不在当前列表：按实时帖插入
+            const boundary = sinceIdRef.current;
+            if (boundary !== null && post.cursorId != null && post.cursorId <= boundary) {
+                // 属于历史区：仍然置顶显示这次转发，让用户看到自己/他人的转发动作
+                setRealtime((prev) => upsertRealtime(prev, post, tabsForPost(post, localHost)));
+                return;
+            }
+            setRealtime((prev) => upsertRealtime(prev, post, tabsForPost(post, localHost)));
+        },
+        [history, localHost, mutate, realtime, rememberUser],
+    );
+
+    /** 收到实时取消转发：撤掉标记（帖子本身保留在时间线里） */
+    const applyRemoteAnnounceRemoved = useCallback(
+        (payload: { noteUuid: string }) => {
+            mutate(payload.noteUuid, (post) => {
+                if (!post.announcer) return post;
+                return {
+                    ...post,
+                    announcer: undefined,
+                    boosts: Math.max(0, post.boosts - 1),
+                };
+            });
         },
         [mutate],
     );
@@ -534,6 +616,8 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             syncNew,
             applyRemoteReply,
             applyRemoteLike,
+            applyRemoteAnnounce,
+            applyRemoteAnnounceRemoved,
         }),
         [
             posts,
@@ -558,6 +642,8 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             syncNew,
             applyRemoteReply,
             applyRemoteLike,
+            applyRemoteAnnounce,
+            applyRemoteAnnounceRemoved,
         ],
     );
 

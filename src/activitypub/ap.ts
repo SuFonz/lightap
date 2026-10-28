@@ -10,6 +10,7 @@ export type APActivityType = "Activity" |
                              "Accept" | 
                              "Reject" | 
                              "Follow" | 
+                             "Announce" |
                              "Undo";
 
 export type APObjectType = "Note" |
@@ -93,6 +94,16 @@ export interface APAccept extends APActivity {
 
 export interface APLike extends APActivity {
     type: "Like",
+}
+
+/**
+ * Announce：转发（Mastodon 里叫 boost，Misskey 里叫 renote）。
+ *
+ * `object` 是**被转发的帖子地址**（字符串），而不是内嵌对象——
+ * 这样接收方可以直接引用原帖，也避免重复传输整条内容。
+ */
+export interface APAnnounce extends APActivity {
+    type: "Announce",
 }
 
 // Resources Types

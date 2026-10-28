@@ -72,6 +72,17 @@ export interface NoteAttachmentItem {
     height?: number;
 }
 
+/** 时间线里「这条帖子是谁转发的」（本站/远程都可能） */
+export interface AnnouncedByItem {
+    username: string;
+    displayName: string;
+    avatarUrl: string;
+    /** 转发者所在实例 */
+    domain: string;
+    /** Announce 活动的 uri */
+    announceUri: string;
+}
+
 // 帖子列表：GET /api/v1/feed?type=... 与 GET /api/v1/users/[username]/posts 共用
 export interface PostListItem {
     /** notes.uuid，帖子稳定标识（用于 /post/<uuid> 与详情查询） */
@@ -87,6 +98,12 @@ export interface PostListItem {
     inReplyTo: string | null;
     /** 远程帖子的附件；本站帖子为空数组 */
     attachment: NoteAttachmentItem[];
+    /** 被转发次数 */
+    announceCount: number;
+    /** 当前登录用户是否已转发（决定按钮状态） */
+    boosted: boolean;
+    /** 非空表示这条在时间线里是「某人转发了它」 */
+    announcedBy: AnnouncedByItem | null;
     /** 当前登录用户是否已点赞 */
     liked: boolean;
     likeCount: number;
@@ -131,6 +148,12 @@ export interface NoteItem {
     inReplyTo: string | null;
     /** 远程帖子的附件；本站帖子为空数组 */
     attachment: NoteAttachmentItem[];
+    /** 被转发次数 */
+    announceCount: number;
+    /** 当前登录用户是否已转发（线程里也返回，供详情页按钮状态用） */
+    boosted: boolean;
+    /** 线程里恒为 null（转发只在时间线出现） */
+    announcedBy: AnnouncedByItem | null;
     /** 当前登录用户是否已点赞 */
     liked: boolean;
     likeCount: number;

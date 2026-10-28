@@ -1,1 +1,1 @@
-export type NotificationType = "Follow" | "Like" | "Reply" | "Mention";
+export type NotificationType = "Follow" | "Like" | "Reply" | "Mention" | "Announce";

@@ -1,7 +1,7 @@
 import { APActivity, APActor, APNote, APOrderedCollection } from "@/src/activitypub/ap";
 import { getActor, postInbox } from "@/src/activitypub/network";
 import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools";
-import { activities, follows, likes, notes, users } from "@/src/db/schema";
+import { activities, announces, follows, likes, notes, users } from "@/src/db/schema";
 import { storeRemoteActor } from "@/src/lib/actor";
 import { parseAttachments, serializeAttachments } from "@/src/lib/attachments";
 import { toNoteListItems } from "@/src/lib/notes";
@@ -256,6 +256,77 @@ async function handleActivity(request: Request, params: Params, activity: APActi
 
                 break;
             }
+            case "Announce": {
+                // 远程用户转发了某条帖子。
+                //
+                // 与 Like 的区别：转发会进入时间线，所以要能定位到**被转发的原帖**。
+                // 如果原帖不在本地库里（例如转的是另一台实例的帖子），
+                // 这里只记录转发关系、不抓取内容——抓取需要额外的网络请求，
+                // 属于「按需补全」，不在 inbox 的同步路径里做。
+                const { remoteUser } = await resolveRemoteActor(request, activity, username);
+
+                // object 是被转发的 Note（通常是一个 uri 字符串，也可能内嵌对象）
+                const objectUri = typeof activity.object === "string" ? activity.object : activity.object?.id;
+                if (!objectUri || !remoteUser) {
+                    break;
+                }
+
+                const note = (await db.select().from(notes).where(eq(notes.uri, objectUri)))[0];
+                if (!note) {
+                    // 原帖不在本地：暂不记录（避免时间线出现空壳转发）
+                    break;
+                }
+
+                // 已删除的帖子不接受转发
+                if (note.deletedAt) {
+                    break;
+                }
+
+                // 存入数据库（ActivityPub 会重投，同一用户+帖子的唯一约束保证幂等）
+                const inserted = await db.insert(announces).values({
+                    uri: activity.id,
+                    userId: remoteUser.id,
+                    noteId: note.id,
+                }).onConflictDoNothing().returning();
+
+                if (inserted.length > 0) {
+                    // 给被转发帖子的作者写一条 Announce 通知（仅本站用户）
+                    const recipient = await findLocalUser(note.actor, url.host);
+                    if (recipient) {
+                        await createNotification({
+                            userId: recipient.id,
+                            actorId: remoteUser.id,
+                            type: "Announce",
+                            noteId: note.id,
+                        });
+                    }
+
+                    // 实时：让这条转发出现在时间线上
+                    try {
+                        const [item] = await toNoteListItems(
+                            [note],
+                            undefined,
+                            new Map([[note.id, {
+                                username: remoteUser.username,
+                                displayName: remoteUser.displayName ?? remoteUser.username,
+                                avatarUrl: remoteUser.avatarUrl ?? "",
+                                domain: remoteUser.domain,
+                                announceUri: activity.id,
+                            }]]),
+                        );
+                        if (item) {
+                            await publishEvent({
+                                type: "announce.created",
+                                data: item,
+                            }, { type: "all" });
+                        }
+                    } catch {
+                        // 实时推送失败不影响转发落库
+                    }
+                }
+
+                break;
+            }
             case "Delete": {
                 // 先拉取远程 Actor、验证签名并落库
                 const { actor } = await resolveRemoteActor(request, activity, username);
@@ -277,6 +348,8 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                 }
 
                 // 软删除（本地也标记删除，feed / 线程即不再展示）
+                // 不清理 likes / announces：软删除只是「不再展示」，
+                // 展示层都带 deletedAt 过滤，关联数据自然也不会出现。
                 await db.update(notes).set({
                     deletedAt: Math.floor(Date.now() / 1000),
                 }).where(eq(notes.id, note.id));
@@ -297,6 +370,28 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                             eq(follows.following, user.actorUrl),
                         ),
                     );
+                    break;
+                }
+
+                // 取消转发：Undo Announce（object 是内嵌 Announce，或只是它的 uri）
+                if (obj.type === "Announce") {
+                    const announceUri = typeof activity.object === "string" ? activity.object : obj.id;
+                    if (announceUri) {
+                        const removed = await db.delete(announces)
+                            .where(eq(announces.uri, announceUri))
+                            .returning();
+                        // 让时间线撤掉这条转发
+                        if (removed.length > 0) {
+                            const note = (await db.select().from(notes)
+                                .where(eq(notes.id, removed[0].noteId)))[0];
+                            if (note) {
+                                await publishEvent({
+                                    type: "announce.removed",
+                                    data: { noteUuid: note.uuid, actorUsername: actor.preferredUsername },
+                                }, { type: "all" });
+                            }
+                        }
+                    }
                     break;
                 }
 

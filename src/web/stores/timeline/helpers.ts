@@ -60,6 +60,18 @@ export function fromListItem(item: PostListItem): Post {
     post.likedByMe = item.liked;
     post.likes = item.likeCount;
     post.attachment = item.attachment ?? [];
+    post.boosts = item.announceCount ?? 0;
+    // 按钮亮不亮由服务端返回的真实状态决定，不再写死 false
+    post.boostedByMe = item.boosted ?? false;
+    // 这条是「某人转发了它」：记下转发者，卡片顶部会展示一行「xx 转发了」
+    post.announcer = item.announcedBy
+        ? {
+              username: item.announcedBy.username,
+              displayName: item.announcedBy.displayName,
+              avatarUrl: item.announcedBy.avatarUrl,
+              domain: item.announcedBy.domain,
+          }
+        : undefined;
     return post;
 }
 
@@ -77,6 +89,8 @@ export function fromNoteItem(item: NoteItem): Post {
     post.likedByMe = item.liked;
     post.likes = item.likeCount;
     post.attachment = item.attachment ?? [];
+    post.boosts = item.announceCount ?? 0;
+    post.boostedByMe = item.boosted ?? false;
     return post;
 }
 

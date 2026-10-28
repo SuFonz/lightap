@@ -16,7 +16,15 @@ import type { NotificationItem, PostListItem } from "@/web/types";
  */
 export function RealtimeProvider({ children }: { children: ReactNode }) {
     const { session } = useSession();
-    const { applyRemoteNote, applyFollowingNote, applyRemoteReply, applyRemoteLike, syncNew } = useTimeline();
+    const {
+        applyRemoteNote,
+        applyFollowingNote,
+        applyRemoteReply,
+        applyRemoteLike,
+        applyRemoteAnnounce,
+        applyRemoteAnnounceRemoved,
+        syncNew,
+    } = useTimeline();
     const { addNotification } = useNotifications();
 
     // 用 ref 持有最新回调，避免回调变化（例如切换 tab）导致整个连接重连
@@ -28,6 +36,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     applyLikeRef.current = applyRemoteLike;
     const applyReplyRef = useRef(applyRemoteReply);
     applyReplyRef.current = applyRemoteReply;
+    const applyAnnounceRef = useRef(applyRemoteAnnounce);
+    applyAnnounceRef.current = applyRemoteAnnounce;
+    const applyAnnounceRemovedRef = useRef(applyRemoteAnnounceRemoved);
+    applyAnnounceRemovedRef.current = applyRemoteAnnounceRemoved;
     const addNotificationRef = useRef(addNotification);
     addNotificationRef.current = addNotification;
     const syncNewRef = useRef(syncNew);
@@ -69,6 +81,22 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                 // 忽略坏数据
             }
         };
+        const onAnnounce = (event: Event) => {
+            try {
+                applyAnnounceRef.current(JSON.parse((event as MessageEvent).data) as PostListItem);
+            } catch {
+                // 忽略坏数据
+            }
+        };
+        const onAnnounceRemoved = (event: Event) => {
+            try {
+                applyAnnounceRemovedRef.current(
+                    JSON.parse((event as MessageEvent).data) as { noteUuid: string },
+                );
+            } catch {
+                // 忽略坏数据
+            }
+        };
         const onNotification = (event: Event) => {
             try {
                 addNotificationRef.current(JSON.parse((event as MessageEvent).data) as NotificationItem);
@@ -82,6 +110,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         source.addEventListener("following.note", onFollowingNote);
         source.addEventListener("reply.created", onReply);
         source.addEventListener("like.created", onLike);
+        source.addEventListener("announce.created", onAnnounce);
+        source.addEventListener("following.announce", onAnnounce);
+        source.addEventListener("announce.removed", onAnnounceRemoved);
         source.addEventListener("notification.created", onNotification);
 
         return () => {
@@ -90,6 +121,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             source.removeEventListener("following.note", onFollowingNote);
             source.removeEventListener("reply.created", onReply);
             source.removeEventListener("like.created", onLike);
+            source.removeEventListener("announce.created", onAnnounce);
+            source.removeEventListener("following.announce", onAnnounce);
+            source.removeEventListener("announce.removed", onAnnounceRemoved);
             source.removeEventListener("notification.created", onNotification);
             source.close();
         };

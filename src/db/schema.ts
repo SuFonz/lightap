@@ -110,3 +110,29 @@ export const notifications = sqliteTable("notifications", {
     // 通知列表：按 user_id 过滤 + 按 id 倒序分页
     index("idx_notifications_user_id").on(table.userId, table.id),
 ]);
+
+/**
+ * 转发（ActivityPub 的 Announce / Mastodon 的 boost / Misskey 的 renote）。
+ *
+ * 语义：某个用户把一条已有帖子转到自己的时间线。原帖内容不复制，
+ * 只记录「谁转了哪条」，渲染时把原帖内容取出来复用。
+ *
+ * 唯一约束放在 `(userId, noteId)` 上：同一个人对同一条帖子只能转发一次，
+ * 取消转发就是删掉这一行，再次转发会插入新行（新的 uri / 新的时间）。
+ */
+export const announces = sqliteTable("announces", {
+    id: integer().primaryKey({ autoIncrement: true }),
+    // Announce 活动的 uri（联邦投递时用）
+    uri: text().notNull().unique(),
+    // 转发者
+    userId: integer("user_id").notNull().references(() => users.id),
+    // 被转发的帖子
+    noteId: integer("note_id").notNull().references(() => notes.id),
+    createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
+}, (table) => [
+    // 幂等：同一用户对同一帖子只能有一条转发记录
+    unique().on(table.userId, table.noteId),
+    // 时间线按时间倒序取转发；noteId 侧服务「这条帖子被转发了多少次」
+    index("idx_announces_created").on(table.createdAt, table.id),
+    index("idx_announces_note").on(table.noteId),
+]);
