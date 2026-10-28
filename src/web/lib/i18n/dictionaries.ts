@@ -12,6 +12,8 @@ export const dictionaries = {
         "app.protocolNote": "基于 ActivityPub 协议 · LightAP",
 
         "common.close": "关闭",
+        "common.cancel": "取消",
+        "common.confirm": "确认",
         "common.back": "返回",
         "common.loading": "加载中…",
         "common.more": "更多操作",
@@ -219,6 +221,8 @@ export const dictionaries = {
         "app.protocolNote": "Built on ActivityPub · LightAP",
 
         "common.close": "Close",
+        "common.cancel": "Cancel",
+        "common.confirm": "Confirm",
         "common.back": "Back",
         "common.loading": "Loading…",
         "common.more": "More",

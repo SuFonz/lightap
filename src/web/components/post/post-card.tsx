@@ -7,6 +7,7 @@ import { PostAttachments } from "@/web/components/post/post-attachments";
 import { PostContent } from "@/web/components/post/post-content";
 import { Avatar } from "@/web/components/ui/avatar";
 import { BoostIcon, HeartIcon, MoreIcon, ReplyIcon } from "@/web/components/ui/icons";import { Popover } from "@/web/components/ui/popover";
+import { ConfirmDialog } from "@/web/components/ui/confirm-dialog";
 import { RelativeTime } from "@/web/components/ui/relative-time";
 import { cn } from "@/web/lib/cn";
 import { formatCount } from "@/web/lib/format";
@@ -53,6 +54,8 @@ export function PostCard({
     const isContext = variant === "context";
 
     const [menuOpen, setMenuOpen] = useState(false);
+    // 删除确认对话框
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const moreRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     // 按下时的坐标：用来区分「点击」与「按住拖选文字」
@@ -130,8 +133,18 @@ export function PostCard({
 
     function handleDelete() {
         setMenuOpen(false);
-        if (!window.confirm(t("post.confirmDelete"))) return;
-        void deletePost(post).catch(() => showToast(t("common.deleteFailed")));
+        // 用站内确认对话框代替 window.confirm：
+        // 系统弹窗样式与站点脱节，也不受项目的主题与动效控制
+        setConfirmDeleteOpen(true);
+    }
+
+    /** 确认删除：真正执行删除，失败时提示 */
+    async function confirmDelete() {
+        try {
+            await deletePost(post);
+        } catch {
+            showToast(t("common.deleteFailed"));
+        }
     }
 
     return (
@@ -356,6 +369,17 @@ export function PostCard({
                     )}
                 </div>
             </Popover>
+
+            {/* 删除确认：站内对话框，替代 window.confirm */}
+            <ConfirmDialog
+                open={confirmDeleteOpen}
+                onClose={() => setConfirmDeleteOpen(false)}
+                title={t("post.delete")}
+                description={t("post.confirmDelete")}
+                confirmLabel={t("post.delete")}
+                tone="danger"
+                onConfirm={confirmDelete}
+            />
         </article>
     );
 }
