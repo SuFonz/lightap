@@ -509,8 +509,12 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
      *
      * 与 note.created 的区别：帖子本身可能早就在时间线里了，
      * 这里不是「插入新帖」，而是「给已有帖打上转发标记」。
-     * 如果帖子不在当前列表（属于别的页或更早的历史），就把它作为新条目插到顶部——
-     * 用户刚转发的东西出现在自己眼前更符合预期。
+     *
+     * 关键点：SSE 送来的是 `fromListItem` 的结果，它**不含 `tabs` 字段**
+     * （tabs 只在 upsertRealtime 里补）。所以不能把整条替换进列表——
+     * 那样新对象没有 tabs，下一帧就会被 realtimeForTab 的
+     * `p.tabs?.includes(tab)` 过滤掉，表现为「转发第二条后它自己消失了」。
+     * 正确做法：沿用已有对象的 tabs，只覆盖转发相关字段。
      */
     const applyRemoteAnnounce = useCallback(
         (item: PostListItem) => {
@@ -518,31 +522,58 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             const post = fromListItem(item);
             if (!post.announcer) return;
 
+            const tabs = tabsForPost(post, localHost);
             const existing = findPost(
                 [...realtime, ...Object.values(history).flatMap((state) => state.posts)],
                 post.id,
             );
 
             if (existing) {
-                // 已有这条帖子：只补上转发标记，并把它提到列表最前
-                mutate(post.id, (p) => ({ ...p, announcer: post.announcer }));
+                // 已有这条帖子：更新转发标记（保留 tabs 等本地派生字段），并把它提到最前
                 setRealtime((prev) => {
-                    const without = prev.filter((p) => p.id !== post.id);
-                    return [post, ...without];
+                    const target = prev.find((p) => p.id === post.id);
+                    if (!target) {
+                        // 只在历史里：给历史那条打标记即可，不重复插入实时区
+                        return prev;
+                    }
+                    const merged: Post = {
+                        ...target,
+                        // 转发相关字段用新数据
+                        boosts: post.boosts,
+                        boostedByMe: post.boostedByMe,
+                        announcer: post.announcer,
+                        likes: post.likes,
+                        likedByMe: post.likedByMe,
+                        repliesCount: post.repliesCount,
+                        attachment: post.attachment,
+                        // 沿用已有的 tabs（这是它能留在列表里的关键）
+                        tabs: target.tabs ?? tabs,
+                    };
+                    return [merged, ...prev.filter((p) => p.id !== post.id)];
+                });
+
+                // 历史区里的那条只补标记，不移动位置
+                setHistory((prev) => {
+                    let changed = false;
+                    const next = { ...prev };
+                    for (const target of FEED_TABS) {
+                        const state = prev[target];
+                        if (!findPost(state.posts, post.id)) continue;
+                        next[target] = {
+                            ...state,
+                            posts: mapPost(state.posts, post.id, (p) => ({ ...p, announcer: post.announcer })),
+                        };
+                        changed = true;
+                    }
+                    return changed ? next : prev;
                 });
                 return;
             }
 
-            // 不在当前列表：按实时帖插入
-            const boundary = sinceIdRef.current;
-            if (boundary !== null && post.cursorId != null && post.cursorId <= boundary) {
-                // 属于历史区：仍然置顶显示这次转发，让用户看到自己/他人的转发动作
-                setRealtime((prev) => upsertRealtime(prev, post, tabsForPost(post, localHost)));
-                return;
-            }
-            setRealtime((prev) => upsertRealtime(prev, post, tabsForPost(post, localHost)));
+            // 不在当前列表：按实时帖插入（upsertRealtime 会补上 tabs）
+            setRealtime((prev) => upsertRealtime(prev, post, tabs));
         },
-        [history, localHost, mutate, realtime, rememberUser],
+        [history, localHost, realtime, rememberUser],
     );
 
     /** 收到实时取消转发：撤掉标记（帖子本身保留在时间线里） */
