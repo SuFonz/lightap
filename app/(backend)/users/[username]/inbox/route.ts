@@ -312,6 +312,8 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                                 avatarUrl: remoteUser.avatarUrl ?? "",
                                 domain: remoteUser.domain,
                                 announceUri: activity.id,
+                                // 转发时间：前端据此把它当作「最新」排到最前
+                                createdAt: inserted[0].createdAt ?? Math.floor(Date.now() / 1000),
                             }]]),
                         );
                         if (item) {

@@ -97,15 +97,19 @@ export async function GET(request: Request) {
     // ── 合并转发 ──────────────────────────────────────────────
     //
     // 时间线除了原始帖，还要能出现「某人转发了它」。
-    // 做法：查一批转发记录，把被转发的原帖取出来，替换掉「原帖自己的那条」，
-    // 并按转发时间重新排序。
+    // 做法：查一批转发记录，把被转发的原帖取出来，标上「谁转发了」。
+    //
+    // 展示哪个转发者，优先级：
+    //   1. 当前用户关注的人（自己也算，自己转发自己最直观）
+    //   2. 都是/都不是关注的人时，取最新的那次转发
+    // 这与 Mastodon 一致：时间线里显示的 boost 来源优先是自己关注的人。
     //
     // 取舍说明：没有用 SQL union 把两类条目拼成一条语句，因为两者的排序键
     // （notes.id / announces.created_at）不同，union 后还要再排一次，
     // 反而多一次 TEMP B-TREE 排序；分成两次查询再在内存合并更直观，数量也可控。
     const announceRows = await loadAnnounces(db, body, type, viewer?.actorUrl, url.host);
     if (announceRows.length > 0) {
-        mergeAnnounces(items, announceRows);
+        await mergeAnnounces(db, items, announceRows, viewer?.actorUrl);
     }
 
     return Response.json({
@@ -127,7 +131,7 @@ async function loadAnnounces(
     type: string | null,
     viewerActorUrl: string | undefined,
     host: string,
-): Promise<{ noteId: number; announceUri: string; announcedBy: AnnouncedBy }[]> {
+): Promise<{ noteId: number; announceUri: string; announcedBy: AnnouncedBy; announcerActorUrl: string }[]> {
     // 时间范围：用 notes.id 作为近似游标（转发与帖子共用同一时间轴）
     const where = and(
         body.maxId ? lt(notes.id, body.maxId) : undefined,
@@ -149,7 +153,8 @@ async function loadAnnounces(
     const rows = await db.select({
         noteId: announces.noteId,
         announceUri: announces.uri,
-        announcerId: users.id,
+        announceCreatedAt: announces.createdAt,
+        announcerActorUrl: users.actorUrl,
         username: users.username,
         displayName: users.displayName,
         avatarUrl: users.avatarUrl,
@@ -159,45 +164,74 @@ async function loadAnnounces(
         .innerJoin(notes, eq(notes.id, announces.noteId))
         .innerJoin(users, eq(users.id, announces.userId))
         .where(where)
+        // 最新转发在前：同一条帖子有多人转发时，靠前的优先被选中
         .orderBy(desc(announces.createdAt))
-        .limit(body.limit ?? MAX_LIMIT);
+        // 多取一些：同一条帖子可能被多人转发，limit 与帖子数相同会漏掉后面的转发者
+        .limit((body.limit ?? MAX_LIMIT) * 4);
 
     return rows.map(row => ({
         noteId: row.noteId,
         announceUri: row.announceUri,
+        announcerActorUrl: row.announcerActorUrl,
         announcedBy: {
             username: row.username,
             displayName: row.displayName ?? row.username,
             avatarUrl: row.avatarUrl ?? "",
             domain: row.domain,
             announceUri: row.announceUri,
+            // 转发时间：前端据此把它当作「最新」参与排序
+            createdAt: row.announceCreatedAt,
         },
     }));
 }
 
 /**
- * 把转发合并进列表：把原帖那条替换成「带 announcedBy 的版本」，并按转发时间重排。
+ * 把转发合并进列表：给原帖标上「谁转发了」。
  *
  * 只处理原帖已在本页的情况（跨页的转发留在它自己的页里），
  * 这样分页游标（maxId）的语义不会被破坏。
+ *
+ * 转发者的选择优先级（与 Mastodon 一致）：
+ *   1. 当前用户关注的人 —— 时间线显示「你关注的人转发了它」更合理
+ *   2. 自己 —— 自己转发过的帖子显示自己转发了最直观
+ *   3. 都不是时取最新的那次转发
+ * 同一优先级内取最新（announceRows 已按 createdAt 倒序，先到先得）。
+ *
+ * 注意：这里**不重排**。feed 必须严格按 notes.id 倒序，
+ * 否则 maxId 分页会出现漏帖/重帖（翻页时按 id 定位，顺序被打乱就对不上）。
  */
-function mergeAnnounces(
+async function mergeAnnounces(
+    db: ReturnType<typeof getDBClient>,
     items: Item[],
-    announceRows: { noteId: number; announceUri: string; announcedBy: AnnouncedBy }[],
-): void {
+    announceRows: { noteId: number; announceUri: string; announcedBy: AnnouncedBy; announcerActorUrl: string }[],
+    viewerActorUrl: string | undefined,
+): Promise<void> {
     const byNoteId = new Map(items.map(item => [item.id, item]));
+
+    // 关注集合：自己 + 当前用户 following。
+    // 用子查询限定，不把关注列表整体拉回 Worker（关注数可能很多）。
+    const followed = new Set<string>();
+    if (viewerActorUrl) {
+        followed.add(viewerActorUrl);
+        const rows = await db.select({ following: follows.following })
+            .from(follows)
+            .where(eq(follows.follower, viewerActorUrl));
+        for (const row of rows) followed.add(row.following);
+    }
+
+    // noteId → 已选中转发者的优先级（越小越优先）
+    const chosen = new Map<number, number>();
     for (const row of announceRows) {
         const target = byNoteId.get(row.noteId);
         if (!target) continue;
-        // 同一条帖子被多人转发时只展示第一个（最新的那个）
-        if (target.announcedBy) continue;
+
+        // 0 = 关注的人（含自己），1 = 其他人
+        const rank = followed.has(row.announcerActorUrl) ? 0 : 1;
+        const previous = chosen.get(row.noteId);
+        // 已有更优（或同级更早，因为已按时间倒序）的转发者就跳过
+        if (previous !== undefined && previous <= rank) continue;
+
+        chosen.set(row.noteId, rank);
         target.announcedBy = row.announcedBy;
     }
-    // 有转发的条目提前，保持整体按 id 倒序的相对次序
-    items.sort((a, b) => {
-        const aBoost = a.announcedBy ? 1 : 0;
-        const bBoost = b.announcedBy ? 1 : 0;
-        if (aBoost !== bBoost) return bBoost - aBoost;
-        return b.id - a.id;
-    });
 }

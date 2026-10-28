@@ -62,6 +62,12 @@ export interface Post {
     attachment?: PostAttachment[];
     /** 非空表示这条在时间线里是「某人转发了它」 */
     announcer?: PostAnnouncer;
+    /**
+     * 转发时间（ISO 字符串），仅在有 announcer 时有值。
+     * 时间线排序用它：转发过的帖子按转发时间算「最新」；
+     * 取消转发后 announcer / announcedAt 一起清空，自动回落到原帖 createdAt。
+     */
+    announcedAt?: string;
     replies: Post[];
     repliesCount: number;
     likes: number;

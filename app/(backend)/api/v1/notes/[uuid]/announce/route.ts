@@ -131,6 +131,11 @@ export async function POST(
 
         // 实时推送：组装一条带 announcedBy 的列表项
         try {
+            // 注意：这里**不能**传 viewerId。
+            // 这条事件是广播给所有客户端的，若带上「转发者视角」的 boosted=true，
+            // 其他用户收到后会误以为自己也转发了。
+            // boostedByMe 属于「当前浏览器用户」的私有状态，只应由该用户自己的请求结果决定，
+            // 所以前端 applyRemoteAnnounce 也刻意不覆盖 boostedByMe（见 provider.tsx）。
             const [item] = await toNoteListItems(
                 [note],
                 undefined,
@@ -140,6 +145,8 @@ export async function POST(
                     avatarUrl: user.avatarUrl ?? "",
                     domain: user.domain,
                     announceUri: announce.id,
+                    // 转发时间：前端据此把它当作「最新」排到最前
+                    createdAt: inserted.createdAt ?? Math.floor(Date.now() / 1000),
                 }]]),
             );
             if (item) {

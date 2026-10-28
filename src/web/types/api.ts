@@ -81,6 +81,8 @@ export interface AnnouncedByItem {
     domain: string;
     /** Announce 活动的 uri */
     announceUri: string;
+    /** 转发时间（Unix 秒），前端据此把它当作「最新」排序 */
+    createdAt: number;
 }
 
 // 帖子列表：GET /api/v1/feed?type=... 与 GET /api/v1/users/[username]/posts 共用

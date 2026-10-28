@@ -43,7 +43,7 @@ export interface TimelineValue {
     /** 收到实时转发（SSE announce.created）：把这条帖子标记为「被转发」并置顶 */
     applyRemoteAnnounce: (item: PostListItem) => void;
     /** 收到实时取消转发（SSE announce.removed）：撤掉转发标记 */
-    applyRemoteAnnounceRemoved: (payload: { noteUuid: string }) => void;
+    applyRemoteAnnounceRemoved: (payload: { noteUuid: string; actorUsername?: string }) => void;
     /** SSE 重连后补漏：拉最新的帖子合并进来 */
     syncNew: () => Promise<void>;
     /** 收到实时回复（SSE）时给父帖评论数 +1 */

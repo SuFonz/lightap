@@ -72,6 +72,8 @@ export function fromListItem(item: PostListItem): Post {
               domain: item.announcedBy.domain,
           }
         : undefined;
+    // 转发时间：排序用。没有转发时为 undefined，排序会回落到 createdAt
+    post.announcedAt = item.announcedBy ? toIso(item.announcedBy.createdAt) : undefined;
     return post;
 }
 
@@ -146,6 +148,35 @@ export function mergeLive(live: Post[], incoming: Post[]): Post[] {
         merged.push(post);
     }
     return merged.sort((a, b) => (b.cursorId ?? 0) - (a.cursorId ?? 0));
+}
+
+/**
+ * 时间线的展示时间：转发过的帖子用转发时间，否则用发帖时间。
+ *
+ * 语义与 Mastodon / Misskey 一致：转发是把这条内容「重新带到时间线顶部」，
+ * 所以它的时间应该按转发那一刻算；取消转发后 announcedAt 被清掉，
+ * 自然回落到原帖时间，帖子会回到它原本的位置。
+ */
+export function timelineTime(post: Post): number {
+    const raw = post.announcer && post.announcedAt ? post.announcedAt : post.createdAt;
+    const time = new Date(raw).getTime();
+    return Number.isNaN(time) ? 0 : time;
+}
+
+/**
+ * 按展示时间倒序排（时间相同再按 cursorId 倒序，保证顺序稳定）。
+ *
+ * 为什么放在前端而不是 SQL：分页游标 `maxId` 用的是 notes.id，
+ * 若在 SQL 里按转发时间排序，排序键与游标键不一致，翻页会漏帖/重帖。
+ * 在已加载的这一页内按展示时间重排，既满足「转发算最新」，
+ * 又不影响分页正确性。
+ */
+export function sortByTimelineTime(posts: Post[]): Post[] {
+    return [...posts].sort((a, b) => {
+        const diff = timelineTime(b) - timelineTime(a);
+        if (diff !== 0) return diff;
+        return (b.cursorId ?? 0) - (a.cursorId ?? 0);
+    });
 }
 
 /** 递归删除指定帖子；没有变化时返回原数组引用 */

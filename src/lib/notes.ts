@@ -15,6 +15,12 @@ export interface AnnouncedBy {
     domain: string;
     /** Announce 活动的 uri */
     announceUri: string;
+    /**
+     * 转发发生的时间（Unix 秒）。
+     * 前端据此把「被转发的帖子」按转发时间排序（算作最新）；
+     * 取消转发后 announcer 变 null，自然回落到原帖时间。
+     */
+    createdAt: number;
 }
 
 /**

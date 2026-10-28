@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { postsApi } from "@/web/lib/api";
 import { postsKey } from "@/web/lib/user";
 import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import type { FeedTab, Post, PostListItem } from "@/web/types";
 import { TimelineContext } from "./context";
-import { appendUnique, findPost, fromListItem, fromNoteItem, makePost, mapPost, removePost, rememberAuthors, upsertRealtime } from "./helpers";
+import { appendUnique, findPost, fromListItem, fromNoteItem, makePost, mapPost, removePost, rememberAuthors, sortByTimelineTime, upsertRealtime } from "./helpers";
 import type { Pagination, TimelineValue } from "./types";
 
 const FEED_LIMIT = 30;
@@ -61,6 +61,34 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     const sinceIdRef = useRef(sinceId);
     sinceIdRef.current = sinceId;
 
+    /**
+     * 账号隔离：换账号 / 登出时必须清空所有列表缓存。
+     *
+     * 原因：列表里带着「相对当前用户」的私有状态（boostedByMe、likedByMe），
+     * 以及 following 这类只对特定账号成立的分区。不清的话：
+     * - 换账号后 loadFeed 命中 `loaded` 缓存，直接显示上一个账号的数据，
+     *   表现为「用另一个账号登录，转发按钮还是亮的」
+     * - following tab 里会残留上一个账号的关注内容
+     */
+    const identity = session?.username ?? "";
+    const prevIdentityRef = useRef(identity);
+    useEffect(() => {
+        if (prevIdentityRef.current === identity) return;
+        prevIdentityRef.current = identity;
+
+        setRealtime([]);
+        setHistory({
+            all: emptyHistory(),
+            local: emptyHistory(),
+            following: emptyHistory(),
+        });
+        setThreads({});
+        setUserPosts({});
+        setUserPostsMeta({});
+        setSinceId(null);
+        setTab("all");
+    }, [identity]);
+
     // 本站 host：登录用户用 session.instance，访客用当前浏览器 host（否则访客的「本地」tab 会全被过滤掉）
     const localHost = session?.instance || (typeof window === "undefined" ? "" : window.location.host);
 
@@ -72,7 +100,13 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         return realtime.filter((p) => (p.tabs?.includes(tab) ?? false) && !historyIds.has(p.id));
     }, [realtime, tab, active.posts]);
 
-    const posts = useMemo(() => [...realtimeForTab, ...active.posts], [realtimeForTab, active.posts]);
+    // 展示列表：实时帖在前，历史在后，整体再按「展示时间」倒序。
+    // 转发过的帖子用转发时间参与排序（所以会浮到最前），
+    // 取消转发后 announcedAt 清空，自动回落到原帖时间。
+    const posts = useMemo(
+        () => sortByTimelineTime([...realtimeForTab, ...active.posts]),
+        [realtimeForTab, active.posts],
+    );
 
     const patchHistory = useCallback(
         (target: FeedTab, patch: Partial<HistoryState> | ((prev: HistoryState) => Partial<HistoryState>)) => {
@@ -430,9 +464,10 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     /**
      * 转发 / 取消转发（乐观更新，失败自动回滚）。
      *
-     * 与点赞不同的是：转发会改变「这条帖子是否出现在时间线上」的形态，
-     * 但本地只更新按钮状态与计数——真正的列表刷新由服务端 SSE
-     * （announce.created / announce.removed）驱动，避免自己重复插入。
+     * 转发会改变帖子在时间线里的位置，所以乐观更新里要一并处理时间：
+     * - 转发：把 `announcedAt` 设为当前时间，帖子立刻浮到最前（不等 SSE）
+     * - 取消：清掉 `announcedAt`，帖子立刻回到原帖时间对应的位置
+     * 这样按钮点击后排序立刻正确，SSE 到达时再校正一次即可。
      */
     const toggleBoost = useCallback(
         async (post: Post) => {
@@ -440,11 +475,14 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
 
             const willBoost = !post.boostedByMe;
             const id = post.id;
+            const now = new Date().toISOString();
 
             mutate(id, (item) => ({
                 ...item,
                 boostedByMe: willBoost,
                 boosts: item.boosts + (willBoost ? 1 : -1),
+                // 时间：转发算「此刻」，取消则回落到原帖时间
+                announcedAt: willBoost ? now : undefined,
             }));
 
             try {
@@ -456,6 +494,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                     ...item,
                     boostedByMe: !willBoost,
                     boosts: item.boosts + (willBoost ? -1 : 1),
+                    announcedAt: willBoost ? post.announcedAt : now,
                 }));
                 throw error;
             }
@@ -538,10 +577,15 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                     }
                     const merged: Post = {
                         ...target,
-                        // 转发相关字段用新数据
+                        // 转发相关字段用新数据。
+                        // 注意 boostedByMe **不覆盖**：SSE 是广播，载荷里的 boosted
+                        // 是按「无 viewer」算出来的（恒 false），覆盖会把本人刚点亮的
+                        // 按钮冲回未转发，导致再点一次发出 POST 而不是 DELETE。
+                        // 本人的转发状态只由 toggleBoost 的乐观更新与后续 fetch 决定。
                         boosts: post.boosts,
-                        boostedByMe: post.boostedByMe,
                         announcer: post.announcer,
+                        // 转发时间：排序键，让它按「转发那一刻」浮到最前
+                        announcedAt: post.announcedAt,
                         likes: post.likes,
                         likedByMe: post.likedByMe,
                         repliesCount: post.repliesCount,
@@ -549,10 +593,14 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                         // 沿用已有的 tabs（这是它能留在列表里的关键）
                         tabs: target.tabs ?? tabs,
                     };
-                    return [merged, ...prev.filter((p) => p.id !== post.id)];
+                    return mapPost(prev, post.id, () => merged);
                 });
 
-                // 历史区里的那条只补标记，不移动位置
+                // 历史区里的那条：补上转发标记**和转发时间**。
+                //
+                // announcedAt 必须一起写：它是排序键。绝大多数帖子在历史区，
+                // 只写 announcer 不写 announcedAt 的话，排序仍按原帖 createdAt，
+                // 表现为「别人转发了我这边排序不变」。
                 setHistory((prev) => {
                     let changed = false;
                     const next = { ...prev };
@@ -561,7 +609,12 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                         if (!findPost(state.posts, post.id)) continue;
                         next[target] = {
                             ...state,
-                            posts: mapPost(state.posts, post.id, (p) => ({ ...p, announcer: post.announcer })),
+                            posts: mapPost(state.posts, post.id, (p) => ({
+                                ...p,
+                                announcer: post.announcer,
+                                announcedAt: post.announcedAt,
+                                boosts: post.boosts,
+                            })),
                         };
                         changed = true;
                     }
@@ -576,19 +629,30 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         [history, localHost, realtime, rememberUser],
     );
 
-    /** 收到实时取消转发：撤掉标记（帖子本身保留在时间线里） */
+    /**
+     * 收到实时取消转发：撤掉标记（帖子本身保留在时间线里）。
+     *
+     * 两种来源要分开处理：
+     * - 别人取消：本地没减过计数，这里减 1
+     * - 自己取消：`toggleBoost` 已经乐观减过 1，这里只清标记，不再减计数
+     *   （否则会减成 -2，被 Math.max 兜住后计数直接归零，看起来像掉了两次）
+     */
     const applyRemoteAnnounceRemoved = useCallback(
-        (payload: { noteUuid: string }) => {
+        (payload: { noteUuid: string; actorUsername?: string }) => {
+            const isSelf = !!payload.actorUsername && payload.actorUsername === session?.username;
             mutate(payload.noteUuid, (post) => {
                 if (!post.announcer) return post;
                 return {
                     ...post,
                     announcer: undefined,
-                    boosts: Math.max(0, post.boosts - 1),
+                    // 清掉转发时间：排序会自动回落到原帖 createdAt，
+                    // 帖子于是回到它原本的时间线位置。
+                    announcedAt: undefined,
+                    boosts: isSelf ? post.boosts : Math.max(0, post.boosts - 1),
                 };
             });
         },
-        [mutate],
+        [mutate, session],
     );
 
     const deletePost = useCallback(

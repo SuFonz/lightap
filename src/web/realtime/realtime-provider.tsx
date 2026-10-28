@@ -91,7 +91,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         const onAnnounceRemoved = (event: Event) => {
             try {
                 applyAnnounceRemovedRef.current(
-                    JSON.parse((event as MessageEvent).data) as { noteUuid: string },
+                    JSON.parse((event as MessageEvent).data) as { noteUuid: string; actorUsername?: string },
                 );
             } catch {
                 // 忽略坏数据
