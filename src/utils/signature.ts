@@ -88,7 +88,7 @@ function base64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
 
 async function bodyToBytes(body: SignableBody): Promise<Uint8Array<ArrayBuffer>> {
     if (typeof body === "string") {
-        return new TextEncoder().encode(body);
+        return new Uint8Array(new TextEncoder().encode(body));
     }
     if (body instanceof ArrayBuffer) {
         return new Uint8Array(body);
