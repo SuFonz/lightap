@@ -79,3 +79,24 @@ export interface Post {
 export type FeedTab = "all" | "local" | "following";
 
 export type PostVariant = "default" | "context";
+
+/** 关注 / 粉丝列表的方向 */
+export type FollowDirection = "following" | "followers";
+
+/**
+ * 关注 / 粉丝列表里的一个人。
+ *
+ * 比 `User` 轻：列表不需要帖子数、关注数这些统计，
+ * 而每个统计都要额外聚合查询，列表页会放大成 N 次。
+ */
+export interface FollowUser {
+    username: string;
+    displayName: string;
+    avatarUrl: string;
+    /** 所在实例域名（本地用户也是真实 host，便于统一展示 @user@host） */
+    domain: string;
+    bio: string;
+    actorUrl: string;
+    /** 分页游标（follows.id），下一页的 maxId 取最后一项的值 */
+    cursorId: number;
+}

@@ -30,6 +30,19 @@ export function fetchUserPosts(
     return request<PostListResponse>(`/api/v1/users/${encodeURIComponent(username)}/posts${suffix}`);
 }
 
+/** 某个用户的回复：GET /api/v1/users/[username]/replies（分页参数与 /posts 一致） */
+export function fetchUserReplies(
+    username: string,
+    params: { limit?: number; maxId?: number; domain?: string | null } = {},
+) {
+    const query = new URLSearchParams();
+    if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.maxId !== undefined) query.set("maxId", String(params.maxId));
+    if (params.domain) query.set("domain", params.domain);
+    const suffix = query.toString() ? `?${query}` : "";
+    return request<PostListResponse>(`/api/v1/users/${encodeURIComponent(username)}/replies${suffix}`);
+}
+
 export function createNote(body: CreateNoteRequest) {
     return request<CreateNoteResponse>("/api/v1/notes", { method: "POST", body });
 }

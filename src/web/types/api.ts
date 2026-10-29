@@ -184,6 +184,25 @@ export interface UnfollowRequest {
     targetActorUrl: string;
 }
 
+// 关注 / 粉丝列表：GET /api/v1/users/[username]/following|followers
+export interface FollowUserItem {
+    username: string;
+    displayName: string;
+    avatarUrl: string;
+    /** 所在实例域名 */
+    domain: string;
+    bio: string;
+    actorUrl: string;
+    /** 分页游标（follows.id），拿最后一项的值作为下一页的 maxId */
+    cursorId: number;
+}
+
+export interface FollowListResponse {
+    items: FollowUserItem[];
+    /** 是否还有下一页 */
+    hasMore: boolean;
+}
+
 // 通知：GET /api/v1/notifications
 export type NotificationType = "Follow" | "Like" | "Reply" | "Mention";
 

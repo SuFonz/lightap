@@ -1,4 +1,4 @@
-import type { FeedTab, Post, PostListItem } from "@/web/types";
+import type { FeedTab, FollowDirection, FollowUser, Post, PostListItem } from "@/web/types";
 
 export interface Pagination {
     hasMore: boolean;
@@ -20,11 +20,29 @@ export interface TimelineValue {
     compose: (content: string) => Promise<void>;
     /** 回复某个帖子 */
     reply: (post: Post, content: string) => Promise<void>;
-    /** 某个用户的帖子（个人主页用），未加载过为 undefined；key 见 postsKey(username, domain) */
+    /** 某个用户的帖子（个人主页「帖子」标签页），key 见 postsKey(username, domain, "posts") */
     userPosts: Record<string, Post[]>;
     userPostsMeta: Record<string, Pagination>;
     loadUserPosts: (username: string, domain?: string | null) => Promise<void>;
     loadMoreUserPosts: (username: string, domain?: string | null) => Promise<void>;
+    /** 某个用户的回复（个人主页「回复」标签页），key 见 postsKey(username, domain, "replies") */
+    userReplies: Record<string, Post[]>;
+    userRepliesMeta: Record<string, Pagination>;
+    loadUserReplies: (username: string, domain?: string | null) => Promise<void>;
+    loadMoreUserReplies: (username: string, domain?: string | null) => Promise<void>;
+    /** 关注 / 粉丝列表，key 见 followListKey */
+    followLists: Record<string, FollowUser[]>;
+    followListsMeta: Record<string, Pagination>;
+    loadFollowList: (
+        username: string,
+        domain: string | null | undefined,
+        direction: FollowDirection,
+    ) => Promise<void>;
+    loadMoreFollowList: (
+        username: string,
+        domain: string | null | undefined,
+        direction: FollowDirection,
+    ) => Promise<void>;
     getPost: (id: string) => Post | undefined;
     /** 返回 [顶层, ..., 当前帖]，未加载过则为 undefined */
     getThread: (id: string) => Post[] | undefined;

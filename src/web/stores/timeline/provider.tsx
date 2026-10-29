@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { postsApi } from "@/web/lib/api";
-import { postsKey } from "@/web/lib/user";
+import { usersApi, postsApi } from "@/web/lib/api";
+import { followListKey, postsKey } from "@/web/lib/user";
 import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
-import type { FeedTab, Post, PostListItem } from "@/web/types";
+import type { FeedTab, FollowDirection, FollowUser, Post, PostListItem } from "@/web/types";
 import { TimelineContext } from "./context";
 import { appendUnique, findPost, fromListItem, fromNoteItem, makePost, mapPost, removePost, rememberAuthors, sortByTimelineTime, upsertRealtime } from "./helpers";
 import type { Pagination, TimelineValue } from "./types";
@@ -52,6 +52,12 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     const [threads, setThreads] = useState<Record<string, Post[]>>({});
     const [userPosts, setUserPosts] = useState<Record<string, Post[]>>({});
     const [userPostsMeta, setUserPostsMeta] = useState<Record<string, Pagination>>({});
+    // 用户的「回复」列表：与帖子列表独立缓存、独立分页
+    const [userReplies, setUserReplies] = useState<Record<string, Post[]>>({});
+    const [userRepliesMeta, setUserRepliesMeta] = useState<Record<string, Pagination>>({});
+    // 关注 / 粉丝列表
+    const [followLists, setFollowLists] = useState<Record<string, FollowUser[]>>({});
+    const [followListsMeta, setFollowListsMeta] = useState<Record<string, Pagination>>({});
     const [tab, setTab] = useState<FeedTab>("all");
     // 实时帖与历史帖的分界：历史帖 id <= sinceId，实时帖 id > sinceId
     const [sinceId, setSinceId] = useState<number | null>(null);
@@ -85,6 +91,10 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         setThreads({});
         setUserPosts({});
         setUserPostsMeta({});
+        setUserReplies({});
+        setUserRepliesMeta({});
+        setFollowLists({});
+        setFollowListsMeta({});
         setSinceId(null);
         setTab("all");
     }, [identity]);
@@ -368,6 +378,120 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             }
         },
         [userPosts, userPostsMeta, rememberUser],
+    );
+
+    /**
+     * 用户的回复列表（「回复」标签页）。
+     *
+     * 与 loadUserPosts 结构相同，只是接口和缓存键不同。
+     * 两个列表各自独立分页：翻「帖子」不会影响「回复」的游标。
+     */
+    const loadUserReplies = useCallback(
+        async (username: string, domain?: string | null) => {
+            if (!username) return;
+            const key = postsKey(username, domain, "replies");
+            try {
+                const { items } = await postsApi.fetchUserReplies(username, { limit: FEED_LIMIT, domain });
+                rememberAuthors(items, rememberUser);
+                const page = items.map(fromListItem);
+                setUserReplies((prev) => ({ ...prev, [key]: page }));
+                setUserRepliesMeta((prev) => ({
+                    ...prev,
+                    [key]: { hasMore: page.length === FEED_LIMIT, loadingMore: false },
+                }));
+            } catch {
+                setUserReplies((prev) => ({ ...prev, [key]: [] }));
+                setUserRepliesMeta((prev) => ({ ...prev, [key]: { hasMore: false, loadingMore: false } }));
+            }
+        },
+        [rememberUser],
+    );
+
+    const loadMoreUserReplies = useCallback(
+        async (username: string, domain?: string | null) => {
+            const key = postsKey(username, domain, "replies");
+            const list = userReplies[key];
+            const meta = userRepliesMeta[key];
+            if (!list || !meta?.hasMore || meta.loadingMore) return;
+            const last = list[list.length - 1];
+            if (!last?.cursorId) return;
+
+            setUserRepliesMeta((prev) => ({ ...prev, [key]: { ...prev[key], loadingMore: true } }));
+            try {
+                const { items } = await postsApi.fetchUserReplies(
+                    username,
+                    { limit: FEED_LIMIT, maxId: last.cursorId, domain },
+                );
+                rememberAuthors(items, rememberUser);
+                const page = items.map(fromListItem);
+                setUserReplies((prev) => ({ ...prev, [key]: appendUnique(prev[key] ?? [], page) }));
+                setUserRepliesMeta((prev) => ({
+                    ...prev,
+                    [key]: { hasMore: page.length === FEED_LIMIT, loadingMore: false },
+                }));
+            } catch {
+                setUserRepliesMeta((prev) => ({ ...prev, [key]: { ...prev[key], loadingMore: false } }));
+            }
+        },
+        [userReplies, userRepliesMeta, rememberUser],
+    );
+
+    /** 关注 / 粉丝列表：首次加载 */
+    const loadFollowList = useCallback(
+        async (
+            username: string,
+            domain: string | null | undefined,
+            direction: FollowDirection,
+        ) => {
+            if (!username) return;
+            const key = followListKey(username, domain, direction);
+            try {
+                const { items, hasMore } = await usersApi.fetchFollowList(username, direction, {
+                    limit: FEED_LIMIT,
+                    domain,
+                });
+                setFollowLists((prev) => ({ ...prev, [key]: items }));
+                setFollowListsMeta((prev) => ({ ...prev, [key]: { hasMore, loadingMore: false } }));
+            } catch {
+                setFollowLists((prev) => ({ ...prev, [key]: [] }));
+                setFollowListsMeta((prev) => ({ ...prev, [key]: { hasMore: false, loadingMore: false } }));
+            }
+        },
+        [],
+    );
+
+    /** 关注 / 粉丝列表：翻页。游标取最后一项的 cursorId（follows.id） */
+    const loadMoreFollowList = useCallback(
+        async (
+            username: string,
+            domain: string | null | undefined,
+            direction: FollowDirection,
+        ) => {
+            const key = followListKey(username, domain, direction);
+            const list = followLists[key];
+            const meta = followListsMeta[key];
+            if (!list || !meta?.hasMore || meta.loadingMore) return;
+            const last = list[list.length - 1];
+            if (!last?.cursorId) return;
+
+            setFollowListsMeta((prev) => ({ ...prev, [key]: { ...prev[key], loadingMore: true } }));
+            try {
+                const { items, hasMore } = await usersApi.fetchFollowList(username, direction, {
+                    limit: FEED_LIMIT,
+                    maxId: last.cursorId,
+                    domain,
+                });
+                setFollowLists((prev) => {
+                    // 按 actorUrl 去重：翻页边界上偶尔会重复
+                    const seen = new Set((prev[key] ?? []).map((u) => u.actorUrl));
+                    return { ...prev, [key]: [...(prev[key] ?? []), ...items.filter((u) => !seen.has(u.actorUrl))] };
+                });
+                setFollowListsMeta((prev) => ({ ...prev, [key]: { hasMore, loadingMore: false } }));
+            } catch {
+                setFollowListsMeta((prev) => ({ ...prev, [key]: { ...prev[key], loadingMore: false } }));
+            }
+        },
+        [followLists, followListsMeta],
     );
 
     const getPost = useCallback(
@@ -681,6 +805,18 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                 }
                 return next;
             });
+            // 回复列表同理：删掉的帖子也可能出现在「回复」标签页里
+            setUserReplies((prev) => {
+                let next = prev;
+                for (const [username, list] of Object.entries(prev)) {
+                    const updated = removePost(list, post.id);
+                    if (updated !== list) {
+                        if (next === prev) next = { ...prev };
+                        next[username] = updated;
+                    }
+                }
+                return next;
+            });
         },
         [session, removeAll],
     );
@@ -700,6 +836,14 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             userPostsMeta,
             loadUserPosts,
             loadMoreUserPosts,
+            userReplies,
+            userRepliesMeta,
+            loadUserReplies,
+            loadMoreUserReplies,
+            followLists,
+            followListsMeta,
+            loadFollowList,
+            loadMoreFollowList,
             getPost,
             getThread,
             loadThread,
@@ -726,6 +870,14 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
             userPostsMeta,
             loadUserPosts,
             loadMoreUserPosts,
+            userReplies,
+            userRepliesMeta,
+            loadUserReplies,
+            loadMoreUserReplies,
+            followLists,
+            followListsMeta,
+            loadFollowList,
+            loadMoreFollowList,
             getPost,
             getThread,
             loadThread,
