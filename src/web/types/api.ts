@@ -12,6 +12,24 @@ export interface ApiErrorBody {
 export interface AuthRequest {
     username: string;
     password: string;
+    /**
+     * 机器人验证 token（Turnstile）。
+     * 仅在服务端配置了 TURNSTILE_SECRET_KEY 时必填；未配置时忽略。
+     */
+    botToken?: string;
+}
+
+// 公开配置：GET /api/v1/config
+export interface BotDetectionConfig {
+    /** Turnstile 站点公钥，前端用它渲染 widget */
+    siteKey: string;
+    /** 后端是否真的会校验（只配了 site_key 时后端不校验） */
+    enforced: boolean;
+}
+
+export interface PublicConfigResponse {
+    /** null 表示未启用机器人验证 */
+    botDetection: BotDetectionConfig | null;
 }
 
 // 搜索：GET /api/v1/search?q=@user@domain

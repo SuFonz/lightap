@@ -72,6 +72,15 @@
 	],
 	// The following are secrets, you should create them using wrangler:
 	//		npx wrangler secret put JWT_SECRET
+	//
+	// Optional bot protection (Cloudflare Turnstile):
+	// Both keys must be configured to enable it. Leave both unset and the
+	// registration flow stays exactly as it was — the feature is opt-in.
+	//   TURNSTILE_SECRET_KEY — private key, used by the backend for verification. Store it as a secret:
+	//       npx wrangler secret put TURNSTILE_SECRET_KEY
+	//   TURNSTILE_SITE_KEY   — public site key, used by the frontend to render the widget. Goes in vars:
+	//       "vars": { "TURNSTILE_SITE_KEY": "0x4AAAAAAA..." }
+	// You can get both keys from the Turnstile section of the Cloudflare dashboard.
 	
 
 	/**

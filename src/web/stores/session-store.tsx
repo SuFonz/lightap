@@ -15,7 +15,7 @@ interface SessionValue {
     session: Session | null;
     isAuthenticated: boolean;
     login: (username: string, password: string) => Promise<void>;
-    register: (username: string, password: string) => Promise<void>;
+    register: (username: string, password: string, botToken?: string) => Promise<void>;
     logout: () => Promise<void>;
 }
 
@@ -49,8 +49,8 @@ export function SessionProvider({
     );
 
     const register = useCallback(
-        async (username: string, password: string) => {
-            await authApi.register({ username, password });
+        async (username: string, password: string, botToken?: string) => {
+            await authApi.register({ username, password, botToken });
             applySession({ username, instance: instanceHost() });
         },
         [applySession],

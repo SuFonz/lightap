@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { BotCheckWidget } from "@/web/components/auth/bot-check-widget";
 import { CloseIcon, FeatherIcon, LockIcon, UserIcon } from "@/web/components/ui/icons";
 import { Modal } from "@/web/components/ui/modal";
 import { ApiError } from "@/web/lib/api";
@@ -33,6 +34,8 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
     const [confirmPassword, setConfirmPassword] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // 机器人验证 token：未启用该功能时恒为 null，不影响提交
+    const [botToken, setBotToken] = useState<string | null>(null);
 
     const isLogin = mode === "login";
 
@@ -42,6 +45,7 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
         setPassword("");
         setConfirmPassword("");
         setError(null);
+        setBotToken(null);
     }, [open, mode]);
 
     function validate(): string | null {
@@ -73,12 +77,20 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
         setSubmitting(true);
         setError(null);
         try {
-            if (isLogin) await login(username.trim(), password);
-            else await register(username.trim(), password);
+            if (isLogin) {
+                await login(username.trim(), password);
+            } else {
+                // botToken 只在启用机器人验证时才有值；
+                // 未启用时传 undefined，后端也不会校验
+                await register(username.trim(), password, botToken ?? undefined);
+            }
             onClose();
         } catch (e) {
             if (!isLogin && e instanceof ApiError && e.status === 409) {
                 setError(t("auth.taken"));
+            } else if (!isLogin && e instanceof ApiError && e.status === 403) {
+                // 403 在注册路径上只可能是机器人校验失败
+                setError(t("auth.botFailed"));
             } else {
                 setError(
                     e instanceof Error && e.message
@@ -168,6 +180,9 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                         />
                     </label>
                 )}
+
+                {/* 机器人验证：只有服务端配置了 siteKey 才渲染，未配置时返回 null */}
+                {!isLogin && <BotCheckWidget onTokenChange={setBotToken} />}
 
                 {error && (
                     <p role="alert" className="rounded-lg bg-sakura/10 px-3 py-2 text-xs font-bold text-sakura-deep">

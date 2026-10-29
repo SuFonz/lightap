@@ -6,12 +6,15 @@ import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 import { cookieHeaders, sessionCookieValues } from "@/src/lib/cookies";
+import { isBotDetectionEnabled, verifyBotToken } from "@/src/bot-detection";
 
 export const dynamic = "force-dynamic";
 
 interface Body {
     username: string,
     password: string,
+    /** Turnstile widget 产出的 token；未启用机器人检测时不传 */
+    botToken?: string,
 }
 
 export async function POST(request: Request) {
@@ -26,6 +29,21 @@ export async function POST(request: Request) {
         }, {
             status: 401
         });
+    }
+
+    // 机器人检测（可选）：只有配置了 TURNSTILE_SECRET_KEY 才校验。
+    // 放在创建账号之前，避免白跑一次密钥对生成（RSA 生成成本较高）。
+    if (isBotDetectionEnabled()) {
+        const remoteIp = request.headers.get("CF-Connecting-IP") ?? undefined;
+        const check = await verifyBotToken(body.botToken, remoteIp);
+        if (!check.ok) {
+            // 不把具体原因返回给客户端，避免给攻击者提供调参依据
+            return Response.json({
+                error: "Bot verification failed."
+            }, {
+                status: 403
+            });
+        }
     }
 
     // Actor Url
