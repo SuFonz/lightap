@@ -9,7 +9,7 @@ export function LoginRequiredPanel() {
     return (
         <section className="row-quiet p-4" aria-label={t("composer.title")}>
             <div className="flex items-center gap-3">
-                <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
+                <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#6fbaf5] to-[#4a9de0] text-white shadow-md shadow-brand/40">
                     <FeatherIcon size={19} />
                 </span>
                 <input

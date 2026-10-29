@@ -97,10 +97,11 @@ export function ThemeSwitcher({ variant = "icon" }: { variant?: "icon" | "rail" 
                                     accentHue === preset.hue && "scale-110",
                                 )}
                                 style={{
-                                    background: `hsl(${preset.hue} 90% 52%)`,
+                                    // 与 :root 里的 --accent 保持同一饱和度，预览才不会比实际更刺眼
+                                    background: `hsl(${preset.hue} 72% 52%)`,
                                     boxShadow:
                                         accentHue === preset.hue
-                                            ? `0 0 0 2px var(--surface-bg), 0 0 0 3px hsl(${preset.hue} 90% 52%)`
+                                            ? `0 0 0 2px var(--surface-bg), 0 0 0 3px hsl(${preset.hue} 72% 52%)`
                                             : "inset 0 1px 0 rgba(255,255,255,0.25)",
                                 }}
                             />

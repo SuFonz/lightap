@@ -70,9 +70,10 @@ export function ThemeSection() {
                                 active && "scale-110",
                             )}
                             style={{
-                                background: `hsl(${preset.hue} 90% 52%)`,
+                                // 与 :root 里的 --accent 保持同一饱和度，预览才不会比实际更刺眼
+                                background: `hsl(${preset.hue} 72% 52%)`,
                                 boxShadow: active
-                                    ? `0 0 0 2px var(--bg), 0 0 0 3.5px hsl(${preset.hue} 90% 52%)`
+                                    ? `0 0 0 2px var(--bg), 0 0 0 3.5px hsl(${preset.hue} 72% 52%)`
                                     : "inset 0 1px 0 rgba(255,255,255,0.25)",
                             }}
                         >

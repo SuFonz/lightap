@@ -28,7 +28,7 @@ export default function AboutPage() {
             </section>
 
             <section className="row-quiet flex flex-col items-center gap-3 px-6 py-10 text-center">
-                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-b from-[#6fbaf5] to-[#4a9de0] text-white shadow-md shadow-brand/40">
                     <FeatherIcon size={26} />
                 </span>
                 <div className="flex flex-col items-center gap-2">

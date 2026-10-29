@@ -117,7 +117,8 @@ function ProfilePageInner() {
                 <div
                     className="relative h-24 rounded-xl sm:h-28"
                     style={{
-                        background: "linear-gradient(100deg, hsl(var(--accent-hue) 85% 88%) 0%, hsl(var(--magic-hue) 75% 90%) 100%)",
+                        // 横幅用低饱和的浅色带：它面积大，饱和度一高就抢戏
+                        background: "linear-gradient(100deg, hsl(var(--accent-hue) 62% 90%) 0%, hsl(var(--magic-hue) 52% 92%) 100%)",
                     }}
                     aria-hidden="true"
                 />

@@ -52,9 +52,11 @@
     color-scheme: light;
 
     --accent-hue: 210;
-    --accent: hsl(var(--accent-hue) 92% 52%);
-    --accent-deep: hsl(var(--accent-hue) 90% 44%);
-    --accent-ink: hsl(var(--accent-hue) 88% 34%);
+    /* 饱和度整体压低：原来的 90% 上下在高饱和蓝里偏刺眼，
+       降到 70% 一带后仍是明确的强调色，但视觉负担小很多 */
+    --accent: hsl(var(--accent-hue) 72% 52%);
+    --accent-deep: hsl(var(--accent-hue) 70% 45%);
+    --accent-ink: hsl(var(--accent-hue) 62% 36%);
 
     /* 辅助色相由 ThemeProvider 计算后写入 */
     --magic-hue: 182;
@@ -62,15 +64,15 @@
     --sakura-hue: 242;
     --cool-hue: 196;
 
-    --magic: hsl(var(--magic-hue) 70% 66%);
-    --magic-deep: hsl(var(--magic-hue-deep) 62% 56%);
-    --sakura: hsl(var(--sakura-hue) 85% 74%);
-    --sakura-deep: hsl(var(--sakura-hue) 66% 60%);
+    --magic: hsl(var(--magic-hue) 56% 66%);
+    --magic-deep: hsl(var(--magic-hue-deep) 50% 56%);
+    --sakura: hsl(var(--sakura-hue) 62% 74%);
+    --sakura-deep: hsl(var(--sakura-hue) 52% 60%);
 
     /* 背景：极浅冷蓝，几乎没有渐变 */
     --bg: #eef5fc;
-    --bg-tint-1: hsla(calc(var(--accent-hue) * 1deg), 85%, 88%, 0.38);
-    --bg-tint-2: hsla(calc(var(--magic-hue) * 1deg), 70%, 90%, 0.2);
+    --bg-tint-1: hsla(calc(var(--accent-hue) * 1deg), 62%, 88%, 0.34);
+    --bg-tint-2: hsla(calc(var(--magic-hue) * 1deg), 50%, 90%, 0.18);
 
     /* 文字层级 */
     --fg: #1e2f42;
@@ -99,7 +101,7 @@
     --glow-shadow: 0 8px 22px -8px rgba(23, 60, 102, 0.16);
     --float-shadow: 0 12px 32px -12px rgba(23, 60, 102, 0.2);
 
-    --scrollbar-thumb: hsl(var(--accent-hue) 70% 72%);
+    --scrollbar-thumb: hsl(var(--accent-hue) 55% 72%);
 
     /* ── 动效节奏 ──────────────────────────────────────────
        统一在这里调，组件只引用变量，保证全站节奏一致：
@@ -125,19 +127,20 @@
 [data-theme="dark"] {
     color-scheme: dark;
 
-    --accent: hsl(var(--accent-hue) 85% 62%);
-    --accent-deep: hsl(var(--accent-hue) 82% 54%);
-    --accent-ink: hsl(var(--accent-hue) 88% 74%);
+    /* 深色下同样压低饱和度：亮底上的高饱和色更刺眼，暗底上尤其明显 */
+    --accent: hsl(var(--accent-hue) 65% 62%);
+    --accent-deep: hsl(var(--accent-hue) 62% 54%);
+    --accent-ink: hsl(var(--accent-hue) 60% 74%);
 
-    --magic: hsl(var(--magic-hue) 60% 58%);
-    --magic-deep: hsl(var(--magic-hue-deep) 55% 52%);
-    --sakura: hsl(var(--sakura-hue) 65% 64%);
-    --sakura-deep: hsl(var(--sakura-hue) 55% 56%);
+    --magic: hsl(var(--magic-hue) 48% 58%);
+    --magic-deep: hsl(var(--magic-hue-deep) 44% 52%);
+    --sakura: hsl(var(--sakura-hue) 52% 64%);
+    --sakura-deep: hsl(var(--sakura-hue) 44% 56%);
 
     --bg: #0f1420;
     /* 深色下氛围压到几乎不可见：只有一点点色温，没有可见渐变 */
-    --bg-tint-1: hsla(calc(var(--accent-hue) * 1deg), 45%, 26%, 0.18);
-    --bg-tint-2: hsla(calc(var(--magic-hue) * 1deg), 35%, 28%, 0.1);
+    --bg-tint-1: hsla(calc(var(--accent-hue) * 1deg), 38%, 26%, 0.16);
+    --bg-tint-2: hsla(calc(var(--magic-hue) * 1deg), 30%, 28%, 0.09);
 
     --fg: #e3eaf4;
     --fg-weak: #9dabbd;
@@ -160,7 +163,7 @@
     --glow-shadow: 0 8px 22px -8px rgba(0, 0, 0, 0.5);
     --float-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.55);
 
-    --scrollbar-thumb: hsl(var(--accent-hue) 45% 45%);
+    --scrollbar-thumb: hsl(var(--accent-hue) 38% 45%);
 }
 
 html {
@@ -190,7 +193,7 @@ body {
 }
 
 ::selection {
-    background: hsl(var(--accent-hue) 92% 52% / 0.24);
+    background: hsl(var(--accent-hue) 72% 52% / 0.2);
 }
 
 ::-webkit-scrollbar {
@@ -346,7 +349,7 @@ body {
         background: var(--accent);
         box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.2),
-            0 4px 12px -4px hsl(var(--accent-hue) 90% 44% / 0.42);
+            0 4px 12px -4px hsl(var(--accent-hue) 70% 45% / 0.34);
     }
 
     &:active:not(:disabled) {
@@ -397,7 +400,7 @@ body {
     background: var(--accent-deep);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.22),
-        0 6px 18px -6px hsl(var(--accent-hue) 90% 44% / 0.5);
+        0 6px 18px -6px hsl(var(--accent-hue) 70% 45% / 0.4);
     transition:
         background-color 0.18s var(--ease-out),
         transform 0.18s var(--ease-spring),
@@ -408,7 +411,7 @@ body {
         transform: translateY(-1px);
         box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.24),
-            0 10px 24px -8px hsl(var(--accent-hue) 90% 44% / 0.55);
+            0 10px 24px -8px hsl(var(--accent-hue) 70% 45% / 0.44);
     }
 
     &:active:not(:disabled) {

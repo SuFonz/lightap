@@ -117,7 +117,7 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
         >
             <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-b from-[#59b5ff] to-[#2e97f4] text-white shadow-md shadow-brand/40">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-b from-[#6fbaf5] to-[#4a9de0] text-white shadow-md shadow-brand/40">
                         <FeatherIcon size={17} />
                     </span>
                     <h2 className="font-display text-lg font-black text-fg">
