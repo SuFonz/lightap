@@ -85,25 +85,39 @@ export const follows = sqliteTable("follows", {
     index("idx_follows_following").on(table.following),
 ]);
 
+/**
+ * 帖子点赞。
+ *
+ * `noteId` 与 `userId` 都带 `onDelete: "cascade"`：
+ * 删除帖子或用户时，点赞记录自动清掉，应用层不需要手动清理，
+ * 也不会再被外键挡住删除。
+ */
 export const likes = sqliteTable("likes", {
     id: integer().primaryKey({ autoIncrement: true }),
     uri: text().notNull().unique(),
-    userId: integer("user_id").notNull().references(() => users.id),
-    noteId: integer("note_id").notNull().references(() => notes.id),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    noteId: integer("note_id").notNull().references(() => notes.id, { onDelete: "cascade" }),
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
 }, (table) => [
     // 一个索引同时服务「批量点赞计数」与「当前用户是否赞过」
     index("idx_likes_note_user").on(table.noteId, table.userId),
 ]);
 
+/**
+ * 站内通知。
+ *
+ * `noteId` 可空（Follow 类通知没有关联帖子）。
+ * 三个外键都带 `onDelete: "cascade"`：帖子或用户被删时，相关通知一起清掉
+ * （对 NULL 不生效，符合预期）。
+ */
 export const notifications = sqliteTable("notifications", {
     id: integer().primaryKey({ autoIncrement: true }),
     // 收到通知的用户
-    userId: integer("user_id").notNull().references(() => users.id),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     // 触发通知的用户
-    actorId: integer("actor_id").notNull().references(() => users.id),
+    actorId: integer("actor_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     type: text().$type<NotificationType>().notNull(),
-    noteId: integer("note_id").references(() => notes.id),
+    noteId: integer("note_id").references(() => notes.id, { onDelete: "cascade" }),
     readAt: integer("read_at"),
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
 }, (table) => [
@@ -119,15 +133,17 @@ export const notifications = sqliteTable("notifications", {
  *
  * 唯一约束放在 `(userId, noteId)` 上：同一个人对同一条帖子只能转发一次，
  * 取消转发就是删掉这一行，再次转发会插入新行（新的 uri / 新的时间）。
+ *
+ * 外键带 `onDelete: "cascade"`：帖子被删时转发记录自动清掉。
  */
 export const announces = sqliteTable("announces", {
     id: integer().primaryKey({ autoIncrement: true }),
     // Announce 活动的 uri（联邦投递时用）
     uri: text().notNull().unique(),
     // 转发者
-    userId: integer("user_id").notNull().references(() => users.id),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     // 被转发的帖子
-    noteId: integer("note_id").notNull().references(() => notes.id),
+    noteId: integer("note_id").notNull().references(() => notes.id, { onDelete: "cascade" }),
     createdAt: integer("created_at").notNull().default(sql`(unixepoch())`),
 }, (table) => [
     // 幂等：同一用户对同一帖子只能有一条转发记录

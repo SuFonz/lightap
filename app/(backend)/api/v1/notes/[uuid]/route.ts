@@ -151,17 +151,6 @@ export async function DELETE(
             });
         }
 
-        // 软删除：只打 deletedAt 标记，保留点赞与转发记录。
-        //
-        // 语义说明：软删除意味着「这条帖子不再展示」，而不是「数据被抹掉」。
-        // 所以这里**不**清理 likes / announces：
-        // - 展示层（feed、线程、转发合并）都带 `deletedAt is null` 过滤，
-        //   帖子删了以后，它的点赞和转发自然都不会出现
-        // - 保留记录让「恢复帖子」成为可能（数据还在，只是不展示）
-        // - 也不会因为外键而报错：软删除不执行 DELETE，外键根本不触发
-        //
-        // 真正的数据清除（GDPR 之类）应该走独立的硬删除流程，不混在软删除里。
-
         // 递送目标：关注者 + 被回复者（本地实例跳过，他们走本地数据库）
         const inboxes = new Set(
             (await db.select().from(follows).where(eq(follows.following, user.actorUrl))).map(f => f.follower)
@@ -174,12 +163,21 @@ export async function DELETE(
         }
         const targets = [...inboxes].filter(actorUrl => !actorUrl.startsWith(`${url.origin}/users/`));
 
-        // 软删除：只打删除时间标记，保留 uri（Delete 活动要用它指向 Tombstone）
+        // 软删除：只打 deletedAt 标记，不真正删行。
+        //
+        // 为什么不硬删：
+        // - Delete 活动要向远端投递 Tombstone，原帖 uri 和行本身都还要用来构建报文
+        // - 保留数据让误删可恢复，也便于排查
+        // - 展示层（feed / 线程 / 转发合并 / 用户帖子）都带 `deletedAt is null` 过滤，
+        //   标记后自然不再出现，效果与删除一致
+        //
+        // 数据库里 likes / announces / notifications 的外键带 ON DELETE CASCADE，
+        // 那是给「直接在数据库里清理数据」用的，应用层不会触发。
         await db.update(notes).set({
             deletedAt: Math.floor(Date.now() / 1000),
         }).where(eq(notes.id, note.id));
 
-        // 记录 Delete 活动并向远程收件人异步投递；object 指向 Tombstone（用 note.id 反查 uri）
+        // 记录 Delete 活动并向远程收件人异步投递；object 指向 Tombstone
         await dispatchActivity(url, {
             type: "Delete",
             actor: user.actorUrl,

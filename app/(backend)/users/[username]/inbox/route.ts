@@ -349,9 +349,12 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                     break;
                 }
 
-                // 软删除（本地也标记删除，feed / 线程即不再展示）
-                // 不清理 likes / announces：软删除只是「不再展示」，
-                // 展示层都带 deletedAt 过滤，关联数据自然也不会出现。
+                // 软删除（本地也标记删除，feed / 线程即不再展示）。
+                //
+                // 不硬删的原因：远端还可能重投同一条 Delete，也便于排查；
+                // 展示层都带 deletedAt 过滤，标记后自然不出现。
+                // 数据库外键的 ON DELETE CASCADE 是给手动清理数据用的，
+                // 应用层不会触发。
                 await db.update(notes).set({
                     deletedAt: Math.floor(Date.now() / 1000),
                 }).where(eq(notes.id, note.id));
