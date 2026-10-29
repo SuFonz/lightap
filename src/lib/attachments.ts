@@ -32,6 +32,14 @@ export interface NoteAttachment {
     height?: number;
     /** 远程原始 type，便于调试 */
     apType?: string;
+    /**
+     * 是否敏感内容（需点击才展示）。
+     *
+     * 来源有两个，取「或」：
+     * - 附件自身的 `sensitive`（只有某几张图敏感）
+     * - 整条 Note 的 `sensitive`（Mastodon 勾选「包含敏感内容」时所有媒体都敏感）
+     */
+    sensitive?: boolean;
 }
 
 /** 单个帖子最多保留多少附件，防止恶意报文塞入海量条目 */
@@ -138,8 +146,12 @@ function resolveKind(types: string[], mediaType?: string, url?: string): NoteAtt
  *
  * 任何非法条目都会被跳过而不是抛错：一条帖子的附件坏了，
  * 不该导致整条帖子入库失败。
+ *
+ * @param raw         Note.attachment 原始值
+ * @param noteSensitive 整条帖子是否敏感；为 true 时所有附件都标为敏感
+ *                      （Mastodon 勾选「包含敏感内容」就是这个语义）
  */
-export function parseAttachments(raw: unknown): NoteAttachment[] {
+export function parseAttachments(raw: unknown, noteSensitive = false): NoteAttachment[] {
     if (!Array.isArray(raw) || raw.length === 0) return [];
 
     const result: NoteAttachment[] = [];
@@ -161,6 +173,10 @@ export function parseAttachments(raw: unknown): NoteAttachment[] {
 
         const name = typeof record.name === "string" ? record.name.trim() : undefined;
 
+        // 敏感标记：帖子级优先（true 则全部敏感），否则看附件自身的 sensitive。
+        // 远程数据里这个值可能是字符串 "true"、"1"，统一按「明确为真」判定。
+        const itemSensitive = noteSensitive || isTruthy(record.sensitive);
+
         result.push({
             kind,
             url,
@@ -169,10 +185,27 @@ export function parseAttachments(raw: unknown): NoteAttachment[] {
             width: pickSize(record.width),
             height: pickSize(record.height),
             apType: types[0],
+            sensitive: itemSensitive || undefined,
         });
     }
 
     return result;
+}
+
+/**
+ * 判定「明确为真」的布尔值。
+ *
+ * 远程实现常把布尔写成字符串或数字，这里统一收口；
+ * 未识别的值一律当 false，避免把正常内容误标成敏感。
+ */
+function isTruthy(value: unknown): boolean {
+    if (value === true) return true;
+    if (typeof value === "string") {
+        const v = value.trim().toLowerCase();
+        return v === "true" || v === "1";
+    }
+    if (typeof value === "number") return value === 1;
+    return false;
 }
 
 /**

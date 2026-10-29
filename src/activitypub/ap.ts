@@ -112,6 +112,11 @@ export interface APDocument extends APObject {
     type: APDocumentType,
     name: string,
     url: string,
+    /**
+     * 该媒体是否敏感（Mastodon 的「敏感媒体」标记）。
+     * 前端据此给图片/视频/音频加遮罩，需用户点击才展示。
+     */
+    sensitive?: boolean,
 }
 
 export interface APAudio extends APDocument {
@@ -132,6 +137,16 @@ export interface APNote extends APObject {
     content: string,
     inReplyTo?: string,
     attachment: APDocument[],
+    /**
+     * 整条帖子是否标记为敏感内容。
+     *
+     * 与 `APDocument.sensitive` 的关系：
+     * - 帖子级为 true 时，**所有**附件都应视为敏感（Mastodon 的常见做法：
+     *   勾选「包含敏感内容」会把整条帖子的媒体都加上遮罩）
+     * - 附件级可以单独标记，用于「只有某几张图敏感」的场景
+     * 两者是「或」的关系。
+     */
+    sensitive?: boolean,
     /** 原始发布时间（ISO 8601），用于保留远端帖子的真实时间 */
     published?: string,
 }

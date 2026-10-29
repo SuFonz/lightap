@@ -32,6 +32,8 @@ export interface PostAttachment {
     name?: string;
     width?: number;
     height?: number;
+    /** 是否敏感内容：前端需加遮罩，用户点击后才展示 */
+    sensitive?: boolean;
 }
 
 /** 时间线里「这条帖子是谁转发的」 */

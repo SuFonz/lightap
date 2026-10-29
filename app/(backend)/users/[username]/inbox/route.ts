@@ -116,8 +116,11 @@ async function handleActivity(request: Request, params: Params, activity: APActi
 
                 // 存入数据库
                 // 远程帖子的附件（图片/视频/音频/文件）单独解析后存成 JSON，
-                // 解析失败或没有附件时存 null，不影响帖子本身入库
-                const attachments = parseAttachments(obj.attachment);
+                // 解析失败或没有附件时存 null，不影响帖子本身入库。
+                //
+                // 帖子级的 sensitive 会把所有附件一并标为敏感
+                // （Mastodon 勾选「包含敏感内容」就是这个语义）。
+                const attachments = parseAttachments(obj.attachment, obj.sensitive === true);
                 const newNote = (await db.insert(notes).values({
                     uri: obj.id,
                     uuid: crypto.randomUUID(),
