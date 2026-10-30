@@ -34,6 +34,15 @@ interface BotCheckWidgetProps {
      * 拿到 token 表示用户通过了挑战；`null` 表示失效 / 出错 / 尚未完成。
      */
     onTokenChange: (token: string | null) => void;
+    /**
+     * 重置信号：每次变化都让 widget 重新挑战。
+     *
+     * 为什么需要：Turnstile 的 token **只能用一次**（服务端校验后会拒绝重复使用，
+     * 返回 timeout-or-duplicate）。所以提交失败（比如用户名被占用）后，
+     * 必须重新拿一个新 token，否则第二次提交必然 403。
+     * 父组件在每次提交结束后把这个值 +1。
+     */
+    resetSignal?: number;
 }
 
 /**
@@ -44,7 +53,7 @@ interface BotCheckWidgetProps {
  *
  * 主题跟随站点的 `data-theme`，避免深色页面里嵌一块白框。
  */
-export function BotCheckWidget({ onTokenChange }: BotCheckWidgetProps) {
+export function BotCheckWidget({ onTokenChange, resetSignal = 0 }: BotCheckWidgetProps) {
     const config = usePublicConfig();
     const siteKey = config?.botDetection?.siteKey ?? null;
 
@@ -112,6 +121,25 @@ export function BotCheckWidget({ onTokenChange }: BotCheckWidgetProps) {
             widgetIdRef.current = null;
         };
     }, [siteKey, scriptReady]);
+
+    // 重置：每次 resetSignal 变化都让 widget 重新挑战，拿到新 token。
+    //
+    // 必须在渲染之后、且跳过初始那次（resetSignal=0 时 widget 刚渲染，不需要重置）。
+    const lastResetRef = useRef(resetSignal);
+    useEffect(() => {
+        if (resetSignal === lastResetRef.current) return;
+        lastResetRef.current = resetSignal;
+
+        // 先清掉父组件持有的旧 token：新挑战还没完成前它是无效的
+        onChangeRef.current(null);
+
+        if (!widgetIdRef.current || !window.turnstile) return;
+        try {
+            window.turnstile.reset(widgetIdRef.current);
+        } catch {
+            // widget 已被移除时忽略
+        }
+    }, [resetSignal]);
 
     // 未配置：完全不渲染
     if (!siteKey) return null;

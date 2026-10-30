@@ -68,8 +68,8 @@ export interface BotCheckResult {
  * - **网络或上游故障** → 放行。检测服务挂了不该把正常用户挡在门外。
  *
  * 注意 `res.ok` 只代表 HTTP 成功，`success` 字段才代表验证结果：
- * 用 always-fail 的测试 key 时，Cloudflare 仍返回 HTTP 200，
- * 只是 body 里 `success: false`。所以必须先看 body 再判断。
+ * 校验不通过时 Cloudflare 仍返回 HTTP 200，只是 body 里 `success: false`。
+ * 所以必须先看 body 再判断。
  */
 export async function verifyBotToken(token: string | null | undefined, remoteIp?: string): Promise<BotCheckResult> {
     const { secret } = botEnv();

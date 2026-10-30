@@ -31,26 +31,17 @@ export async function POST(request: Request) {
         });
     }
 
-    // 机器人检测（可选）：只有配置了 TURNSTILE_SECRET_KEY 才校验。
-    // 放在创建账号之前，避免白跑一次密钥对生成（RSA 生成成本较高）。
-    if (isBotDetectionEnabled()) {
-        const remoteIp = request.headers.get("CF-Connecting-IP") ?? undefined;
-        const check = await verifyBotToken(body.botToken, remoteIp);
-        if (!check.ok) {
-            // 不把具体原因返回给客户端，避免给攻击者提供调参依据
-            return Response.json({
-                error: "Bot verification failed."
-            }, {
-                status: 403
-            });
-        }
-    }
-
     // Actor Url
     const url = new URL(request.url);
     const actorUrl = `${url.origin}/users/${username}`;
 
     // 检查用户名是否重复（只算本站：username 相同 且 actorUrl 属于本实例）
+    //
+    // 顺序很重要：查重必须放在机器人验证**之前**。
+    // Turnstile 的 token 是一次性的，验证通过即被消耗；
+    // 如果先验证再查重，用户名被占用时用户会白白浪费一次人机验证，
+    // 而且前端必须重新挑战才能再次提交（体验很差）。
+    // 查重只是一次索引查询，成本远低于验证，先做更合理。
     const db = getDBClient();
     const existing = (await db.select().from(users).where(
         and(
@@ -64,6 +55,23 @@ export async function POST(request: Request) {
         }, {
             status: 409
         });
+    }
+
+    // 机器人检测（可选）：只有配置了 TURNSTILE_SECRET_KEY 才校验。
+    // 放在用户名查重之后、生成密钥对之前：
+    // - 查重在前：用户名不合法时不必消耗验证
+    // - 生成密钥对在后：验证不通过时不必白跑一次 RSA 生成
+    if (isBotDetectionEnabled()) {
+        const remoteIp = request.headers.get("CF-Connecting-IP") ?? undefined;
+        const check = await verifyBotToken(body.botToken, remoteIp);
+        if (!check.ok) {
+            // 不把具体原因返回给客户端，避免给攻击者提供调参依据
+            return Response.json({
+                error: "Bot verification failed."
+            }, {
+                status: 403
+            });
+        }
     }
 
     // 密码哈希

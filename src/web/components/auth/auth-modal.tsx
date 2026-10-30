@@ -36,6 +36,14 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
     const [error, setError] = useState<string | null>(null);
     // 机器人验证 token：未启用该功能时恒为 null，不影响提交
     const [botToken, setBotToken] = useState<string | null>(null);
+    /**
+     * Turnstile 重置信号。
+     *
+     * token 只能用一次，所以每次提交结束后都要让 widget 重新挑战：
+     * 否则「用户名被占用」这类失败后再次提交，带的还是已消耗的旧 token，
+     * 会被服务端判为 timeout-or-duplicate 而一直 403。
+     */
+    const [botResetSignal, setBotResetSignal] = useState(0);
 
     const isLogin = mode === "login";
 
@@ -46,6 +54,8 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
         setConfirmPassword("");
         setError(null);
         setBotToken(null);
+        // 重开弹窗时也换一个新 token（旧的可能已经过期或已消耗）
+        setBotResetSignal((n) => n + 1);
     }, [open, mode]);
 
     function validate(): string | null {
@@ -102,6 +112,9 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
             }
         } finally {
             setSubmitting(false);
+            // 每次提交结束都换一个新 token（成功时弹窗会关，这里重置也无害）。
+            // 这是「token 只能用一次」的关键处理：失败后重试必须带新 token。
+            setBotResetSignal((n) => n + 1);
         }
     }
 
@@ -182,7 +195,7 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
                 )}
 
                 {/* 机器人验证：只有服务端配置了 siteKey 才渲染，未配置时返回 null */}
-                {!isLogin && <BotCheckWidget onTokenChange={setBotToken} />}
+                {!isLogin && <BotCheckWidget onTokenChange={setBotToken} resetSignal={botResetSignal} />}
 
                 {error && (
                     <p role="alert" className="rounded-lg bg-sakura/10 px-3 py-2 text-xs font-bold text-sakura-deep">
