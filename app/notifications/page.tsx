@@ -55,7 +55,7 @@ export default function NotificationsPage() {
                         const name = item.user.displayName || item.user.username;
                         // Follow 跳到对方主页，Like/Reply 跳到相关帖子
                         const href = item.note
-                            ? `/post/${item.note.uuid}`
+                            ? `/notes/${item.note.uuid}`
                             : profileHref({ username: item.user.username, domain: item.user.domain });
 
                         return (

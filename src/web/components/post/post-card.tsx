@@ -50,7 +50,7 @@ export function PostCard({
     const { openAuth, showToast } = useUi();
     const router = useRouter();
     const author = getUser(post.authorUsername, post.domain);
-    const detailHref = `/post/${post.id}`;
+    const detailHref = `/notes/${post.id}`;
     const isContext = variant === "context";
 
     const [menuOpen, setMenuOpen] = useState(false);

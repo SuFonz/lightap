@@ -107,7 +107,7 @@ export interface AnnouncedByItem {
 
 // 帖子列表：GET /api/v1/feed?type=... 与 GET /api/v1/users/[username]/posts 共用
 export interface PostListItem {
-    /** notes.uuid，帖子稳定标识（用于 /post/<uuid> 与详情查询） */
+    /** notes.uuid，帖子稳定标识（用于 /notes/<uuid> 与详情查询） */
     uuid: string;
     /** 数字主键，仅用于分页游标（maxId） */
     id: number;

@@ -10,7 +10,7 @@ import { useI18n } from "@/web/lib/i18n";
 import { hasInAppHistory } from "@/web/lib/nav-history";
 import { useTimeline } from "@/web/stores/timeline";
 
-export default function PostDetailPage() {
+export default function NoteDetailPage() {
     const params = useParams<{ uuid: string }>();
     const uuid = typeof params?.uuid === "string" ? params.uuid : "";
     const router = useRouter();
