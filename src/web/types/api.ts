@@ -30,6 +30,8 @@ export interface BotDetectionConfig {
 export interface PublicConfigResponse {
     /** null 表示未启用机器人验证 */
     botDetection: BotDetectionConfig | null;
+    /** 是否可用翻译（后端配置了 LLM 才为 true） */
+    translation: boolean;
 }
 
 // 搜索：GET /api/v1/search?q=@user@domain

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PostAttachments } from "@/web/components/post/post-attachments";
 import { PostContent } from "@/web/components/post/post-content";
+import { TranslateableContent } from "@/web/components/post/translateable-content";
 import { Avatar } from "@/web/components/ui/avatar";
 import { BoostIcon, HeartIcon, MoreIcon, ReplyIcon } from "@/web/components/ui/icons";import { Popover } from "@/web/components/ui/popover";
 import { ConfirmDialog } from "@/web/components/ui/confirm-dialog";
@@ -18,6 +19,7 @@ import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
 import { useTimeline } from "@/web/stores/timeline";
 import { useUi } from "@/web/stores/ui-store";
+import { usePublicConfig } from "@/web/hooks/use-public-config";
 import type { Post, PostVariant } from "@/web/types";
 
 const MENU_ITEM_CLASS =
@@ -49,6 +51,8 @@ export function PostCard({
     const { session, isAuthenticated } = useSession();
     const { openAuth, showToast } = useUi();
     const router = useRouter();
+    // 翻译是否可用（后端配了 LLM 才显示按钮，避免点了才发现不可用）
+    const translationEnabled = Boolean(usePublicConfig()?.translation);
     const author = getUser(post.authorUsername, post.domain);
     const detailHref = `/notes/${post.id}`;
     const isContext = variant === "context";
@@ -226,9 +230,19 @@ export function PostCard({
                         </button>
                     </div>
 
-                    <p className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-fg">
-                        <PostContent content={post.content} onTagClick={stop} />
-                    </p>
+                    {/* 正文：翻译可用时包一层可翻译容器（默认显示原文），
+                        不可用时退化为纯渲染，不多任何 UI */}
+                    {translationEnabled ? (
+                        <TranslateableContent
+                            content={post.content}
+                            onInteract={stop}
+                            render={(text) => <PostContent content={text} onTagClick={stop} />}
+                        />
+                    ) : (
+                        <p className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-fg">
+                            <PostContent content={post.content} onTagClick={stop} />
+                        </p>
+                    )}
 
                     {/* 远程帖子的附件（图片/视频/音频/文件）；本站帖子没有附件，不渲染 */}
                     {post.attachment && post.attachment.length > 0 && (
