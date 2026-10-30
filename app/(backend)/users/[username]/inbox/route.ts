@@ -8,7 +8,7 @@ import { toNoteListItems } from "@/src/lib/notes";
 import { createNotification } from "@/src/lib/notify";
 import { publishEvent } from "@/src/realtime/sse";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { getDBClient } from "@/src/db";
 
 export const dynamic = "force-dynamic";
@@ -333,14 +333,50 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                 break;
             }
             case "Delete": {
-                // 先拉取远程 Actor、验证签名并落库
-                const { actor } = await resolveRemoteActor(request, activity, username);
-
-                // object 可能是 Tombstone / Note（对象），也可能只是被删对象的 uri
+                // object 可能是 Tombstone / Note / Person（对象），也可能只是被删对象的 uri
                 const objectUri = typeof activity.object === "string" ? activity.object : activity.object.id;
                 if (!objectUri) {
                     break;
                 }
+
+                // ── 情况 A：注销账号（object 指向 Actor 自身）──────
+                //
+                // 这一步**必须放在拉取远程 Actor 之前**。
+                //
+                // 原因：对方注销后，它的 Actor 文档通常已经 404/410，
+                // 如果先走 resolveRemoteActor，getActor 会失败并抛
+                // "Remote user not found."，导致删除永远执行不到 ——
+                // 数据一直残留，而且每个来件都会报一次错。
+                //
+                // 改用**本地已存的公钥**验签：既不需要任何网络请求，
+                // 又保留了安全性（只有真正持有对应私钥的实例才能删自己）。
+                if (objectUri === activity.actor) {
+                    const remoteUser = (await db.select().from(users)
+                        .where(eq(users.actorUrl, activity.actor)))[0];
+
+                    // 数据库里没有这个人 → 没什么可删的，直接返回
+                    if (!remoteUser) break;
+
+                    // 用库里存的公钥验签（不依赖远程 Actor 文档）
+                    const verified = await tryVerifySignature(
+                        request.method,
+                        request.url,
+                        request.headers,
+                        remoteUser.publicKey,
+                        convertActorUrlToMainKey(remoteUser.actorUrl),
+                    );
+                    if (!verified) {
+                        throw new Error("Sinature is invalid.");
+                    }
+
+                    await hardDeleteRemoteUser(db, remoteUser.actorUrl);
+                    break;
+                }
+
+                // ── 情况 B：删帖 ────────────────────────────────
+                //
+                // 删帖仍需要拉取远程 Actor：要确认「发件人就是帖子作者」。
+                const { actor } = await resolveRemoteActor(request, activity, username);
 
                 const note = (await db.select().from(notes).where(eq(notes.uri, objectUri)))[0];
                 if (!note) {
@@ -352,15 +388,11 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                     break;
                 }
 
-                // 软删除（本地也标记删除，feed / 线程即不再展示）。
+                // 硬删除帖子。
                 //
-                // 不硬删的原因：远端还可能重投同一条 Delete，也便于排查；
-                // 展示层都带 deletedAt 过滤，标记后自然不出现。
-                // 数据库外键的 ON DELETE CASCADE 是给手动清理数据用的，
-                // 应用层不会触发。
-                await db.update(notes).set({
-                    deletedAt: Math.floor(Date.now() / 1000),
-                }).where(eq(notes.id, note.id));
+                // likes / announces / notifications 的外键带 ON DELETE CASCADE，
+                // 一条 DELETE 就能把关联数据一起清掉。
+                await db.delete(notes).where(eq(notes.id, note.id));
 
                 break;
             }
@@ -419,6 +451,45 @@ async function handleActivity(request: Request, params: Params, activity: APActi
         throw error;
     }
 
+}
+
+/**
+ * 硬删除一个远程用户（收到 `Delete` 且 object 指向该 Actor 时调用）。
+ *
+ * 为什么硬删而不是打标记：
+ * 对方明确发来了注销声明，继续保留数据没有意义；硬删也能避免
+ * 「一个已注销账号的资料页还能被访问」这类问题。
+ *
+ * 删除范围（顺序不能反）：
+ * 1. 先删该用户的帖子 —— 帖子下的点赞/转发/通知靠 notes 的 CASCADE 清理
+ * 2. 再删关注关系（双向）—— `follows` 表没有外键，必须手动删
+ * 3. 最后删用户行 —— likes / announces / notifications 的 `user_id` 是 CASCADE，
+ *    会自动清掉这个用户对别人内容的互动记录
+ *
+ * 注意：`notes.actor` 和 `follows.follower/following` 都是纯 text 字段（无外键），
+ * 所以必须按 actorUrl 显式删除，不能指望 CASCADE。
+ */
+async function hardDeleteRemoteUser(
+    db: ReturnType<typeof getDBClient>,
+    actorUrl: string,
+): Promise<void> {
+    const user = (await db.select().from(users).where(eq(users.actorUrl, actorUrl)))[0];
+    // 没落库过就不用处理（比如第一次接触就是注销声明）
+    if (!user) return;
+
+    await db.batch([
+        // 该用户的帖子：关联数据靠 notes 的 CASCADE
+        db.delete(notes).where(eq(notes.actor, actorUrl)),
+        // 关注关系（双向）：follows 无外键，手动删
+        db.delete(follows).where(
+            or(
+                eq(follows.follower, actorUrl),
+                eq(follows.following, actorUrl),
+            ),
+        ),
+        // 用户行：剩余关联数据靠 users 的 CASCADE
+        db.delete(users).where(eq(users.id, user.id)),
+    ]);
 }
 
 /**

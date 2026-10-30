@@ -163,28 +163,24 @@ export async function DELETE(
         }
         const targets = [...inboxes].filter(actorUrl => !actorUrl.startsWith(`${url.origin}/users/`));
 
-        // 软删除：只打 deletedAt 标记，不真正删行。
+        // 硬删除帖子。
         //
-        // 为什么不硬删：
-        // - Delete 活动要向远端投递 Tombstone，原帖 uri 和行本身都还要用来构建报文
-        // - 保留数据让误删可恢复，也便于排查
-        // - 展示层（feed / 线程 / 转发合并 / 用户帖子）都带 `deletedAt is null` 过滤，
-        //   标记后自然不再出现，效果与删除一致
+        // 顺序：先投递 Delete 活动，再删行。
+        // 投递是异步的（写进 activities 表后由队列消费），队列要用 objectUri
+        // 构建 Tombstone。所以这里显式传 `objectUri`（原帖地址），
+        // 不依赖队列反查 notes 表 —— 否则删完就查不到，远端收不到有效通知。
         //
-        // 数据库里 likes / announces / notifications 的外键带 ON DELETE CASCADE，
-        // 那是给「直接在数据库里清理数据」用的，应用层不会触发。
-        await db.update(notes).set({
-            deletedAt: Math.floor(Date.now() / 1000),
-        }).where(eq(notes.id, note.id));
-
-        // 记录 Delete 活动并向远程收件人异步投递；object 指向 Tombstone
+        // 删行后 likes / announces / notifications 靠外键 ON DELETE CASCADE 自动清理，
+        // 不需要手动逐表删除。
         await dispatchActivity(url, {
             type: "Delete",
             actor: user.actorUrl,
-            objectId: note.id,
+            objectUri: note.uri,
             objectType: "Tombstone",
             targets,
         });
+
+        await db.delete(notes).where(eq(notes.id, note.id));
     } catch (error: any) {
         console.log(error.message);
         return Response.json({

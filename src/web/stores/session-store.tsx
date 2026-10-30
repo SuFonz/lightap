@@ -17,6 +17,8 @@ interface SessionValue {
     login: (username: string, password: string) => Promise<void>;
     register: (username: string, password: string, botToken?: string) => Promise<void>;
     logout: () => Promise<void>;
+    /** 注销账号（硬删除，不可恢复）：删除成功后本地会话一并清空 */
+    deleteAccount: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -65,6 +67,18 @@ export function SessionProvider({
         applySession(null);
     }, [applySession]);
 
+    /**
+     * 注销账号（硬删除）。
+     *
+     * 与 logout 的区别：logout 只是清 cookie，账号还在；
+     * 这里是真正删除账号与全部内容，不可恢复。
+     * 后端成功后 cookie 已被清除，本地会话同步置空。
+     */
+    const deleteAccount = useCallback(async () => {
+        await authApi.deleteAccount();
+        applySession(null);
+    }, [applySession]);
+
     const value = useMemo<SessionValue>(
         () => ({
             session,
@@ -72,8 +86,9 @@ export function SessionProvider({
             login,
             register,
             logout,
+            deleteAccount,
         }),
-        [session, login, register, logout],
+        [session, login, register, logout, deleteAccount],
     );
 
     return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/web/components/ui/avatar";
-import { ChevronRightIcon, FeatherIcon, GlobeIcon, LockIcon } from "@/web/components/ui/icons";
+import { ConfirmDialog } from "@/web/components/ui/confirm-dialog";
+import { ChevronRightIcon, FeatherIcon, GlobeIcon, LockIcon, WarnIcon } from "@/web/components/ui/icons";
 import { LanguageSwitcher } from "@/web/components/layout/language-switcher";
 import { ThemeSection } from "@/web/components/settings/theme-section";
 import { useI18n } from "@/web/lib/i18n";
 import { useDirectory } from "@/web/stores/directory";
 import { useSession } from "@/web/stores/session-store";
+import { useUi } from "@/web/stores/ui-store";
 
 /**
  * 设置页：平面布局，没有卡片。
@@ -17,10 +19,13 @@ import { useSession } from "@/web/stores/session-store";
  */
 export default function SettingsPage() {
     const router = useRouter();
-    const { isAuthenticated, logout } = useSession();
+    const { isAuthenticated, logout, deleteAccount } = useSession();
     const { currentUser } = useDirectory();
     const { t } = useI18n();
+    const { showToast } = useUi();
     const [loggingOut, setLoggingOut] = useState(false);
+    // 注销账号确认弹窗
+    const [deleteOpen, setDeleteOpen] = useState(false);
 
     // 未登录（例如刚退出）直接回到首页
     useEffect(() => {
@@ -37,6 +42,22 @@ export default function SettingsPage() {
             router.push("/");
         } finally {
             setLoggingOut(false);
+        }
+    }
+
+    /**
+     * 注销账号（硬删除，不可恢复）。
+     *
+     * 成功后后端已清除 cookie、本地会话也已置空，
+     * 这里直接回首页（设置页在未登录状态下本来也会自动跳走）。
+     */
+    async function handleDeleteAccount() {
+        try {
+            await deleteAccount();
+            router.push("/");
+        } catch {
+            showToast(t("settings.deleteAccountFailed"));
+            throw new Error("delete failed");
         }
     }
 
@@ -100,11 +121,35 @@ export default function SettingsPage() {
                         {loggingOut ? t("common.loggingOut") : t("common.logout")}
                     </button>
 
+                    {/* 注销账号：危险操作，与退出登录明确分开 */}
+                    <button
+                        type="button"
+                        onClick={() => setDeleteOpen(true)}
+                        className="press-sm mt-2 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-red-400/30 py-2.5 font-display text-[12px] font-bold text-red-500 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <WarnIcon size={13} />
+                        {t("settings.deleteAccount")}
+                    </button>
+                    <p className="mt-1.5 text-center text-[10px] font-medium text-fg-mute">
+                        {t("settings.deleteAccountHint")}
+                    </p>
+
                     <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[10px] font-medium text-fg-mute">
                         <FeatherIcon size={10} /> {t("app.footerShort")}
                     </p>
                 </section>
             </div>
+
+            {/* 注销确认：复用 ConfirmDialog，红色危险按钮 + 二次确认 */}
+            <ConfirmDialog
+                open={deleteOpen}
+                onClose={() => setDeleteOpen(false)}
+                title={t("settings.deleteAccountTitle")}
+                description={t("settings.deleteAccountWarning")}
+                confirmLabel={t("settings.deleteAccountConfirm")}
+                tone="danger"
+                onConfirm={handleDeleteAccount}
+            />
         </div>
     );
 }

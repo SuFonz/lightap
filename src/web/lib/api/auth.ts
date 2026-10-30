@@ -13,3 +13,13 @@ export function register(body: AuthRequest) {
 export function logout() {
     return request<Record<string, never>>("/api/v1/logout", { method: "POST" });
 }
+
+/**
+ * 注销账号：DELETE /api/v1/me
+ *
+ * 硬删除：账号及其全部内容真正从数据库移除，不可恢复。
+ * 成功后服务端会清除登录 cookie。
+ */
+export function deleteAccount() {
+    return request<Record<string, never>>("/api/v1/me", { method: "DELETE" });
+}

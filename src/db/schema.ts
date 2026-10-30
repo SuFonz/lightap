@@ -53,7 +53,7 @@ export const notes = sqliteTable("notes", {
     id: integer().primaryKey({ autoIncrement: true }),
     uuid: text().notNull().unique(),
     uri: text().notNull().unique(),
-    actor: text().notNull(),
+    actor: text().notNull(), // 可能需要改，改成外键是 users.id
     content: text().notNull(),
     inReplyTo: text(),
     /**
