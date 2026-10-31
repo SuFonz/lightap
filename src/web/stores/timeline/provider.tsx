@@ -702,16 +702,17 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
                     const merged: Post = {
                         ...target,
                         // 转发相关字段用新数据。
-                        // 注意 boostedByMe **不覆盖**：SSE 是广播，载荷里的 boosted
-                        // 是按「无 viewer」算出来的（恒 false），覆盖会把本人刚点亮的
-                        // 按钮冲回未转发，导致再点一次发出 POST 而不是 DELETE。
-                        // 本人的转发状态只由 toggleBoost 的乐观更新与后续 fetch 决定。
+                        // 注意 boostedByMe / likedByMe 都**不覆盖**：SSE 是广播，
+                        // 载荷里的 boosted / liked 是按「无 viewer」算出来的（恒 false），
+                        // 覆盖会把本人已点亮的按钮冲回未点亮状态。
+                        // 表现为「别人转发的帖子，我点过的赞又变回未点赞」。
+                        // 本人的点赞 / 转发状态只由 toggleLike / toggleBoost 的乐观更新
+                        // 与后续 fetch 决定，这里只更新公共计数。
                         boosts: post.boosts,
                         announcer: post.announcer,
                         // 转发时间：排序键，让它按「转发那一刻」浮到最前
                         announcedAt: post.announcedAt,
                         likes: post.likes,
-                        likedByMe: post.likedByMe,
                         repliesCount: post.repliesCount,
                         attachment: post.attachment,
                         // 沿用已有的 tabs（这是它能留在列表里的关键）

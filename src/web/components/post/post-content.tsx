@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { TagPill } from "@/web/components/ui/tag-pill";
 import { ExternalLinkDialog } from "@/web/components/post/external-link-dialog";
-import { isInternalLink, tokenizeContent } from "@/web/lib/links";
+import { isInternalLink, parseMention, tokenizeContent } from "@/web/lib/links";
+import { profileHref } from "@/web/lib/user";
 
 /**
  * 正文渲染：把 `#话题`、`@提及`、裸链接 渲染成可交互元素。
@@ -41,10 +42,13 @@ export function PostContent({
                 }
 
                 if (token.type === "mention") {
+                    // 完整 acct（@user@domain）要带 ?domain= 才能定位到远程那个人；
+                    // 只用 slice(1) 拼出 /u/user@domain 是错的，查不到。
+                    const { username, domain } = parseMention(token.value);
                     return (
                         <Link
                             key={i}
-                            href={`/u/${token.value.slice(1)}`}
+                            href={profileHref({ username, domain })}
                             onClick={onTagClick}
                             className="font-bold text-brand-deep hover:underline"
                         >

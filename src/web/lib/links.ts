@@ -77,6 +77,38 @@ export function isInternalLink(href: string, selfHost: string): boolean {
 }
 
 /**
+ * 话题 / 提及的匹配规则。
+ *
+ * 提及要支持联邦宇宙的完整 acct 形式：`@用户名@实例域名`。
+ * 这里的关键是**允许中间出现第二个 `@`**：
+ * 旧规则写成 `@[^\s@]+`（把 `@` 当排除符），遇到 `@xxx@domain.com`
+ * 会切成 `@xxx` 和 `@domain.com` 两段，渲染成两个链接，
+ * 但前者根本不是完整地址，点进去也查不到人。
+ *
+ * 域名部分只接受「字母数字 + . _ -」，避免把句末标点（`。`、`,`）
+ * 或后续的另一个 `@` 吞进域名里。
+ */
+const TAG_PATTERN = /#[^\s#]+|@[^\s@]+(?:@[^\s@.]+(?:\.[^\s@.]+)*)?/g;
+
+/**
+ * 把提及文本拆成用户名与域名。
+ *
+ * 支持两种写法：
+ * - `@username`           → 本地提及，没有域名
+ * - `@username@domain.com` → 远程提及
+ *
+ * 域名从**最后一个** `@` 切：用 lastIndexOf 能容忍意外字符，
+ * 不至于把用户名切坏。
+ */
+export function parseMention(mention: string): { username: string; domain: string | null } {
+    // 兜底再剥一次尾部标点：调用方可能直接传原始文本进来
+    const body = mention.replace(TRAILING_PUNCTUATION, "").replace(/^@/, "");
+    const at = body.lastIndexOf("@");
+    if (at <= 0) return { username: body, domain: null };
+    return { username: body.slice(0, at), domain: body.slice(at + 1) || null };
+}
+
+/**
  * 把正文切成「文本 / 话题 / 提及 / 链接」片段。
  *
  * 与旧实现的区别：旧版用单个正则 split 处理话题和提及，
@@ -92,17 +124,33 @@ export function tokenizeContent(content: string): ContentToken[] {
 
     const pushText = (text: string) => {
         if (!text) return;
-        // 话题 / 提及的切分沿用旧规则
-        const parts = text.split(/(#[^\s#]+|@[^\s@]+)/g);
-        for (const part of parts) {
-            if (!part) continue;
-            if (/^#[^\s#]+/.test(part)) {
-                tokens.push({ type: "hashtag", value: part });
-            } else if (/^@[^\s@]+/.test(part)) {
-                tokens.push({ type: "mention", value: part });
-            } else {
-                tokens.push({ type: "text", value: part });
+        // 用 matchAll 而不是 split：split 在捕获组上会把分隔符一起吐出，
+        // 连续命中时容易和普通文本混在一起，顺序也更难保证。
+        let last = 0;
+        for (const match of text.matchAll(TAG_PATTERN)) {
+            const start = match.index ?? 0;
+            if (start > last) {
+                tokens.push({ type: "text", value: text.slice(last, start) });
             }
+            const raw = match[0];
+            if (raw.startsWith("#")) {
+                tokens.push({ type: "hashtag", value: raw });
+                last = start + raw.length;
+                continue;
+            }
+            // 提及：剥掉尾部标点（`@user@domain.com。` 里的句号属于句子，
+            // 不属于地址），剥掉的部分要退回普通文本，否则会丢字。
+            const value = raw.replace(TRAILING_PUNCTUATION, "");
+            if (!value) {
+                tokens.push({ type: "text", value: raw });
+                last = start + raw.length;
+                continue;
+            }
+            tokens.push({ type: "mention", value });
+            last = start + value.length;
+        }
+        if (last < text.length) {
+            tokens.push({ type: "text", value: text.slice(last) });
         }
     };
 
