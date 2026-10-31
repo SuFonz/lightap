@@ -8,6 +8,7 @@ const RULES: { title: TranslationKey; text: TranslationKey }[] = [
     { title: "rules.2.title", text: "rules.2.text" },
     { title: "rules.3.title", text: "rules.3.text" },
     { title: "rules.4.title", text: "rules.4.text" },
+    { title: "rules.5.title", text: "rules.5.text" },
 ];
 
 export function CommunityRules() {

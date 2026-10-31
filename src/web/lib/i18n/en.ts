@@ -175,8 +175,10 @@ export const en = {
     "rules.2.text": "Don't repeat the same content or flood the timeline.",
     "rules.3.title": "Use content warnings",
     "rules.3.text": "Add a content warning (CW) for spoilers and sensitive topics.",
-    "rules.4.title": "Protect privacy",
-    "rules.4.text": "Don't share others' private info; ask before posting.",
+    "rules.4.title": "No NSFW",
+    "rules.4.text": "Please don't post pornographic or adult content (NSFW) — let's keep the timeline a clean place for everyone.",
+    "rules.5.title": "Protect privacy",
+    "rules.5.text": "Don't share others' private info; ask before posting.",
 
     "user.following": "Following",
     "user.follow": "Follow",

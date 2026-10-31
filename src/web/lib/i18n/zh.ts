@@ -173,8 +173,10 @@ export const zh = {
     "rules.2.text": "请勿重复发布相同内容或刷屏，一起保持时间线清爽。",
     "rules.3.title": "善用内容警告",
     "rules.3.text": "剧透、敏感话题记得加上内容警告（CW）。",
-    "rules.4.title": "保护隐私",
-    "rules.4.text": "不要公开他人的私人信息，发布前先征得同意。",
+    "rules.4.title": "不要发 NSFW 内容",
+    "rules.4.text": "请勿发布色情、露骨或成人向内容（NSFW），一起保持时间线干净清爽。",
+    "rules.5.title": "保护隐私",
+    "rules.5.text": "不要公开他人的私人信息，发布前先征得同意。",
 
     "user.following": "已关注",
     "user.follow": "关注",
