@@ -94,7 +94,7 @@ function llmConfig(): {
 /** LLM 功能是否可用（baseUrl 与 apiKey 都配了才算） */
 export function isLLMEnabled(): boolean {
     const { baseUrl, apiKey } = llmConfig();
-    return Boolean(baseUrl && apiKey && env.CF_AIG_GATEWAY_ID);
+    return Boolean(baseUrl && (apiKey || env.CF_AIG_AUTHORIZATION));
 }
 
 // ── 内部工具 ────────────────────────────────────────────────
@@ -121,13 +121,19 @@ async function request(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
+    const cfAigGatewayId = (env as any).CF_AIG_GATEWAY_ID;
+    const cfAigAuthorization = (env as any).CF_AIG_AUTHORIZATION;
+    const cfAigByokAlias = (env as any).CF_AIG_BYOK_ALIAS;
+
     try {
         return await fetch(`${baseUrl}${path}`, {
             method: "POST",
             headers: {
-                "cf-aig-gateway-id": env.CF_AIG_GATEWAY_ID,
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${apiKey}`,
+                ...(cfAigGatewayId !== undefined && { "cf-aig-gateway-id": `${cfAigGatewayId}` }),
+                ...(cfAigAuthorization !== undefined && { "cf-aig-authorization": `Bearer ${cfAigAuthorization}` }),
+                ...(cfAigByokAlias !== undefined && { "cf-aig-byok-alias": `${cfAigByokAlias}` }),
+                ...(apiKey !== undefined && { "Authorization": `Bearer ${apiKey}` }),
             },
             body: JSON.stringify(body),
             signal: controller.signal,
@@ -264,6 +270,8 @@ export async function chat(options: ChatOptions): Promise<ChatResult> {
     } catch {
         // 不是 JSON（比如网关返回 HTML 错误页），下面按状态码报错
     }
+
+    console.log(raw);
 
     if (!res.ok) {
         throw new LLMError(

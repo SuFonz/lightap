@@ -75,7 +75,8 @@
 		// "TURNSTILE_SITE_KEY": "",
 		// "LLM_BASE_URL": "",
 		// "LLM_MODEL": "",
-		// "CF_AIG_GATEWAY_ID": ""
+		// "CF_AIG_GATEWAY_ID": "" // optional, it depends on how you call LLM
+		// "CF_AIG_BYOK_ALIAS": "" // optional, it depends on how you call LLM
 	},
 
 	// ── Secrets ────────────────────────────────────────────────
@@ -87,6 +88,7 @@
 	// Optional (feature stays off when unset):
 	//   TURNSTILE_SECRET_KEY — bot protection on sign-up; needs TURNSTILE_SITE_KEY too
 	//   LLM_API_KEY          — translation; needs LLM_BASE_URL too
+	//   CF_AIG_AUTHORIZATION — optional, it depends on how you call LLM
 	
 
 	/**
