@@ -9,6 +9,7 @@ import { useI18n, type Locale, type TranslationKey } from "@/web/lib/i18n";
 const OPTIONS: { value: Locale; labelKey: TranslationKey; short: string }[] = [
     { value: "zh", labelKey: "language.zh", short: "中" },
     { value: "en", labelKey: "language.en", short: "EN" },
+    { value: "ja", labelKey: "language.ja", short: "日" },
 ];
 
 /**

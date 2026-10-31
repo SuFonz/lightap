@@ -1,7 +1,7 @@
 /**
  * 中文文案。
  *
- * 与 `en.ts` 保持同一套 key；新增文案时两个文件都要加
+ * 与 `en.ts` / `ja.ts` 保持同一套 key；新增文案时三个文件都要加
  * （`TranslationKey` 由 zh 的 key 推导，缺了会在类型检查时暴露）。
  */
 export const zh = {
@@ -249,4 +249,5 @@ export const zh = {
     "language.label": "语言",
     "language.zh": "中文",
     "language.en": "English",
+    "language.ja": "日本語",
 } as const;

@@ -39,7 +39,7 @@ LightAP 是一个基于 [ActivityPub](https://activitypub.rocks/) 联邦协议�
 - 个人主页，含帖子、关注与粉丝数量
 - 可以修改自己的昵称和简介；两者与 Actor 文档来自同一张表，远端实例下次抓取时会同步更新
 - 未登录也能浏览时间线和个人主页
-- 界面支持中文与 English，可随时切换；选择存在 Cookie 里并在服务端生效，首屏就是选定的语言
+- 界面支持中文、English 与日本語，可随时切换；选择存在 Cookie 里并在服务端生效，首屏就是选定的语言
 
 **账号**
 
@@ -59,7 +59,7 @@ LightAP 是一个基于 [ActivityPub](https://activitypub.rocks/) 联邦协议�
 | 实时 | Durable Objects + Server-Sent Events |
 | 异步投递 | Cloudflare Queues |
 | 样式 | Tailwind CSS v4 |
-| 多语言 | 自实现的有类型字典（zh / en），没有引入 i18n 依赖 |
+| 多语言 | 自实现的有类型字典（zh / en / ja），没有引入 i18n 依赖 |
 | 密码学 | 全部使用 Web Crypto，没有引入任何第三方鉴权或 JWT 依赖 |
 
 ## 目录结构

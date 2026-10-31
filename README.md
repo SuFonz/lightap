@@ -39,7 +39,7 @@ It is a serverless project: the whole app is bundled into a single Cloudflare Wo
 - Profile pages with post, following and follower counts
 - Edit your own display name and bio; both live in the same table the Actor document is built from, so remote instances pick up the change on their next fetch
 - Guests can browse the timeline and profiles without an account
-- Interface in Chinese or English, switchable at runtime — the choice is remembered in a cookie and applied server-side, so the first paint is already in the right language
+- Interface in Chinese, English or Japanese, switchable at runtime — the choice is remembered in a cookie and applied server-side, so the first paint is already in the right language
 
 **Accounts**
 
@@ -59,7 +59,7 @@ It is a serverless project: the whole app is bundled into a single Cloudflare Wo
 | Real-time | Durable Objects + Server-Sent Events |
 | Async delivery | Cloudflare Queues |
 | Styling | Tailwind CSS v4 |
-| i18n | A hand-rolled, typed dictionary (`zh` / `en`) — no i18n dependency |
+| i18n | A hand-rolled, typed dictionary (`zh` / `en` / `ja`) — no i18n dependency |
 | Crypto | Web Crypto only — no third-party auth or JWT dependencies |
 
 ## Project structure

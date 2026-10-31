@@ -1,7 +1,8 @@
 /**
  * English copy.
  *
- * Keep the same key set as `zh.ts` — adding a string means updating both files.
+ * Keep the same key set as `zh.ts` — adding a string means updating
+ * `zh.ts`, `en.ts` and `ja.ts` together.
  * (`TranslationKey` is derived from zh, so a missing key here surfaces as a
  * type error when the dictionary is consumed.)
  */
@@ -250,4 +251,5 @@ export const en = {
     "language.label": "Language",
     "language.zh": "中文",
     "language.en": "English",
+    "language.ja": "日本語",
 } as const;

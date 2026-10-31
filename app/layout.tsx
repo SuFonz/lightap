@@ -2,23 +2,39 @@ import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import { AppShell } from "@/web/components/layout/app-shell";
 import { SESSION_TOKEN_COOKIE, SESSION_USERNAME_COOKIE } from "@/web/lib/session";
-import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE } from "@/web/lib/i18n/dictionaries";
+import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE, type Locale } from "@/web/lib/i18n/dictionaries";
 import { THEME_INIT_SCRIPT } from "@/web/stores/theme-store";
 import type { Session } from "@/web/types";
 import "./globals.css";
 
+/** 界面语言 → `<html lang>` 用的 BCP-47 标签 */
+const HTML_LANG: Record<Locale, string> = {
+ zh:"zh-CN",
+ en:"en",
+ ja:"ja",
+};
+
+/** 界面语言 → 站点标题与描述 */
+const SITE_METADATA: Record<Locale, { title: string; description: string }> = {
+ zh: {
+  title:"LightAP · 轻量 ActivityPub 社区",
+  description:"一个可爱的去中心化联邦宇宙小站，基于 ActivityPub 协议。",
+ },
+ en: {
+  title:"LightAP · Lightweight ActivityPub community",
+  description:"A cute, decentralized fediverse instance built on ActivityPub.",
+ },
+ ja: {
+  title:"LightAP · 軽量な ActivityPub コミュニティ",
+  description:"ActivityPub に基づく、かわいくて分散型のフェディバース拠点です。",
+ },
+};
+
 export async function generateMetadata(): Promise<Metadata> {
  const raw = (await cookies()).get(LOCALE_COOKIE)?.value;
  const locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
- return locale ==="en"
- ? {
- title:"LightAP · Lightweight ActivityPub community",
- description:"A cute, decentralized fediverse instance built on ActivityPub.",
- }
- : {
- title:"LightAP · 轻量 ActivityPub 社区",
- description:"一个可爱的去中心化联邦宇宙小站，基于 ActivityPub 协议。",
- };
+ const { title, description } = SITE_METADATA[locale];
+ return { title, description };
 }
 
 export const viewport: Viewport = {
@@ -47,7 +63,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
  return (
  // suppressHydrationWarning：data-theme / --accent-hue 由首屏脚本改写在 <html> 上，
  // 与服务端输出必然不同，这是预期行为。
- <html lang={initialLocale ==="en" ?"en" :"zh-CN"} suppressHydrationWarning>
+ <html lang={HTML_LANG[initialLocale]} suppressHydrationWarning>
  <head>
  {/* 阻塞式首屏主题注入：避免深色用户在 React 水合前看到白屏闪烁 */}
  <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
