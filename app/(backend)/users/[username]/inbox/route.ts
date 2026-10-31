@@ -4,7 +4,7 @@ import { buildActivity, convertActorUrlToMainKey } from "@/src/activitypub/tools
 import { activities, announces, follows, likes, notes, users } from "@/src/db/schema";
 import { storeRemoteActor } from "@/src/lib/actor";
 import { parseAttachments, serializeAttachments } from "@/src/lib/attachments";
-import { toNoteListItems } from "@/src/lib/notes";
+import { fetchRemoteNote, findNoteByUri, toNoteListItems } from "@/src/lib/notes";
 import { createNotification } from "@/src/lib/notify";
 import { publishEvent } from "@/src/realtime/sse";
 import { HeaderSource, verifyActivityPubRequest, verifyRfc9421 } from "@/src/utils/signature";
@@ -263,10 +263,9 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                 // 远程用户转发了某条帖子。
                 //
                 // 与 Like 的区别：转发会进入时间线，所以要能定位到**被转发的原帖**。
-                // 如果原帖不在本地库里（例如转的是另一台实例的帖子），
-                // 这里只记录转发关系、不抓取内容——抓取需要额外的网络请求，
-                // 属于「按需补全」，不在 inbox 的同步路径里做。
-                const { remoteUser } = await resolveRemoteActor(request, activity, username);
+                // 原帖可能来自另一台实例（对方转的是别人的帖子），本地库里没有，
+                // 这时按 uri 主动拉取原帖 + 作者并落库（见 src/lib/notes 的 fetchRemoteNote）。
+                const { user, remoteUser } = await resolveRemoteActor(request, activity, username);
 
                 // object 是被转发的 Note（通常是一个 uri 字符串，也可能内嵌对象）
                 const objectUri = typeof activity.object === "string" ? activity.object : activity.object?.id;
@@ -274,9 +273,16 @@ async function handleActivity(request: Request, params: Params, activity: APActi
                     break;
                 }
 
-                const note = (await db.select().from(notes).where(eq(notes.uri, objectUri)))[0];
+                // 原帖可能在本地，也可能来自另一台实例（需要按 uri 抓取）
+                const localNote = await findNoteByUri(objectUri);
+                const note = localNote ?? await fetchRemoteNote(
+                    objectUri,
+                    user.privateKey,
+                    convertActorUrlToMainKey(user.actorUrl),
+                );
                 if (!note) {
-                    // 原帖不在本地：暂不记录（避免时间线出现空壳转发）
+                    // 抓取失败（对方 404 / 不是 Note / 网络问题）：
+                    // 不记录这条转发，避免时间线出现没有内容的空壳条目
                     break;
                 }
 

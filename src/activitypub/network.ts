@@ -168,14 +168,32 @@ export async function getWebfinger(username: string, domain: string) {
     );
 }
 
-export async function getActor(actorUrl: string, privateKey?: string, keyId?: string) {
+/**
+ * 按 uri 取任意 ActivityPub 文档（Note / Actor / Collection 等）。
+ *
+ * 这是「取一个 AP 文档」的通用入口：传私钥就签名请求，不传就匿名请求。
+ *
+ * 为什么需要它：`getActor` 只是本函数的一个特例（取 Actor），
+ * 但取 Note 时若也叫 `getActor` 会让人误解（读代码的人会以为在拉 Actor 文档）。
+ * 联邦场景里「按 uri 抓对象」非常常见，值得单独有个名字。
+ */
+export async function getApObject(
+    uri: string,
+    privateKey?: string,
+    keyId?: string,
+): Promise<Response> {
     // 不签名请求
     if (!privateKey || !keyId) {
-        return await apFetch(actorUrl);
+        return await apFetch(uri);
     }
 
-    // 签名请求
-    return await apTrySignedFetch(actorUrl, { privateKey, keyId });
+    // 签名请求：部分实例（Mastodon 默认开启 AUTHORIZED_FETCH）只对已签名请求返回内容
+    return await apTrySignedFetch(uri, { privateKey, keyId });
+}
+
+/** 取远程 Actor 文档（`getApObject` 的特例，语义更明确） */
+export async function getActor(actorUrl: string, privateKey?: string, keyId?: string) {
+    return getApObject(actorUrl, privateKey, keyId);
 }
 
 export async function postInbox(inboxUrl: string, privateKey: string, keyId: string, activity: APActivity) {

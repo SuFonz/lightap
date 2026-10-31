@@ -136,6 +136,13 @@ export interface APNote extends APObject {
     name: string,
     content: string,
     inReplyTo?: string,
+    /**
+     * 作者。ActivityPub 规范里可能是 uri 字符串，也可能内嵌一个完整的 Actor 对象。
+     *
+     * 本地收 Create 时用不到它（作者就是活动的 actor），
+     * 但按需抓取远程帖子（见 src/lib/notes 的 fetchRemoteNote）时必须靠它定位作者。
+     */
+    attributedTo?: string | APObject,
     attachment: APDocument[],
     /**
      * 整条帖子是否标记为敏感内容。
