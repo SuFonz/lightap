@@ -38,7 +38,10 @@ export function SearchHistoryList({ history, onPick, onRemove, onClear }: Search
                     {t("search.clearHistory")}
                 </button>
             </div>
-            <ul className="flex flex-col">
+            {/* 历史最多 12 条，条数多时浮层会顶出屏幕，所以这里限高并内部滚动。
+                header 留在 ul 之外，滚动时「最近搜索 / 清空」始终可见。
+                overscroll-contain：滚到底部时不要带着外层页面一起滚。 */}
+            <ul className="flex max-h-[min(50dvh,20rem)] flex-col overflow-y-auto overscroll-contain">
                 {history.map((term) => (
                     <li key={term} className="group flex items-center gap-1">
                         <button

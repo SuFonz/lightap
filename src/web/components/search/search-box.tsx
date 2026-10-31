@@ -47,7 +47,10 @@ export function SearchBox({ className, autoFocus = false, placeholder }: SearchB
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        onBlur={() => setTimeout(() => setOpen(false), 120)}
+                        // 不用 onBlur 关闭浮层：拖动历史列表的滚动条会让输入框
+                        // 失焦，浮层就会在拖到一半时消失，滚动条等于白加。
+                        // 关闭交给 Popover 的 onClose（点击浮层与输入框之外 / Esc），
+                        // 这也更符合常见搜索框的行为：输入时列表一直开着。
                         placeholder={placeholderText}
                         aria-label={t("search.action")}
                         autoFocus={autoFocus}
@@ -67,8 +70,19 @@ export function SearchBox({ className, autoFocus = false, placeholder }: SearchB
                 </label>
             </form>
 
-            <Popover open={open} anchorRef={anchorRef}>
-                <SearchHistoryList history={history} onPick={runSearch} onRemove={remove} onClear={clear} />
+            {/* 浮层里按下指针不会让它关闭（内部点击不算「外部」），
+                所以拖滚动条安全；点外部或按 Esc 才关 */}
+            <Popover open={open} anchorRef={anchorRef} onClose={() => setOpen(false)}>
+                <SearchHistoryList
+                    history={history}
+                    onPick={runSearch}
+                    onRemove={remove}
+                    // 清空后列表为空、浮层没有内容可显示，顺手关掉
+                    onClear={() => {
+                        clear();
+                        setOpen(false);
+                    }}
+                />
             </Popover>
         </div>
     );
