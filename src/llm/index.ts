@@ -333,6 +333,7 @@ export async function* chatStream(
 
     for await (const delta of parseStream(res.body)) {
         options.onToken?.(delta);
+        console.log(delta);
         yield delta;
     }
 }

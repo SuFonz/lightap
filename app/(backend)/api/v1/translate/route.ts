@@ -74,8 +74,21 @@ export async function POST(request: Request) {
 
     const stream = new ReadableStream({
         async start(controller) {
+            /**
+             * 发送一个 SSE 事件。
+             *
+             * 关键点：`data` 里可能有换行（译文分段、模型输出多行），
+             * 必须按 SSE 规范把每一行都写成独立的 `data:` 行 ——
+             * 否则裸换行会被当成事件分隔（空行 = 事件结束），
+             * 第二行之后的内容全部丢失，前端就只看到一行。
+             *
+             * 客户端 `parseEventBlock` 会用 `dataLines.join("\n")` 拼回原文，
+             * 两端配合后多行译文才能完整传输。
+             */
             const send = (event: string, data: string) => {
-                controller.enqueue(encoder.encode(`event: ${event}\ndata: ${data}\n\n`));
+                // `split` 对空串返回 [""]，所以这里至少会有一条 data 行
+                const lines = data.split(/\r?\n/).map((line) => `data: ${line}`);
+                controller.enqueue(encoder.encode(`event: ${event}\n${lines.join("\n")}\n\n`));
             };
 
             try {
