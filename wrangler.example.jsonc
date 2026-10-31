@@ -57,7 +57,12 @@
 		{
 			"queue": "ap-delivery",
 			"max_batch_size": 10,
-			"max_batch_timeout": 5
+			"max_batch_timeout": 5,
+			// 投递失败最多重试 5 次（与 worker.ts 里的 MAX_RETRIES 保持一致）。
+			// 必须显式配置：Cloudflare 默认值是 3，不写的话平台会在第 3 次就丢弃消息。
+			"max_retries": 5,
+			// 平台级兜底间隔（秒）；实际间隔由 worker.ts 的指数退避决定。
+			"retry_delay": 10
 		}
 		]
 	},

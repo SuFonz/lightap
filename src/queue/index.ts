@@ -97,6 +97,52 @@ export async function consume(data: QueueData) {
 
     console.log(activity);
 
-    // 递送
-    await delivery(data.targetActor, activity, user.privateKey, convertActorUrlToMainKey(user.actorUrl));
+    // 递送。
+    //
+    // 关键：失败必须**抛错**，不能静默返回。
+    // `delivery()` 失败时只是把失败的 Response 返回回来（不抛异常），
+    // 如果这里不检查，consume 会正常结束、外层 ack 掉这条消息，
+    // 失败的投递就永远不会重试了。
+    const res = await delivery(
+        data.targetActor,
+        activity,
+        user.privateKey,
+        convertActorUrlToMainKey(user.actorUrl),
+    );
+
+    if (!res.ok) {
+        // 带上状态码，方便在日志里定位是哪一类失败（404 对方 Actor 没了 / 401 验签被拒 / 5xx 对方临时故障）
+        throw new DeliveryError(
+            `投递失败 ${res.status} ${res.statusText} → ${data.targetActor}`,
+            res.status,
+        );
+    }
+}
+
+/** 投递失败错误：区分「可重试」与「不该再重试」 */
+export class DeliveryError extends Error {
+    constructor(
+        message: string,
+        /** 对方返回的 HTTP 状态码 */
+        readonly status: number,
+    ) {
+        super(message);
+        this.name = "DeliveryError";
+    }
+
+    /**
+     * 这个失败还值得重试吗？
+     *
+     * - 4xx（除 408 / 429）是**确定性**失败：对方明确拒绝了，重试多少次结果都一样。
+     *   典型如 404（对方 Actor / inbox 已不存在）、401（签名被拒）、400（报文不合法）。
+     *   继续重试只是浪费配额，还会让对方觉得我们在刷请求。
+     * - 5xx、408（超时）、429（限流）是**临时性**故障，值得重试。
+     * - 其它（网络错误没有状态码，用 0 表示）也按临时故障处理。
+     */
+    get retryable(): boolean {
+        if (this.status === 408 || this.status === 429) return true;
+        if (this.status >= 500) return true;
+        if (this.status === 0) return true;
+        return false;
+    }
 }
