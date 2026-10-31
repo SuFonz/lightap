@@ -11,6 +11,8 @@ export const ja = {
     "app.footer": "LightAP · フェディバースの小さな拠点",
     "app.footerShort": "LightAP · 軽量フェディバース拠点",
     "app.protocolNote": "ActivityPub プロトコル採用 · LightAP",
+    "meta.title": "LightAP · 軽量な ActivityPub コミュニティ",
+    "meta.description": "ActivityPub に基づく、かわいくて分散型のフェディバース拠点です。",
 
     "common.close": "閉じる",
     "common.cancel": "キャンセル",

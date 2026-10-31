@@ -35,3 +35,25 @@ export const LOCALES: readonly Locale[] = ["zh", "en", "ja"];
 export function isLocale(value: string | null | undefined): value is Locale {
     return typeof value === "string" && (LOCALES as readonly string[]).includes(value);
 }
+
+/**
+ * 取某个语言的站点标题与描述。
+ *
+ * 服务端（`generateMetadata`）和客户端（切换语言时同步 `document.title`）
+ * 都走这里，保证两边文案永远一致，不用在两处维护同一份字符串。
+ */
+export function getSiteMeta(locale: Locale): { title: string; description: string } {
+    const dict = dictionaries[locale] as Record<string, string>;
+    const fallback = dictionaries[DEFAULT_LOCALE] as Record<string, string>;
+    return {
+        title: dict["meta.title"] ?? fallback["meta.title"],
+        description: dict["meta.description"] ?? fallback["meta.description"],
+    };
+}
+
+/** 界面语言 → `<html lang>` 用的 BCP-47 标签 */
+export const HTML_LANG: Record<Locale, string> = {
+    zh: "zh-CN",
+    en: "en",
+    ja: "ja",
+};

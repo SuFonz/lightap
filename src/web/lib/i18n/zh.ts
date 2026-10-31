@@ -10,6 +10,8 @@ export const zh = {
     "app.footer": "LightAP · 联邦宇宙小站",
     "app.footerShort": "LightAP · 轻量联邦宇宙小站",
     "app.protocolNote": "基于 ActivityPub 协议 · LightAP",
+    "meta.title": "LightAP · 轻量 ActivityPub 社区",
+    "meta.description": "一个可爱的去中心化联邦宇宙小站，基于 ActivityPub 协议。",
 
     "common.close": "关闭",
     "common.cancel": "取消",

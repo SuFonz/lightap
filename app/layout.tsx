@@ -2,38 +2,19 @@ import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import { AppShell } from "@/web/components/layout/app-shell";
 import { SESSION_TOKEN_COOKIE, SESSION_USERNAME_COOKIE } from "@/web/lib/session";
-import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE, type Locale } from "@/web/lib/i18n/dictionaries";
+import { DEFAULT_LOCALE, getSiteMeta, HTML_LANG, isLocale, LOCALE_COOKIE } from "@/web/lib/i18n/dictionaries";
 import { THEME_INIT_SCRIPT } from "@/web/stores/theme-store";
 import type { Session } from "@/web/types";
 import "./globals.css";
 
-/** 界面语言 → `<html lang>` 用的 BCP-47 标签 */
-const HTML_LANG: Record<Locale, string> = {
- zh:"zh-CN",
- en:"en",
- ja:"ja",
-};
-
-/** 界面语言 → 站点标题与描述 */
-const SITE_METADATA: Record<Locale, { title: string; description: string }> = {
- zh: {
-  title:"LightAP · 轻量 ActivityPub 社区",
-  description:"一个可爱的去中心化联邦宇宙小站，基于 ActivityPub 协议。",
- },
- en: {
-  title:"LightAP · Lightweight ActivityPub community",
-  description:"A cute, decentralized fediverse instance built on ActivityPub.",
- },
- ja: {
-  title:"LightAP · 軽量な ActivityPub コミュニティ",
-  description:"ActivityPub に基づく、かわいくて分散型のフェディバース拠点です。",
- },
-};
-
+/**
+ * 站点标题与描述来自词典（`meta.title` / `meta.description`），
+ * 与客户端切换语言时用的 `getSiteMeta` 是同一份文案，避免两处维护。
+ */
 export async function generateMetadata(): Promise<Metadata> {
  const raw = (await cookies()).get(LOCALE_COOKIE)?.value;
  const locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
- const { title, description } = SITE_METADATA[locale];
+ const { title, description } = getSiteMeta(locale);
  return { title, description };
 }
 

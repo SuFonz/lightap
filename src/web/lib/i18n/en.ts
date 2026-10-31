@@ -12,6 +12,8 @@ export const en = {
     "app.footer": "LightAP · Fediverse",
     "app.footerShort": "LightAP · Lightweight fediverse",
     "app.protocolNote": "Built on ActivityPub · LightAP",
+    "meta.title": "LightAP · Lightweight ActivityPub community",
+    "meta.description": "A cute, decentralized fediverse instance built on ActivityPub.",
 
     "common.close": "Close",
     "common.cancel": "Cancel",

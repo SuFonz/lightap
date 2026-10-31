@@ -1,9 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { DEFAULT_LOCALE, dictionaries, LOCALE_COOKIE, type Locale, type TranslationKey } from "./dictionaries";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { DEFAULT_LOCALE, dictionaries, getSiteMeta, HTML_LANG, LOCALE_COOKIE, type Locale, type TranslationKey } from "./dictionaries";
 
-export { dictionaries, DEFAULT_LOCALE, LOCALE_COOKIE, isLocale } from "./dictionaries";
+export { dictionaries, DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, getSiteMeta } from "./dictionaries";
 export type { Locale, TranslationKey };
 
 type Params = Record<string, string | number>;
@@ -39,6 +39,22 @@ export function I18nProvider({
             document.cookie = `${LOCALE_COOKIE}=${next}; Path=/; Max-Age=${365 * 24 * 60 * 60}; SameSite=Lax`;
         }
     }, []);
+
+    /**
+     * 切换语言时同步页面标题与 `<html lang>`。
+     *
+     * 为什么要在客户端改：`generateMetadata` 只在服务端跑，改语言不会重新请求，
+     * 所以浏览器标签页会一直停在上一种语言的标题。
+     * 首次挂载时也跑一次，但值和服务端输出一致，不会有多余变化。
+     *
+     * 只用 `document.title` 而不调 `router.refresh()`：后者会让整页重新拉数据，
+     * 为了改一个标题不值得。
+     */
+    useEffect(() => {
+        if (typeof document === "undefined") return;
+        document.title = getSiteMeta(locale).title;
+        document.documentElement.lang = HTML_LANG[locale];
+    }, [locale]);
 
     const t = useCallback(
         (key: TranslationKey, params?: Params) => {
