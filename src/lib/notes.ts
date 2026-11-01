@@ -152,34 +152,19 @@ export async function findNoteByUri(uri: string) {
 }
 
 /**
- * 按需抓取一条远程帖子并落库。
+ * 按 uri 抓取远程帖子并落库。
  *
- * 使用场景：收到 `Announce` 时，被转发的原帖可能来自**另一台实例**
- * （对方转的是别人的帖子），本地库里没有这条记录。此时按 uri 主动拉取，
- * 拿到内容后才能把它作为转发条目展示在时间线上。
- *
- * 为什么不做成通用后台任务：抓取是「为了展示这条转发」才需要的，
- * 只有遇到 Announce 这类确实需要原帖内容的场景才触发，不值得为每条活动都跑。
- *
- * 返回本地 `notes` 行；抓不到（对方 404 / 内容不是 Note / 网络失败）时返回 undefined。
- *
- * @param noteUri  被转发帖子的 uri
- * @param privateKey 签名用私钥（部分实例只对已签名的请求返回内容）
- * @param keyId      签名身份
+ * 用在收 Announce 时：被转发的原帖可能来自另一台实例，本地没有记录。
+ * 抓不到（404 / 不是 Note / 网络失败）返回 undefined。
  */
 export async function fetchRemoteNote(
     noteUri: string,
     privateKey: string,
     keyId: string,
 ): Promise<NoteRow | undefined> {
-    // 可能已被别的请求抢先落库（同一帖子被多人转发时会并发走到这里）
     const existing = await findNoteByUri(noteUri);
     if (existing) return existing;
 
-    // 拉取远程 Note 文档。
-    // 用 getApObject 而不是 getActor：这里要取的是 Note 对象，不是 Actor。
-    // 优先签名请求：不少实例（Mastodon 默认开启 AUTHORIZED_FETCH）会拒绝匿名请求，
-    // 签名后拿到的成功率明显更高。
     let res: Response;
     try {
         res = await getApObject(noteUri, privateKey, keyId);
@@ -196,21 +181,16 @@ export async function fetchRemoteNote(
         return undefined;
     }
 
-    // 只接受 Note：对方可能返回其它类型（Article / Question / 甚至 Actor）
     if (!obj || obj.type !== "Note" || !obj.id) return undefined;
 
-    // 帖子作者可能也还没落库（转的是第三方实例的帖子）。
-    // 作者信息是 feed 展示的必需字段，所以先抓 Actor 并落库。
-    //
-    // attributedTo 有两种形态：uri 字符串（常见），或内嵌的 Actor 对象（少数实现）。
-    // 内嵌时直接用它的 id，不必再发一次网络请求。
+    // 作者可能也还没落库（转的是第三方实例的帖子），先抓 Actor。
+    // attributedTo 可能是 uri 字符串，也可能是内嵌 Actor 对象（后者可直接落库，省一次请求）
     let actorUrl: string | undefined;
     if (typeof obj.attributedTo === "string") {
         actorUrl = obj.attributedTo;
     } else if (obj.attributedTo && typeof obj.attributedTo === "object") {
         const embedded = obj.attributedTo;
         actorUrl = embedded.id;
-        // 内嵌对象已含公钥等信息，可直接落库，省一次请求
         if (embedded.type === "Person" && (embedded as any).publicKey) {
             try {
                 await storeRemoteActor(embedded as any);
@@ -221,7 +201,6 @@ export async function fetchRemoteNote(
     }
     if (!actorUrl) return undefined;
 
-    // 本地已有这个作者就不再重复抓取（同一作者常有多条帖子被转发）
     const db = getDBClient();
     const existingAuthor = (await db.select().from(users).where(eq(users.actorUrl, actorUrl)))[0];
     if (!existingAuthor) {
@@ -231,11 +210,10 @@ export async function fetchRemoteNote(
                 await storeRemoteActor(await actorRes.json());
             }
         } catch {
-            // Actor 抓取失败也继续：帖子本身能存，只是作者显示为空
+            // 抓不到作者也继续，帖子本身能存
         }
     }
 
-    // 保留远端原始发布时间；解析失败则用当前时间
     const publishedMs = obj.published ? new Date(obj.published).getTime() : NaN;
     const createdAt = Number.isFinite(publishedMs)
         ? Math.floor(publishedMs / 1000)
@@ -243,9 +221,9 @@ export async function fetchRemoteNote(
 
     const attachments = parseAttachments(obj.attachment, obj.sensitive === true);
 
-    // 并发下可能被别的请求先插入：uri 是唯一键，冲突时退回读取已存在的那条
+    // uri 是唯一键：并发插入冲突时退回读取已存在的那条
     try {
-        const inserted = (await getDBClient().insert(notes).values({
+        return (await getDBClient().insert(notes).values({
             uri: obj.id,
             uuid: crypto.randomUUID(),
             actor: actorUrl,
@@ -254,7 +232,6 @@ export async function fetchRemoteNote(
             attachment: serializeAttachments(attachments),
             createdAt,
         }).returning())[0];
-        return inserted;
     } catch {
         return await findNoteByUri(noteUri);
     }

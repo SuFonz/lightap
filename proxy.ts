@@ -8,9 +8,25 @@ type UserPayload = JwtPayload & {
 }
 
 export async function proxy(req: NextRequest) {
-    // 登录注册登出放行
     const pathname = req.nextUrl.pathname;
 
+    // 帖子详情按 Accept 分流：浏览器走页面，联邦实例要 AP JSON。
+    // 同一路径不能同时有 page.tsx 和 route.ts，所以 JSON 出口放在内部 API 里重写过去。
+    const accept = (req.headers.get("accept") ?? "").toLowerCase();
+    const noteRest = pathname.slice("/notes/".length);
+    if (
+        req.method === "GET" &&
+        pathname.startsWith("/notes/") &&
+        noteRest.length > 0 &&
+        !noteRest.includes("/") &&
+        (accept.includes("application/activity+json") || accept.includes("application/ld+json"))
+    ) {
+        const rewritten = req.nextUrl.clone();
+        rewritten.pathname = `/api/v1/notes/${noteRest}/activity`;
+        return NextResponse.rewrite(rewritten);
+    }
+
+    // 登录注册登出放行
     if (
         pathname === "/api/v1/login" ||
         pathname === "/api/v1/register" ||
@@ -83,6 +99,8 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
     matcher: [
-        "/api/:path*"
+        "/api/:path*",
+        // 帖子详情要按 Accept 分流
+        "/notes/:path*",
     ]
 };
