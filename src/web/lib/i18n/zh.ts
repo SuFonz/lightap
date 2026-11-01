@@ -177,8 +177,10 @@ export const zh = {
     "rules.3.text": "剧透、敏感话题记得加上内容警告（CW）。",
     "rules.4.title": "不要发 NSFW 内容",
     "rules.4.text": "请勿发布色情、露骨或成人向内容（NSFW），一起保持时间线干净清爽。",
-    "rules.5.title": "保护隐私",
-    "rules.5.text": "不要公开他人的私人信息，发布前先征得同意。",
+    "rules.5.title": "不要讨论政治",
+    "rules.5.text": "请勿发布政治、宗教等争议性话题，一起保持时间线轻松友好。",
+    "rules.6.title": "保护隐私",
+    "rules.6.text": "不要公开他人的私人信息，发布前先征得同意。",
 
     "user.following": "已关注",
     "user.follow": "关注",
