@@ -305,7 +305,3 @@ LightAP implements the subset of ActivityPub required to federate. The following
 - **Mentions** — `Mention` is present in the notification type union, but no code creates one.
 - **`/@username`** — WebFinger advertises it as a profile-page alias; only `/u/[username]` is routed.
 - **PBKDF2 iteration count** — 100,000, below the 600,000 OWASP currently recommends for PBKDF2-HMAC-SHA256. The stored hash records its own iteration count, so raising it later will not invalidate existing passwords.
-
-## License
-
-No license has been chosen yet.
